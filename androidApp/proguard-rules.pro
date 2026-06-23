@@ -58,10 +58,10 @@
 
 -dontwarn org.slf4j.impl.StaticLoggerBinder
 -dontwarn kotlinx.serialization.internal.ClassValueReferences
--keep class com.maxrave.simpmusic.data.model.** { *; }
--keep class com.maxrave.simpmusic.extension.AllExtKt { *; }
--keep class com.maxrave.simpmusic.extension.AllExtKt$* { *; }
--keep class com.maxrave.kotlinytmusicscraper.extension.MapExtKt$* { *; }
+-keep class com.tan.gratifymusic.data.model.** { *; }
+-keep class com.tan.gratifymusic.extension.AllExtKt { *; }
+-keep class com.tan.gratifymusic.extension.AllExtKt$* { *; }
+-keep class com.tan.kotlinytmusicscraper.extension.MapExtKt$* { *; }
 
 ## Removes all Logs as they cause perfomance issues in prod
 #-assumenosideeffects class android.util.Log {
@@ -148,7 +148,7 @@
 -keep class com.liskovsoft.** { *; }
 -keep interface com.liskovsoft.** { *; }
 -keep class com.eclipsesource.v8.** { *; }
--keep class com.maxrave.kotlinytmusicscraper.** { *; }
+-keep class com.tan.kotlinytmusicscraper.** { *; }
 
 -dontwarn javax.script.AbstractScriptEngine
 -dontwarn javax.script.Bindings
@@ -200,19 +200,19 @@
 -dontwarn java.beans.Introspector
 -dontwarn java.beans.PropertyDescriptor
 
--dontwarn com.maxrave.data.di.loader.LoaderKt
--dontwarn com.maxrave.media3.ui.MediaPlayerViewKt
+-dontwarn com.tan.data.di.loader.LoaderKt
+-dontwarn com.tan.media3.ui.MediaPlayerViewKt
 
--keep class com.maxrave.data.di.loader.LoaderKt { *; }
--keep class com.maxrave.data.mapping.MappingKt { *; }
--keep class com.maxrave.data.extension.** { *; }
--keep class com.maxrave.data.di.** { *; }
+-keep class com.tan.data.di.loader.LoaderKt { *; }
+-keep class com.tan.data.mapping.MappingKt { *; }
+-keep class com.tan.data.extension.** { *; }
+-keep class com.tan.data.di.** { *; }
 
--keep class com.maxrave.kotlinytmusicscraper.** { *; }
+-keep class com.tan.kotlinytmusicscraper.** { *; }
 
--keep class org.simpmusic.lyrics.parser.** { *; }
--keep class org.simpmusic.lyrics.models.** { *; }
--keep class com.simpmusic.lyrics.parser.** { *; }
+-keep class org.gratifymusic.lyrics.parser.** { *; }
+-keep class org.gratifymusic.lyrics.models.** { *; }
+-keep class com.gratifymusic.lyrics.parser.** { *; }
 
 -keep class com.google.re2j.** { *; }
 -dontwarn com.google.re2j.Matcher

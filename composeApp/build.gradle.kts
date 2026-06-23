@@ -34,6 +34,8 @@ plugins {
 // Force it to `always` so `Res` is generated for this app module.
 compose.resources {
     generateResClass = always
+    publicResClass = true
+    packageOfResClass = "gratifymusic.composeapp.generated.resources"
 }
 
 kotlin {
@@ -44,7 +46,7 @@ kotlin {
         freeCompilerArgs.add("-Xexpect-actual-classes")
     }
     android {
-        namespace = "com.maxrave.simpmusic.composeapp"
+        namespace = "com.tan.gratifymusic.composeapp"
         compileSdk = 37
         minSdk = 26
         withJava()
@@ -173,7 +175,7 @@ kotlin {
             // shared JVM UI + expect/actuals and their direct dependencies.
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
-            implementation(libs.sentry.jvm)
+
             implementation(libs.native.tray)
             implementation(projects.mediaJvmUi)
         }
@@ -312,7 +314,7 @@ val vlcSetupLinuxCi by tasks.registering {
             into(outputDir)
             // Ship the full VLC plugin set (matches the v1.2.1 release).
             // A curated subset based on upstream vlc-setup defaults turned
-            // out to be insufficient for SimpMusic — YT Music streaming
+            // out to be insufficient for GratifyMusic — YT Music streaming
             // depends on HTTP/HTTPS access + MP4/WebM demuxers that the
             // upstream music-app preset doesn't cover. `**/` is needed
             // because include() evaluates against the original jar paths
@@ -525,7 +527,7 @@ val vlcSetupAll by tasks.registering {
 }
 
 buildkonfig {
-    packageName = "com.maxrave.simpmusic"
+    packageName = "com.tan.gratifymusic"
     exposeObjectWithName = "BuildKonfig"
     defaultConfigs {
         val versionName =
@@ -538,23 +540,7 @@ buildkonfig {
         buildConfigField(STRING, "versionName", versionName)
         buildConfigField(INT, "versionCode", "$versionCode")
 
-        if (isFullBuild) {
-            try {
-                println("Full build detected, enabling Sentry DSN")
-                val properties = Properties()
-                properties.load(rootProject.file("local.properties").inputStream())
-                buildConfigField(
-                    STRING,
-                    "sentryDsn",
-                    properties.getProperty("SENTRY_DSN") ?: "",
-                )
-            } catch (e: Exception) {
-                println("Failed to load SENTRY_DSN from local.properties: ${e.message}")
-                buildConfigField(STRING, "sentryDsn", "")
-            }
-        } else {
-            buildConfigField(STRING, "sentryDsn", "")
-        }
+        buildConfigField(STRING, "sentryDsn", "")
     }
 }
 

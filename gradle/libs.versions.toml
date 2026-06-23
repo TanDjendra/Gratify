@@ -46,9 +46,6 @@ common = "1.22.0"
 json = "1.11.0"
 gemini-kotlin = "4.0.2"
 slf4j = "1.7.36"
-sentry-android = "8.43.1"
-sentry-gradle-android = "6.10.0"
-sentry-jvm = "8.43.1"
 newpipe = "v0.26.1"
 brave-newpipe = "v0.26.3"
 # org.json ships with the Android SDK but is absent on JVM desktop; PipePipeExtractor references it.
@@ -85,6 +82,8 @@ tray = "1.3.0"
 commonsIo = "2.5"
 packagedeps = "0.2.5"
 conveyor = "2.0"
+firebase-bom = "33.1.0"
+google-services = "4.4.2"
 
 [libraries]
 desugaring = { group = "com.android.tools", name = "desugar_jdk_libs_nio", version.ref = "desugaring"}
@@ -183,6 +182,8 @@ glance = { group = "androidx.glance", name = "glance", version.ref = "glance" }
 glance-appwidget = { group = "androidx.glance", name = "glance-appwidget", version.ref = "glance" }
 glance-material3 = { group = "androidx.glance", name = "glance-material3", version.ref = "glance" }
 commons-io = { module = "commons-io:commons-io", version.ref = "commonsIo" }
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebase-bom" }
+firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
 
 liquid-glass = { module = "io.github.kyant0:backdrop", version.ref = "liquid-glass" }
 liquid-glass-shape = { module = "io.github.kyant0:shapes", version.ref = "liquid-glass-shapes" }
@@ -223,9 +224,6 @@ koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel" }
 koin-androidx-compose = { module = "io.insert-koin:koin-androidx-compose" }
 koin-android = { module = "io.insert-koin:koin-android"}
 
-#Sentry
-sentry-android = { module = "io.sentry:sentry-android", version.ref = "sentry-android"}
-sentry-jvm = { module = "io.sentry:sentry", version.ref = "sentry-jvm"}
 
 androidx-webkit = { group = "androidx.webkit", name = "webkit", version.ref = "webkit" }
 
@@ -242,7 +240,6 @@ ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 aboutlibraries = { id = "com.mikepenz.aboutlibraries.plugin.android", version.ref = "aboutlibraries" }
 aboutlibraries-multiplatform = { id = "com.mikepenz.aboutlibraries.plugin", version.ref = "aboutlibraries" }
 room = { id = "androidx.room", version.ref = "room" }
-sentry-gradle = { id = "io.sentry.android.gradle", version.ref = "sentry-gradle-android" }
 
 # KMP
 android-lint = { id = "com.android.lint", version.ref = "android" }
@@ -258,3 +255,4 @@ packagedeps = { id = "io.github.kdroidfilter.compose.linux.packagedeps", version
 osdetector = { id = "com.google.osdetector", version.ref = "osdetector" }
 vlc-setup = { id = "ir.mahozad.vlc-setup", version = "0.1.0" }
 conveyor = { id = "dev.hydraulic.conveyor", version.ref = "conveyor" }
+google-services = { id = "com.google.gms.google-services", version.ref = "google-services" }

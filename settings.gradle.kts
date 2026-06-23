@@ -3,6 +3,7 @@ pluginManagement {
         google()
         mavenCentral()
         gradlePluginPortal()
+        mavenLocal()
         maven { setUrl("https://jitpack.io") }
         maven {
             url = uri("https://oss.sonatype.org/content/repositories/snapshots/")
@@ -16,6 +17,7 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         gradlePluginPortal()
+        mavenLocal()
         maven { url = uri("https://jitpack.io") }
         maven {
             url = uri("https://oss.sonatype.org/content/repositories/snapshots/")
@@ -51,7 +53,7 @@ val mediaDir =
         File(rootDir, "./core/media")
     }
 
-rootProject.name = "SimpMusic"
+rootProject.name = "GratifyMusic"
 include(
     ":androidApp",
     ":composeApp",
@@ -68,7 +70,6 @@ include(
     ":media-jvm-ui",
     ":media3",
     ":media3-ui",
-    ":crashlytics",
     ":crashlytics-empty",
     ":kizzy",
 )

@@ -10,8 +10,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <uses-feature
         android:name="android.hardware.type.automotive"
@@ -32,7 +32,7 @@
         </intent>
     </queries>
     <queries>
-        <package android:name="com.maxrave.simpmusic" />
+        <package android:name="${applicationId}" />
     </queries>
     <queries>
         <intent>
@@ -41,11 +41,12 @@
     </queries>
 
     <application
-        android:name=".SimpMusicApplication"
+        android:name=".GratifyMusicApplication"
         android:allowBackup="true"
         android:appCategory="audio"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
         android:localeConfig="@xml/locale_config"
         android:networkSecurityConfig="@xml/network_security_config"
@@ -126,7 +127,7 @@
                 <data android:scheme="vnd.youtube.launch" />
             </intent-filter>
 
-            <!-- SimpMusic deep link filter (https) -->
+            <!-- GratifyMusic deep link filter (https) -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
 
@@ -134,18 +135,18 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data android:scheme="https" />
-                <data android:host="simpmusic.org" />
+                <data android:host="gratifymusic.org" />
                 <data android:pathPrefix="/app/" />
             </intent-filter>
 
-            <!-- SimpMusic deep link filter (custom scheme) -->
+            <!-- GratifyMusic deep link filter (custom scheme) -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
-                <data android:scheme="simpmusic" />
+                <data android:scheme="gratifymusic" />
             </intent-filter>
 
             <!-- Share filter -->
@@ -195,7 +196,7 @@
                 android:value="true" />
         </service>
         <service
-            android:name="com.maxrave.media3.service.SimpleMediaService"
+            android:name="com.tan.media3.service.SimpleMediaService"
             android:exported="true"
             android:foregroundServiceType="mediaPlayback"
             android:stopWithTask="false"
@@ -208,13 +209,20 @@
             </intent-filter>
         </service>
         <service
-            android:name="com.maxrave.media3.service.download.MusicDownloadService"
+            android:name="com.tan.media3.service.download.MusicDownloadService"
             android:exported="true"
             android:foregroundServiceType="dataSync">
             <intent-filter>
                 <action android:name="androidx.media3.exoplayer.downloadService.action.RESTART" />
 
                 <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </service>
+        <service
+            android:name=".service.MyFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
 

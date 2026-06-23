@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "205110987717",
+    "project_id": "tan-gratify",
+    "storage_bucket": "tan-gratify.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:205110987717:android:153b7e7238ed280bafd9ac",
+        "android_client_info": {
+          "package_name": "com.tan.gratifymusic"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyARSA0mb4bNSdJ-3nm5cCUzwTWMv54Jl88"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:205110987717:android:38a13d9414ee2d5fafd9ac",
+        "android_client_info": {
+          "package_name": "com.tan.gratifymusic.dev"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyARSA0mb4bNSdJ-3nm5cCUzwTWMv54Jl88"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

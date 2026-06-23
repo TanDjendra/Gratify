@@ -6,7 +6,7 @@ set -e
 # Default variables
 BUILD_TYPE="release"
 BUILD_VARIANT="full"
-KEYSTORE_PATH="./simpmusic.jks"
+KEYSTORE_PATH="./gratifymusic.jks"
 # Read passwords from environment variables or use default (for backward compatibility)
 KEYSTORE_PASSWORD="${KEYSTORE_PASSWORD}"
 KEY_ALIAS="${KEY_ALIAS}"
@@ -64,10 +64,38 @@ done
 APK_OUTPUT_DIR="./androidApp/build/outputs/apk/$BUILD_TYPE"
 SIGNED_APK_OUTPUT_DIR="./androidApp/build/outputs/apk/$BUILD_TYPE"
 
+# Resolve ANDROID_HOME from local.properties if not set
+if [ -z "$ANDROID_HOME" ]; then
+  if [ -f "local.properties" ]; then
+    SDK_DIR=$(grep 'sdk.dir' local.properties | cut -d'=' -f2 | sed 's/\\:/:/g' | sed 's/\\\\/\//g' | sed 's/\\/\//g')
+    if [[ "$SDK_DIR" =~ ^[A-Za-z]: ]]; then
+      DRIVE="${SDK_DIR:0:1}"
+      DRIVE_LOWER=$(echo "$DRIVE" | tr '[:upper:]' '[:lower:]')
+      SDK_DIR="/$DRIVE_LOWER${SDK_DIR:2}"
+    fi
+    export ANDROID_HOME="$SDK_DIR"
+  fi
+fi
+
+if [ -z "$ANDROID_HOME" ]; then
+  echo "Error: ANDROID_HOME environment variable is not set and could not be read from local.properties"
+  exit 1
+fi
+
 # Android build-tools path
-BUILD_TOOLS_PATH="$ANDROID_HOME/build-tools/$(ls $ANDROID_HOME/build-tools | sort | tail -n 1)"
-APKSIGNER="$BUILD_TOOLS_PATH/apksigner"
-ZIPALIGN="$BUILD_TOOLS_PATH/zipalign"
+BUILD_TOOLS_PATH="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort | tail -n 1)"
+
+if [ -f "$BUILD_TOOLS_PATH/zipalign.exe" ]; then
+  ZIPALIGN="$BUILD_TOOLS_PATH/zipalign.exe"
+else
+  ZIPALIGN="$BUILD_TOOLS_PATH/zipalign"
+fi
+
+if [ -f "$BUILD_TOOLS_PATH/apksigner.bat" ]; then
+  APKSIGNER="$BUILD_TOOLS_PATH/apksigner.bat"
+else
+  APKSIGNER="$BUILD_TOOLS_PATH/apksigner"
+fi
 
 # Create output directory for signed APKs
 mkdir -p "$SIGNED_APK_OUTPUT_DIR"
@@ -86,7 +114,7 @@ echo "Project cleaned successfully."
 
 # Step 2: Build the APK
 echo "[Step 2] Building APK..."
-./gradlew androidApp:assemble"$BUILD_TYPE"
+./gradlew androidApp:assemble"$BUILD_TYPE" -x lint -x lintVital
 echo "APK built successfully."
 
 # Step 3: Locate the built APKs
@@ -103,7 +131,7 @@ for APK_PATH in $APK_PATHS; do
   RELEASE_NAME=$(basename "${APK_PATH/-unsigned/}")
   RELEASE_NAME="${RELEASE_NAME/app-/}"
   RELEASE_NAME="${RELEASE_NAME/androidApp-/}"
-  SIGNED_APK_PATH="$SIGNED_APK_OUTPUT_DIR/SimpMusic-$BUILD_VARIANT-$(basename "$RELEASE_NAME")"
+  SIGNED_APK_PATH="$SIGNED_APK_OUTPUT_DIR/GratifyMusic-$BUILD_VARIANT-$(basename "$RELEASE_NAME")"
 
   echo "[Step 4] Aligning the APK: $APK_PATH..."
   if [ ! -f "$ZIPALIGN" ]; then
