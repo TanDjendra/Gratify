@@ -31,7 +31,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService(), KoinComponent {
         val url = remoteMessage.data["url"] ?: remoteMessage.data["browseId"]
 
         if (title != null || body != null) {
-            showNotification(title ?: "SimpMusic", body ?: "", url)
+            showNotification(title ?: "GratifyMusic", body ?: "", url)
             saveDeveloperNotification(title ?: "Pesan Pengembang", body ?: "", url)
         }
     }

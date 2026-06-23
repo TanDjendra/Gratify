@@ -726,16 +726,16 @@ fun NowPlayingScreenContent(
     // Vote Dialog
     if (showVoteDialog) {
         val canVoteLyrics =
-            screenDataState.lyricsData?.lyricsProvider == LyricsProvider.SIMPMUSIC &&
+            screenDataState.lyricsData?.lyricsProvider == LyricsProvider.GRATIFYMUSIC &&
                 screenDataState.lyricsData
                     ?.lyrics
-                    ?.simpMusicLyrics != null
+                    ?.gratifyMusicLyrics != null
         val canVoteTranslatedLyrics =
-            screenDataState.lyricsData?.translatedLyrics?.second == LyricsProvider.SIMPMUSIC &&
+            screenDataState.lyricsData?.translatedLyrics?.second == LyricsProvider.GRATIFYMUSIC &&
                 screenDataState.lyricsData
                     ?.translatedLyrics
                     ?.first
-                    ?.simpMusicLyrics != null
+                    ?.gratifyMusicLyrics != null
 
         VoteLyricsDialog(
             canVoteLyrics = canVoteLyrics,
@@ -2150,16 +2150,16 @@ fun NowPlayingScreenContent(
                                         Spacer(modifier = Modifier.weight(1f))
                                         // Vote button - only show if lyrics or translated lyrics from GratifyMusic
                                         val canVoteLyrics =
-                                            screenDataState.lyricsData?.lyricsProvider == LyricsProvider.SIMPMUSIC &&
+                                            screenDataState.lyricsData?.lyricsProvider == LyricsProvider.GRATIFYMUSIC &&
                                                 screenDataState.lyricsData
                                                     ?.lyrics
-                                                    ?.simpMusicLyrics != null
+                                                    ?.gratifyMusicLyrics != null
                                         val canVoteTranslatedLyrics =
-                                            screenDataState.lyricsData?.translatedLyrics?.second == LyricsProvider.SIMPMUSIC &&
+                                            screenDataState.lyricsData?.translatedLyrics?.second == LyricsProvider.GRATIFYMUSIC &&
                                                 screenDataState.lyricsData
                                                     ?.translatedLyrics
                                                     ?.first
-                                                    ?.simpMusicLyrics != null
+                                                    ?.gratifyMusicLyrics != null
                                         if (canVoteLyrics || canVoteTranslatedLyrics) {
                                             CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
                                                 IconButton(
@@ -2229,7 +2229,7 @@ fun NowPlayingScreenContent(
                                         Text(
                                             text =
                                                 when (screenDataState.lyricsData?.lyricsProvider) {
-                                                    LyricsProvider.SIMPMUSIC -> {
+                                                    LyricsProvider.GRATIFYMUSIC -> {
                                                         stringResource(Res.string.lyrics_provider_gratifymusic)
                                                     }
 

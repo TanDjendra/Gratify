@@ -21,7 +21,7 @@ import com.tan.domain.manager.DataStoreManager.Values.PROXY_TYPE_SOCKS
 import com.tan.domain.manager.DataStoreManager.Values.REPEAT_ALL
 import com.tan.domain.manager.DataStoreManager.Values.REPEAT_MODE_OFF
 import com.tan.domain.manager.DataStoreManager.Values.REPEAT_ONE
-import com.tan.domain.manager.DataStoreManager.Values.SIMPMUSIC
+import com.tan.domain.manager.DataStoreManager.Values.GRATIFYMUSIC
 import com.tan.domain.manager.DataStoreManager.Values.TRUE
 import com.tan.logger.Logger
 import kotlinx.coroutines.Dispatchers
@@ -419,7 +419,7 @@ internal class DataStoreManagerImpl(
 
     override val lyricsProvider =
         settingsDataStore.data.map { preferences ->
-            preferences[LYRICS_PROVIDER] ?: SIMPMUSIC
+            preferences[LYRICS_PROVIDER] ?: GRATIFYMUSIC
         }
 
     override suspend fun setLyricsProvider(provider: String) {

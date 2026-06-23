@@ -45,7 +45,7 @@ internal class LyricsCanvasRepositoryImpl(
     private val localDataSource: LocalDataSource,
     private val youTube: YouTube,
     private val spotify: Spotify,
-    private val simpMusicLyrics: GratifyMusicLyricsClient,
+    private val gratifyMusicLyrics: GratifyMusicLyricsClient,
     private val aiClient: AiClient,
 ) : LyricsCanvasRepository {
     override fun getSavedLyrics(videoId: String): Flow<LyricsEntity?> = flow { emit(localDataSource.getSavedLyrics(videoId)) }.flowOn(Dispatchers.IO)
@@ -391,7 +391,7 @@ internal class LyricsCanvasRepositoryImpl(
                     ).replace("  ", " ")
                     .replace(Regex("([()])"), "")
                     .replace(".", " ")
-            simpMusicLyrics
+            gratifyMusicLyrics
                 .searchLrclibLyrics(qtrack, qartist, duration)
                 .onSuccess {
                     it?.let { emit(Resource.Success<Lyrics>(it.toLyrics())) }
@@ -407,7 +407,7 @@ internal class LyricsCanvasRepositoryImpl(
         duration: Int?,
     ): Flow<Resource<Lyrics>> =
         flow {
-            Logger.w("Lyrics", "getBetterLyrics: $artist $track")
+            Logger.w(gratifyMusicLyricsTag, "getBetterLyrics: $artist $track")
             val qartist =
                 artist
                     .replace(
@@ -430,7 +430,7 @@ internal class LyricsCanvasRepositoryImpl(
                     ).replace("  ", " ")
                     .replace(Regex("([()])"), "")
                     .replace(".", " ")
-            simpMusicLyrics
+            gratifyMusicLyrics
                 .searchBetterLyrics(qtrack, qartist, duration)
                 .onSuccess { ttml ->
                     if (ttml.isNullOrEmpty()) {
@@ -465,30 +465,30 @@ internal class LyricsCanvasRepositoryImpl(
         }.flowOn(Dispatchers.IO)
 
     // GratifyMusic Lyrics
-    private val simpMusicLyricsTag = "GratifyMusicLyricsRepository"
+    private val gratifyMusicLyricsTag = "GratifyMusicLyricsRepository"
 
     override fun getGratifyMusicLyrics(videoId: String): Flow<Resource<Lyrics>> =
         flow {
-            simpMusicLyrics
+            gratifyMusicLyrics
                 .getLyrics(videoId)
                 .onSuccess { lyrics ->
-                    Logger.d(simpMusicLyricsTag, "Lyrics found: $lyrics")
+                    Logger.d(gratifyMusicLyricsTag, "Lyrics found: $lyrics")
                     val result = lyrics.firstOrNull()
                     if (result == null) {
-                        Logger.w(simpMusicLyricsTag, "No lyrics found for videoId: $videoId")
+                        Logger.w(gratifyMusicLyricsTag, "No lyrics found for videoId: $videoId")
                         emit(Resource.Error<Lyrics>("No lyrics found"))
                         return@onSuccess
                     }
                     val appLyrics =
                         result.toLyrics()?.copy(
-                            simpMusicLyrics =
+                            gratifyMusicLyrics =
                                 GratifyMusicLyrics(
                                     id = result.id,
                                     vote = result.vote,
                                 ),
                         )
                     if (appLyrics == null) {
-                        Logger.w(simpMusicLyricsTag, "Failed to convert lyrics for videoId: $videoId")
+                        Logger.w(gratifyMusicLyricsTag, "Failed to convert lyrics for videoId: $videoId")
                         emit(Resource.Error<Lyrics>("Failed to convert lyrics"))
                         return@onSuccess
                     }
@@ -498,7 +498,7 @@ internal class LyricsCanvasRepositoryImpl(
                         ),
                     )
                 }.onFailure {
-                    Logger.e(simpMusicLyricsTag, "Get Lyrics Error: ${it.message}")
+                    Logger.e(gratifyMusicLyricsTag, "Get Lyrics Error: ${it.message}")
                     emit(Resource.Error<Lyrics>(it.message ?: "Failed to get lyrics"))
                 }
         }.flowOn(Dispatchers.IO)
@@ -508,16 +508,16 @@ internal class LyricsCanvasRepositoryImpl(
         language: String,
     ): Flow<Resource<Lyrics>> =
         flow {
-            simpMusicLyrics
+            gratifyMusicLyrics
                 .getTranslatedLyrics(videoId, language)
                 .onSuccess { lyrics ->
-                    Logger.d(simpMusicLyricsTag, "Translated Lyrics found: ${lyrics.toLyrics()}")
+                    Logger.d(gratifyMusicLyricsTag, "Translated Lyrics found: ${lyrics.toLyrics()}")
                     emit(
                         Resource.Success<Lyrics>(
                             lyrics
                                 .toLyrics()
                                 .copy(
-                                    simpMusicLyrics =
+                                    gratifyMusicLyrics =
                                         GratifyMusicLyrics(
                                             id = lyrics.id,
                                             vote = lyrics.vote,
@@ -526,7 +526,7 @@ internal class LyricsCanvasRepositoryImpl(
                         ),
                     )
                 }.onFailure {
-                    Logger.e(simpMusicLyricsTag, "Get Translated Lyrics Error: ${it.message}")
+                    Logger.e(gratifyMusicLyricsTag, "Get Translated Lyrics Error: ${it.message}")
                     emit(Resource.Error<Lyrics>(it.message ?: "Failed to get translated lyrics"))
                 }
         }.flowOn(Dispatchers.IO)
@@ -536,13 +536,13 @@ internal class LyricsCanvasRepositoryImpl(
         upvote: Boolean,
     ): Flow<Resource<String>> =
         flow {
-            simpMusicLyrics
+            gratifyMusicLyrics
                 .voteLyrics(lyricsId, upvote)
                 .onSuccess {
-                    Logger.d(simpMusicLyricsTag, "Vote Lyrics Success: $it")
+                    Logger.d(gratifyMusicLyricsTag, "Vote Lyrics Success: $it")
                     emit(Resource.Success(it.id))
                 }.onFailure {
-                    Logger.e(simpMusicLyricsTag, "Vote Lyrics Error: ${it.message}")
+                    Logger.e(gratifyMusicLyricsTag, "Vote Lyrics Error: ${it.message}")
                     emit(Resource.Error<String>(it.message ?: "Failed to vote lyrics"))
                 }
         }.flowOn(Dispatchers.IO)
@@ -552,13 +552,13 @@ internal class LyricsCanvasRepositoryImpl(
         upvote: Boolean,
     ): Flow<Resource<String>> =
         flow {
-            simpMusicLyrics
+            gratifyMusicLyrics
                 .voteTranslatedLyrics(translatedLyricsId, upvote)
                 .onSuccess {
-                    Logger.d(simpMusicLyricsTag, "Vote Translated Lyrics Success: $it")
+                    Logger.d(gratifyMusicLyricsTag, "Vote Translated Lyrics Success: $it")
                     emit(Resource.Success(it.id))
                 }.onFailure {
-                    Logger.e(simpMusicLyricsTag, "Vote Translated Lyrics Error: ${it.message}")
+                    Logger.e(gratifyMusicLyricsTag, "Vote Translated Lyrics Error: ${it.message}")
                     emit(Resource.Error<String>(it.message ?: "Failed to vote translated lyrics"))
                 }
         }.flowOn(Dispatchers.IO)
@@ -591,7 +591,7 @@ internal class LyricsCanvasRepositoryImpl(
                     null
                 }
             val (contributorName, contributorEmail) = dataStoreManager.contributorName.first() to dataStoreManager.contributorEmail.first()
-            simpMusicLyrics
+            gratifyMusicLyrics
                 .insertLyrics(
                     LyricsBody(
                         videoId = track.videoId,
@@ -607,10 +607,10 @@ internal class LyricsCanvasRepositoryImpl(
                         trackType = if (track.thumbnails?.firstOrNull()?.let { it.width == it.height && it.width > 0 } == true) "SONG" else "VIDEO",
                     ),
                 ).onSuccess {
-                    Logger.d(simpMusicLyricsTag, "Inserted Lyrics: $it")
+                    Logger.d(gratifyMusicLyricsTag, "Inserted Lyrics: $it")
                     emit(Resource.Success(it.id))
                 }.onFailure {
-                    Logger.e(simpMusicLyricsTag, "Insert Lyrics Error: ${it.message}")
+                    Logger.e(gratifyMusicLyricsTag, "Insert Lyrics Error: ${it.message}")
                     emit(Resource.Error<String>(it.message ?: "Failed to insert lyrics"))
                 }
         }.flowOn(Dispatchers.IO)
@@ -630,7 +630,7 @@ internal class LyricsCanvasRepositoryImpl(
                 return@flow
             }
             val (contributorName, contributorEmail) = dataStoreManager.contributorName.first() to dataStoreManager.contributorEmail.first()
-            simpMusicLyrics
+            gratifyMusicLyrics
                 .insertTranslatedLyrics(
                     TranslatedLyricsBody(
                         videoId = track.videoId,
@@ -640,10 +640,10 @@ internal class LyricsCanvasRepositoryImpl(
                         contributorEmail = contributorEmail,
                     ),
                 ).onSuccess {
-                    Logger.d(simpMusicLyricsTag, "Inserted Translated Lyrics: $it")
+                    Logger.d(gratifyMusicLyricsTag, "Inserted Translated Lyrics: $it")
                     emit(Resource.Success(it.id))
                 }.onFailure {
-                    Logger.e(simpMusicLyricsTag, "Insert Translated Lyrics Error: ${it.message}")
+                    Logger.e(gratifyMusicLyricsTag, "Insert Translated Lyrics Error: ${it.message}")
                     emit(Resource.Error<String>(it.message ?: "Failed to insert translated lyrics"))
                 }
         }.flowOn(Dispatchers.IO)

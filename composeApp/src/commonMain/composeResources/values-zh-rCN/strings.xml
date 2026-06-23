@@ -271,7 +271,7 @@
     <string name="older_first">较早的优先</string>
     <string name="newer_first">较新的在前</string>
     <string name="added_date">已添加日期</string>
-    <string name="credit_app">使用 YouTube Music 作为后端的简单音乐应用 \n\nGratifyMusic 是一个开源项目，可以在没有广告和跟踪的情况下从 YouTube 和 YouTube Music 中流式播放音乐。GratifyMusic 提供许多功能：\n\n - 流媒体音乐 \n - 同步歌词 \n - 个性化数据 \n -等等… \n\nGratifyMusic始终是免费的，没有广告\n\n Tuan Minh Nguyen Duc(Tan-dev) 用 ❤️ 构建</string>
+    <string name="credit_app">使用 YouTube Music 作为后端的简单音乐应用 \n\nGratifyMusic 是一个开源项目，可以在没有广告和跟踪的情况下从 YouTube 和 YouTube Music 中流式播放音乐。GratifyMusic 提供许多功能：\n\n - 流媒体音乐 \n - 同步歌词 \n - 个性化数据 \n -等等… \n\nGratifyMusic始终是免费的，没有广告\n\n Tan 用 ❤️ 构建</string>
     <string name="issue_tracker">问题跟踪</string>
     <string name="featured_playlists">精选歌单</string>
     <string name="featured_inArtist">精选开启</string>

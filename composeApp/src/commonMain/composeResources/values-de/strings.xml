@@ -140,7 +140,7 @@
     <string name="albums_inArtist">Alben</string>
     <string name="singles_inArtist">Singles</string>
     <string name="fans_might_also_like_inArtist">Das könnte Fans auch gefallen</string>
-    <string name="crash_log">SimpMusik ist abgestürzt. Entschuldigung für dieses Problem.\nCrash-Log an den Entwickler senden</string>
+    <string name="crash_log">GratifyMusic ist abgestürzt. Entschuldigung für dieses Problem.\nCrash-Log an den Entwickler senden</string>
     <string name="crash">Absturz</string>
     <string name="send">Senden</string>
     <string name="mail_subject">Absturz melden</string>
@@ -276,7 +276,7 @@
     <string name="older_first">Ältere zuerst</string>
     <string name="newer_first">Neue zuerst</string>
     <string name="added_date">Datum hinzugefügt</string>
-    <string name="credit_app">Eine einfache Musik-App mit YouTube Music als Backend \n\nGratifyMusic ist ein Open-Source-Projekt zum Streamen von Musik von YouTube und YouTube Music ohne Werbung und Tracking. GratifyMusic bietet viele Funktionen:\n\n - Musik streamen \n - Synchronisierte Liedtexte\n - Daten personalisieren\n - etc… \n\nGratifyMusic ist immer kostenlos und ohne Werbung\n\nErstellen Sie mit ❤️ von Tuan Minh Nguyen Duc (tan)</string>
+    <string name="credit_app">Eine einfache Musik-App mit YouTube Music als Backend \n\nGratifyMusic ist ein Open-Source-Projekt zum Streamen von Musik von YouTube und YouTube Music ohne Werbung und Tracking. GratifyMusic bietet viele Funktionen:\n\n - Musik streamen \n - Synchronisierte Liedtexte\n - Daten personalisieren\n - etc… \n\nGratifyMusic ist immer kostenlos und ohne Werbung\n\nErstellen Sie mit ❤️ von Tan</string>
     <string name="issue_tracker">Issue-Tracker</string>
     <string name="featured_playlists">Empfohlene Playlists</string>
     <string name="featured_inArtist">Zu hören in</string>

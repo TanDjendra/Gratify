@@ -1080,7 +1080,7 @@ fun SettingScreen(
                     title = stringResource(Res.string.main_lyrics_provider),
                     subtitle =
                         when (mainLyricsProvider) {
-                            DataStoreManager.SIMPMUSIC -> stringResource(Res.string.gratifymusic_lyrics)
+                            DataStoreManager.GRATIFYMUSIC -> stringResource(Res.string.gratifymusic_lyrics)
                             DataStoreManager.YOUTUBE -> stringResource(Res.string.youtube_transcript)
                             DataStoreManager.LRCLIB -> stringResource(Res.string.lrclib)
                             DataStoreManager.BETTER_LYRICS -> stringResource(Res.string.better_lyrics)
@@ -1094,7 +1094,7 @@ fun SettingScreen(
                                     SettingAlertState.SelectData(
                                         listSelect =
                                             listOf(
-                                                (mainLyricsProvider == DataStoreManager.SIMPMUSIC) to
+                                                (mainLyricsProvider == DataStoreManager.GRATIFYMUSIC) to
                                                     runBlocking { getString(Res.string.gratifymusic_lyrics) },
                                                 (mainLyricsProvider == DataStoreManager.YOUTUBE) to
                                                     runBlocking { getString(Res.string.youtube_transcript) },
@@ -1107,11 +1107,11 @@ fun SettingScreen(
                                     runBlocking { getString(Res.string.change) } to { state ->
                                         viewModel.setLyricsProvider(
                                             when (state.selectOne?.getSelected()) {
-                                                runBlocking { getString(Res.string.gratifymusic_lyrics) } -> DataStoreManager.SIMPMUSIC
+                                                runBlocking { getString(Res.string.gratifymusic_lyrics) } -> DataStoreManager.GRATIFYMUSIC
                                                 runBlocking { getString(Res.string.youtube_transcript) } -> DataStoreManager.YOUTUBE
                                                 runBlocking { getString(Res.string.lrclib) } -> DataStoreManager.LRCLIB
                                                 runBlocking { getString(Res.string.better_lyrics) } -> DataStoreManager.BETTER_LYRICS
-                                                else -> DataStoreManager.SIMPMUSIC
+                                                else -> DataStoreManager.GRATIFYMUSIC
                                             },
                                         )
                                     },
