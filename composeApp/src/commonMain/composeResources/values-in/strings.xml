@@ -116,6 +116,7 @@
     <string name="about_us">Tentang kami</string>
     <string name="version">Versi</string>
     <string name="github">Github</string>
+    <string name="instagram">Instagram</string>
     <string name="tan_dev">tan</string>
     <string name="buy_me_a_coffee">Belikan aku secangkir kopi</string>
     <string name="paypal">PayPal</string>
@@ -340,4 +341,40 @@
     <string name="party">Pesta</string>
     <string name="commute">Perjalanan</string>
     <string name="focus">Fokus</string>
+    <string name="settings_category_account">Akun</string>
+    <string name="settings_category_account_desc">Hubungkan YouTube, Spotify, dan Discord</string>
+    <string name="settings_category_content_display">Konten dan Tampilan</string>
+    <string name="settings_category_content_display_desc">Bahasa, negara, dan visual</string>
+    <string name="settings_category_privacy_social">Privasi dan Sosial</string>
+    <string name="settings_category_privacy_social_desc">Sesi pribadi, riwayat dengar, dan proksi</string>
+    <string name="settings_category_playback">Playback</string>
+    <string name="settings_category_playback_desc">Ekualiser, crossfade, dan sponsor block</string>
+    <string name="settings_category_media_quality">Kualitas Media</string>
+    <string name="settings_category_media_quality_desc">Kualitas streaming Wi-Fi dan video</string>
+    <string name="settings_category_data_saver">Mode Hemat Data dan Offline</string>
+    <string name="settings_category_data_saver_desc">Penyimpanan luring dan kualitas unduhan</string>
+    <string name="settings_category_storage_backup">Penyimpanan dan Cadangan</string>
+    <string name="settings_category_storage_backup_desc">Tembolok aplikasi, ekspor/impor data</string>
+    <string name="settings_category_about_support">Tentang dan Dukungan</string>
+    <string name="settings_category_about_support_desc">Versi aplikasi, blog developer, lisensi</string>
+
+    <!-- Library Category Empty State Descriptions and Recommendations -->
+    <string name="library_utility_label">Kegunaan</string>
+    <string name="library_recommendation_label">Rekomendasi</string>
+    <string name="library_your_library_desc">Ini adalah pusat pustaka pribadi Anda untuk mengakses lagu kanvas dan musik yang baru ditambahkan.</string>
+    <string name="library_your_library_rec">Mulai dengarkan lagu dari layar Beranda atau Pencarian untuk melihat riwayat dan lagu yang baru ditambahkan di sini.</string>
+    <string name="library_charts_desc">Jelajahi lagu-lagu terpopuler, trek yang sedang tren, dan tangga lagu teratas di seluruh dunia.</string>
+    <string name="library_charts_rec">Hubungkan perangkat ke internet untuk memuat tangga lagu tren global dan regional terbaru.</string>
+    <string name="library_yt_playlists_desc">Akses semua daftar putar Anda yang diimpor dari YouTube Music secara langsung di dalam aplikasi.</string>
+    <string name="library_yt_playlists_rec">Pastikan Anda sudah login ke akun YouTube dan memiliki daftar putar di YouTube Music.</string>
+    <string name="library_mix_for_you_desc">Campuran lagu dan stasiun radio yang dipersonalisasi oleh YouTube berdasarkan selera musik Anda.</string>
+    <string name="library_mix_for_you_rec">Dengarkan lebih banyak lagu dan sukai favorit Anda agar YouTube dapat menyesuaikan stasiun dan campuran lagu untuk Anda.</string>
+    <string name="library_local_playlists_desc">Buat dan kelola daftar putar kustom yang disimpan langsung di perangkat Anda.</string>
+    <string name="library_local_playlists_rec">Ketuk tombol \'+\' di sudut kiri atas untuk membuat daftar putar baru, lalu tambahkan lagu favorit Anda.</string>
+    <string name="library_favorite_playlists_desc">Koleksi daftar putar dan album favorit pilihan Anda untuk akses yang cepat.</string>
+    <string name="library_favorite_playlists_rec">Telusuri daftar putar atau album di aplikasi dan ketuk ikon hati untuk menambahkannya ke favorit.</string>
+    <string name="library_downloaded_playlists_desc">Daftar putar dan lagu yang diunduh ke perangkat untuk diputar secara offline tanpa internet.</string>
+    <string name="library_downloaded_playlists_rec">Buka daftar putar apa saja dan ketuk ikon unduh untuk menyimpannya agar bisa didengarkan secara offline.</string>
+    <string name="library_favorite_podcasts_desc">Ikuti terus perkembangan podcast, talk show, dan episode audio favorit Anda.</string>
+    <string name="library_favorite_podcasts_rec">Cari podcast atau telusuri rekomendasi, lalu jadikan favorit atau berlangganan untuk menampilkannya di sini.</string>
 </resources>

@@ -9,6 +9,7 @@ import com.tan.common.Config.RECOVER_TRACK_QUEUE
 import com.tan.common.Config.SHARE
 import com.tan.common.Config.SONG_CLICK
 import com.tan.common.Config.VIDEO_CLICK
+import com.tan.common.LibraryChipType
 import com.tan.common.SELECTED_LANGUAGE
 import com.tan.common.STATUS_DONE
 import com.tan.domain.data.entities.AlbumEntity
@@ -211,6 +212,13 @@ class SharedViewModel(
     val openAppTime: StateFlow<Int> = dataStoreManager.openAppTime.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), 0)
     private val _shareSavedLyrics: MutableStateFlow<Boolean> = MutableStateFlow(true)
     val shareSavedLyrics: StateFlow<Boolean> get() = _shareSavedLyrics
+
+    private val _navigateToLibraryFilter = MutableStateFlow<LibraryChipType?>(null)
+    val navigateToLibraryFilter: StateFlow<LibraryChipType?> = _navigateToLibraryFilter.asStateFlow()
+
+    fun setNavigateToLibraryFilter(filter: LibraryChipType?) {
+        _navigateToLibraryFilter.value = filter
+    }
 
     init {
         viewModelScope.launch {

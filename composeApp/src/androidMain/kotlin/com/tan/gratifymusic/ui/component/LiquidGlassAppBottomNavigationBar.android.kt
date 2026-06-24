@@ -155,6 +155,13 @@ actual fun LiquidGlassAppBottomNavigationBar(
         currentBackStackEntry?.destination?.let { current ->
             Logger.d(TAG, "LiquidGlassAppBottomNavigationBar: current route: ${current.route}")
             isInSearchDestination = current.hasRoute(SearchDestination::class)
+            if (current.hasRoute(HomeDestination::class)) {
+                selectedIndex = BottomNavScreen.Home.ordinal
+            } else if (current.hasRoute(SearchDestination::class)) {
+                selectedIndex = BottomNavScreen.Search.ordinal
+            } else if (current.hasRoute(LibraryDestination::class)) {
+                selectedIndex = BottomNavScreen.Library.ordinal
+            }
         }
     }
 

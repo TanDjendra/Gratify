@@ -303,8 +303,11 @@ fun App(viewModel: SharedViewModel = koinInject()) {
 
     LaunchedEffect(updateData) {
         val response = updateData ?: return@LaunchedEffect
-        if (viewModel.showedUpdateDialog &&
-            response.tagName != getString(Res.string.version_format, VersionManager.getVersionName())
+        val currentVersion = VersionManager.getVersionName()
+        val minVersion = response.minVersion ?: "2.0.0"
+        val isForceUpdate = VersionManager.isVersionLower(currentVersion, minVersion)
+        if ((viewModel.showedUpdateDialog || isForceUpdate) &&
+            response.tagName != getString(Res.string.version_format, currentVersion)
         ) {
             shouldShowUpdateDialog = true
         }
@@ -563,21 +566,28 @@ fun App(viewModel: SharedViewModel = koinInject()) {
 
                 if (shouldShowUpdateDialog) {
                     val response = updateData ?: return@Scaffold
+                    val currentVersion = VersionManager.getVersionName()
+                    val minVersion = response.minVersion ?: "2.0.0"
+                    val isForceUpdate = VersionManager.isVersionLower(currentVersion, minVersion)
                     AlertDialog(
                         properties =
                             DialogProperties(
-                                dismissOnBackPress = false,
+                                dismissOnBackPress = !isForceUpdate,
                                 dismissOnClickOutside = false,
                             ),
                         onDismissRequest = {
-                            shouldShowUpdateDialog = false
-                            viewModel.showedUpdateDialog = false
+                            if (!isForceUpdate) {
+                                shouldShowUpdateDialog = false
+                                viewModel.showedUpdateDialog = false
+                            }
                         },
                         confirmButton = {
                             TextButton(
                                 onClick = {
-                                    shouldShowUpdateDialog = false
-                                    viewModel.showedUpdateDialog = false
+                                    if (!isForceUpdate) {
+                                        shouldShowUpdateDialog = false
+                                        viewModel.showedUpdateDialog = false
+                                    }
                                     downloadAndInstallApk(response.apkUrl, response.tagName)
                                 },
                             ) {
@@ -588,16 +598,18 @@ fun App(viewModel: SharedViewModel = koinInject()) {
                             }
                         },
                         dismissButton = {
-                            TextButton(
-                                onClick = {
-                                    shouldShowUpdateDialog = false
-                                    viewModel.showedUpdateDialog = false
-                                },
-                            ) {
-                                Text(
-                                    stringResource(Res.string.cancel),
-                                    style = typo().bodySmall,
-                                )
+                            if (!isForceUpdate) {
+                                TextButton(
+                                    onClick = {
+                                        shouldShowUpdateDialog = false
+                                        viewModel.showedUpdateDialog = false
+                                    },
+                                ) {
+                                    Text(
+                                        stringResource(Res.string.cancel),
+                                        style = typo().bodySmall,
+                                    )
+                                }
                             }
                         },
                         title = {

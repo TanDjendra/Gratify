@@ -401,98 +401,106 @@ internal class MediaServiceHandlerImpl(
         getDataOfNowPlayingTrackStateJob?.cancel()
         getDataOfNowPlayingTrackStateJob =
             coroutineScope.launch {
-                Logger.w(TAG, "getDataOfNowPlayingState: $videoId")
-                Logger.w(TAG, "getDataOfNowPlayingState: ${track?.thumbnails}")
-                songRepository.getSongById(videoId).cancellable().singleOrNull().let { songEntity ->
-                    if (songEntity != null) {
-                        _controlState.update { it.copy(isLiked = songEntity.liked) }
-                        var thumbUrl =
-                            track?.thumbnails?.lastOrNull()?.url
-                                ?: songEntity.thumbnails
-                                ?: "http://i.ytimg.com/vi/${songEntity.videoId}/maxresdefault.jpg"
-                        Logger.w(TAG, "getDataOfNowPlayingState before: $thumbUrl")
-                        thumbUrl = Regex("([=-][wh])\\d+").replace(thumbUrl, "$1544")
-                        Logger.w(TAG, "getDataOfNowPlayingState: $thumbUrl")
-                        if (songEntity.thumbnails != thumbUrl) {
-                            songRepository.updateThumbnailsSongEntity(thumbUrl, songEntity.videoId).singleOrNull()?.let {
-                                Logger.w(TAG, "getDataOfNowPlayingState: Updated thumbs $it")
+                try {
+                    Logger.w(TAG, "getDataOfNowPlayingState: $videoId")
+                    Logger.w(TAG, "getDataOfNowPlayingState: ${track?.thumbnails}")
+                    songRepository.getSongById(videoId).cancellable().singleOrNull().let { songEntity ->
+                        if (songEntity != null) {
+                            _controlState.update { it.copy(isLiked = songEntity.liked) }
+                            var thumbUrl =
+                                track?.thumbnails?.lastOrNull()?.url
+                                    ?: songEntity.thumbnails
+                                    ?: "http://i.ytimg.com/vi/${songEntity.videoId}/maxresdefault.jpg"
+                            Logger.w(TAG, "getDataOfNowPlayingState before: $thumbUrl")
+                            thumbUrl = Regex("([=-][wh])\\d+").replace(thumbUrl, "$1544")
+                            Logger.w(TAG, "getDataOfNowPlayingState: $thumbUrl")
+                            if (songEntity.thumbnails != thumbUrl) {
+                                songRepository.updateThumbnailsSongEntity(thumbUrl, songEntity.videoId).singleOrNull()?.let {
+                                    Logger.w(TAG, "getDataOfNowPlayingState: Updated thumbs $it")
+                                }
                             }
-                        }
-                        songRepository.updateSongInLibrary(now(), songEntity.videoId).singleOrNull().let {
-                            Logger.w(TAG, "getDataOfNowPlayingState: $it")
-                        }
-                        songRepository.updateListenCount(songEntity.videoId)
-                        Logger.w(TAG, "getDataOfNowPlayingState: $songEntity")
-                        Logger.w(TAG, "getDataOfNowPlayingState: $track")
-                        _nowPlayingState.update {
-                            it.copy(
-                                songEntity =
-                                    songEntity.copy(
-                                        thumbnails = thumbUrl,
-                                    ),
-                            )
-                        }
-                        updateDiscordRpc(songEntity)
-                    } else {
-                        _controlState.update { it.copy(isLiked = false) }
-                        var thumbUrl =
-                            track?.thumbnails?.lastOrNull()?.url
-                                ?: "http://i.ytimg.com/vi/${track?.videoId}/maxresdefault.jpg"
-                        Logger.w(TAG, "getDataOfNowPlayingState before: $thumbUrl")
-                        thumbUrl = Regex("([=-][wh])\\d+").replace(thumbUrl, "$1544")
-                        val songEntity =
-                            (track?.toSongEntity() ?: mediaItem.toSongEntity()).copy(
-                                thumbnails = thumbUrl,
-                            )
-                        songRepository
-                            .insertSong(
-                                songEntity,
-                            ).singleOrNull()
-                            ?.let {
+                            songRepository.updateSongInLibrary(now(), songEntity.videoId).singleOrNull().let {
                                 Logger.w(TAG, "getDataOfNowPlayingState: $it")
                             }
-                        Logger.w(TAG, "getDataOfNowPlayingState: $songEntity")
-                        _nowPlayingState.update {
-                            it.copy(
-                                songEntity = songEntity,
-                            )
-                        }
-                        updateDiscordRpc(songEntity)
-                    }
-                    Logger.w(TAG, "getDataOfNowPlayingState: ${nowPlayingState.value}")
-                }
-                songEntityJob?.cancel()
-                songEntityJob =
-                    coroutineScope.launch {
-                        songRepository.getSongAsFlow(videoId).cancellable().filterNotNull().collectLatest { songEntity ->
-                            if (dataStoreManager.explicitContentEnabled.first() == FALSE && songEntity.isExplicit) {
-                                showToast(ToastType.ExplicitContent)
-                                if (player.hasNextMediaItem()) {
-                                    player.seekToNext()
-                                } else if (player.hasPreviousMediaItem()) {
-                                    player.seekToPrevious()
-                                } else {
-                                    player.stop()
-                                }
-                                return@collectLatest
+                            songRepository.updateListenCount(songEntity.videoId)
+                            Logger.w(TAG, "getDataOfNowPlayingState: $songEntity")
+                            Logger.w(TAG, "getDataOfNowPlayingState: $track")
+                            _nowPlayingState.update {
+                                it.copy(
+                                    songEntity =
+                                        songEntity.copy(
+                                            thumbnails = thumbUrl,
+                                        ),
+                                )
                             }
+                            updateDiscordRpc(songEntity)
+                        } else {
+                            _controlState.update { it.copy(isLiked = false) }
+                            var thumbUrl =
+                                track?.thumbnails?.lastOrNull()?.url
+                                    ?: "http://i.ytimg.com/vi/${track?.videoId}/maxresdefault.jpg"
+                            Logger.w(TAG, "getDataOfNowPlayingState before: $thumbUrl")
+                            thumbUrl = Regex("([=-][wh])\\d+").replace(thumbUrl, "$1544")
+                            val songEntity =
+                                (track?.toSongEntity() ?: mediaItem.toSongEntity()).copy(
+                                    thumbnails = thumbUrl,
+                                )
+                            songRepository
+                                .insertSong(
+                                    songEntity,
+                                ).singleOrNull()
+                                ?.let {
+                                    Logger.w(TAG, "getDataOfNowPlayingState: $it")
+                                }
+                            Logger.w(TAG, "getDataOfNowPlayingState: $songEntity")
                             _nowPlayingState.update {
                                 it.copy(
                                     songEntity = songEntity,
                                 )
                             }
-                            _controlState.update {
-                                it.copy(
-                                    isLiked = songEntity.liked,
-                                )
+                            updateDiscordRpc(songEntity)
+                        }
+                        Logger.w(TAG, "getDataOfNowPlayingState: ${nowPlayingState.value}")
+                    }
+                    songEntityJob?.cancel()
+                    songEntityJob =
+                        coroutineScope.launch {
+                            try {
+                                songRepository.getSongAsFlow(videoId).cancellable().filterNotNull().collectLatest { songEntity ->
+                                    if (dataStoreManager.explicitContentEnabled.first() == FALSE && songEntity.isExplicit) {
+                                        showToast(ToastType.ExplicitContent)
+                                        if (player.hasNextMediaItem()) {
+                                            player.seekToNext()
+                                        } else if (player.hasPreviousMediaItem()) {
+                                            player.seekToPrevious()
+                                        } else {
+                                            player.stop()
+                                        }
+                                        return@collectLatest
+                                    }
+                                    _nowPlayingState.update {
+                                        it.copy(
+                                            songEntity = songEntity,
+                                        )
+                                    }
+                                    _controlState.update {
+                                        it.copy(
+                                            isLiked = songEntity.liked,
+                                        )
+                                    }
+                                }
+                            } catch (e: Throwable) {
+                                Logger.e(TAG, "songEntityJob collection failed", e)
                             }
                         }
+                    if (dataStoreManager.sponsorBlockEnabled.first() == TRUE) {
+                        getSkipSegments(videoId)
                     }
-                if (dataStoreManager.sponsorBlockEnabled.first() == TRUE) {
-                    getSkipSegments(videoId)
-                }
-                if (dataStoreManager.sendBackToGoogle.first() == TRUE) {
-                    getFormat(videoId)
+                    if (dataStoreManager.sendBackToGoogle.first() == TRUE) {
+                        getFormat(videoId)
+                    }
+                } catch (e: Throwable) {
+                    Logger.e(TAG, "getDataOfNowPlayingState failed", e)
                 }
             }
     }
@@ -500,17 +508,21 @@ internal class MediaServiceHandlerImpl(
     private fun getSkipSegments(videoId: String) {
         _skipSegments.value = null
         coroutineScope.launch {
-            streamRepository.getSkipSegments(videoId).collect { response ->
-                when (response) {
-                    is Resource.Success -> {
-                        _skipSegments.value = response.data
-                    }
+            try {
+                streamRepository.getSkipSegments(videoId).collect { response ->
+                    when (response) {
+                        is Resource.Success -> {
+                            _skipSegments.value = response.data
+                        }
 
-                    is Resource.Error -> {
-                        Logger.e(TAG, "getSkipSegments: ${response.message}")
-                        _skipSegments.value = null
+                        is Resource.Error -> {
+                            Logger.e(TAG, "getSkipSegments: ${response.message}")
+                            _skipSegments.value = null
+                        }
                     }
                 }
+            } catch (e: Throwable) {
+                Logger.e(TAG, "getSkipSegments failed", e)
             }
         }
     }
@@ -519,15 +531,19 @@ internal class MediaServiceHandlerImpl(
         getFormatJob?.cancel()
         getFormatJob =
             coroutineScope.launch {
-                if (mediaId != null) {
-                    streamRepository.getFormatFlow(mediaId).cancellable().collectLatest { f ->
-                        Logger.w(TAG, "Get format for $mediaId: $f")
-                        if (f != null) {
-                            _format.emit(f)
-                        } else {
-                            _format.emit(null)
+                try {
+                    if (mediaId != null) {
+                        streamRepository.getFormatFlow(mediaId).cancellable().collectLatest { f ->
+                            Logger.w(TAG, "Get format for $mediaId: $f")
+                            if (f != null) {
+                                _format.emit(f)
+                            } else {
+                                _format.emit(null)
+                            }
                         }
                     }
+                } catch (e: Throwable) {
+                    Logger.e(TAG, "getFormat failed", e)
                 }
             }
     }
@@ -540,19 +556,23 @@ internal class MediaServiceHandlerImpl(
     ) {
         jobWatchtime?.cancel()
         coroutineScope.launch {
-            if (playback != null && atr != null && watchTime != null && cpn != null) {
-                watchTimeList = arrayListOf()
-                streamRepository
-                    .initPlayback(playback, atr, watchTime, cpn, queueData.value.data.playlistId)
-                    .collect {
-                        if (it.first == 204) {
-                            Logger.d("Check initPlayback", "Success")
-                            watchTimeList.add(0f)
-                            watchTimeList.add(5.54f)
-                            watchTimeList.add(it.second)
-                            updateWatchTime()
+            try {
+                if (playback != null && atr != null && watchTime != null && cpn != null) {
+                    watchTimeList = arrayListOf()
+                    streamRepository
+                        .initPlayback(playback, atr, watchTime, cpn, queueData.value.data.playlistId)
+                        .collect {
+                            if (it.first == 204) {
+                                Logger.d("Check initPlayback", "Success")
+                                watchTimeList.add(0f)
+                                watchTimeList.add(5.54f)
+                                watchTimeList.add(it.second)
+                                updateWatchTime()
+                            }
                         }
-                    }
+                }
+            } catch (e: Throwable) {
+                Logger.e(TAG, "initPlayback failed", e)
             }
         }
     }
@@ -843,41 +863,45 @@ internal class MediaServiceHandlerImpl(
 
     override fun toggleRadio() {
         coroutineScope.launch {
-            val currentSong = nowPlayingState.value.songEntity ?: return@launch
-            Logger.d(TAG, "toggleRadio: ${currentSong.title}")
-            songRepository
-                .getRadioFromEndpoint(
-                    YouTubeWatchEndpoint(
-                        videoId = currentSong.videoId,
-                        playlistId = "RDAMVM${currentSong.videoId}",
-                    ),
-                ).collectLatest { res ->
-                    val data = res.data
-                    when (res) {
-                        is Resource.Success if (data != null && data.first.isNotEmpty()) -> {
-                            setQueueData(
-                                QueueData.Data(
-                                    listTracks = data.first,
-                                    firstPlayedTrack = data.first.first(),
-                                    playlistId = "RDAMVM${currentSong.videoId}",
-                                    playlistName = "\"${currentSong.title}\" Radio",
-                                    playlistType = PlaylistType.RADIO,
-                                    continuation = data.second,
-                                ),
-                            )
-                            clearMediaItems()
-                            currentSong.durationSeconds.let {
-                                songRepository.updateDurationSeconds(it, currentSong.videoId)
+            try {
+                val currentSong = nowPlayingState.value.songEntity ?: return@launch
+                Logger.d(TAG, "toggleRadio: ${currentSong.title}")
+                songRepository
+                    .getRadioFromEndpoint(
+                        YouTubeWatchEndpoint(
+                            videoId = currentSong.videoId,
+                            playlistId = "RDAMVM${currentSong.videoId}",
+                        ),
+                    ).collectLatest { res ->
+                        val data = res.data
+                        when (res) {
+                            is Resource.Success if (data != null && data.first.isNotEmpty()) -> {
+                                setQueueData(
+                                    QueueData.Data(
+                                        listTracks = data.first,
+                                        firstPlayedTrack = data.first.first(),
+                                        playlistId = "RDAMVM${currentSong.videoId}",
+                                        playlistName = "\"${currentSong.title}\" Radio",
+                                        playlistType = PlaylistType.RADIO,
+                                        continuation = data.second,
+                                    ),
+                                )
+                                clearMediaItems()
+                                currentSong.durationSeconds.let {
+                                    songRepository.updateDurationSeconds(it, currentSong.videoId)
+                                }
+                                addMediaItem(currentSong.toGenericMediaItem(), playWhenReady = true)
+                                loadPlaylistOrAlbum(0)
                             }
-                            addMediaItem(currentSong.toGenericMediaItem(), playWhenReady = true)
-                            loadPlaylistOrAlbum(0)
-                        }
 
-                        else -> {
-                            Logger.e(TAG, "toggleRadio: ${res.message}")
+                            else -> {
+                                Logger.e(TAG, "toggleRadio: ${res.message}")
+                            }
                         }
                     }
-                }
+            } catch (e: Throwable) {
+                Logger.e(TAG, "toggleRadio failed", e)
+            }
         }
     }
 
@@ -886,15 +910,19 @@ internal class MediaServiceHandlerImpl(
         toggleLikeJob?.cancel()
         toggleLikeJob =
             coroutineScope.launch {
-                var id = (player.currentMediaItem?.mediaId ?: "")
-                if (id.contains("Video")) {
-                    id = id.removePrefix("Video")
+                try {
+                    var id = (player.currentMediaItem?.mediaId ?: "")
+                    if (id.contains("Video")) {
+                        id = id.removePrefix("Video")
+                    }
+                    songRepository.updateLikeStatus(
+                        id,
+                        if (!(controlState.first().isLiked)) 1 else 0,
+                    )
+                    delay(200)
+                } catch (e: Throwable) {
+                    Logger.e(TAG, "toggleLike failed", e)
                 }
-                songRepository.updateLikeStatus(
-                    id,
-                    if (!(controlState.first().isLiked)) 1 else 0,
-                )
-                delay(200)
             }
     }
 
@@ -1027,37 +1055,41 @@ internal class MediaServiceHandlerImpl(
         val playlistId = _queueData.value.data.playlistId ?: return
         val firstPlayedTrack = _queueData.value.data.firstPlayedTrack ?: return
         coroutineScope.launch {
-            if (playlistId.startsWith(LOCAL_PLAYLIST_ID)) {
-                songRepository.insertSong(firstPlayedTrack.toSongEntity()).collect {
-                    Logger.w(TAG, "Inserted song: ${firstPlayedTrack.title}")
-                }
-                clearMediaItems()
-                firstPlayedTrack.durationSeconds?.let {
-                    songRepository.updateDurationSeconds(it, firstPlayedTrack.videoId)
-                }
-                addMediaItem(firstPlayedTrack.toGenericMediaItem(), playWhenReady = true)
-                val longId = playlistId.replace(LOCAL_PLAYLIST_ID, "").toLong()
-                val localPlaylist = localPlaylistRepository.getLocalPlaylist(longId).lastOrNull()?.data
-                if (localPlaylist != null) {
-                    Logger.w(TAG, "shufflePlaylist: Local playlist track size ${localPlaylist.tracks?.size}")
-                    val trackCount = localPlaylist.tracks?.size ?: return@launch
-                    val listPosition =
-                        (0 until trackCount).toMutableList().apply {
-                            remove(randomTrackIndex)
-                        }
-                    if (listPosition.isEmpty()) return@launch
-                    listPosition.shuffle()
-                    _queueData.update {
-                        it.copy(
-                            // After shuffle prefix is offset and list position
-                            data =
-                                it.data.copy(
-                                    continuation = "SHUFFLE0_${fromListIntToString(listPosition)}",
-                                ),
-                        )
+            try {
+                if (playlistId.startsWith(LOCAL_PLAYLIST_ID)) {
+                    songRepository.insertSong(firstPlayedTrack.toSongEntity()).collect {
+                        Logger.w(TAG, "Inserted song: ${firstPlayedTrack.title}")
                     }
-                    loadMore()
+                    clearMediaItems()
+                    firstPlayedTrack.durationSeconds?.let {
+                        songRepository.updateDurationSeconds(it, firstPlayedTrack.videoId)
+                    }
+                    addMediaItem(firstPlayedTrack.toGenericMediaItem(), playWhenReady = true)
+                    val longId = playlistId.replace(LOCAL_PLAYLIST_ID, "").toLong()
+                    val localPlaylist = localPlaylistRepository.getLocalPlaylist(longId).lastOrNull()?.data
+                    if (localPlaylist != null) {
+                        Logger.w(TAG, "shufflePlaylist: Local playlist track size ${localPlaylist.tracks?.size}")
+                        val trackCount = localPlaylist.tracks?.size ?: return@launch
+                        val listPosition =
+                            (0 until trackCount).toMutableList().apply {
+                                remove(randomTrackIndex)
+                            }
+                        if (listPosition.isEmpty()) return@launch
+                        listPosition.shuffle()
+                        _queueData.update {
+                            it.copy(
+                                // After shuffle prefix is offset and list position
+                                data =
+                                    it.data.copy(
+                                        continuation = "SHUFFLE0_${fromListIntToString(listPosition)}",
+                                    ),
+                            )
+                        }
+                        loadMore()
+                    }
                 }
+            } catch (e: Throwable) {
+                Logger.e(TAG, "shufflePlaylist failed", e)
             }
         }
     }
@@ -1074,238 +1106,256 @@ internal class MediaServiceHandlerImpl(
         if (continuation != null) {
             if (playlistId.startsWith(LOCAL_PLAYLIST_ID)) {
                 coroutineScope.launch {
-                    _queueData.update {
-                        it.copy(
-                            queueState = QueueData.StateSource.STATE_INITIALIZING,
-                        )
-                    }
-                    val longId =
-                        try {
-                            playlistId.replace(LOCAL_PLAYLIST_ID, "").toLong()
-                        } catch (e: NumberFormatException) {
-                            return@launch
+                    try {
+                        _queueData.update {
+                            it.copy(
+                                queueState = QueueData.StateSource.STATE_INITIALIZING,
+                            )
                         }
-                    Logger.w("Check loadMore", longId.toString())
-                    if (continuation.startsWith("SHUFFLE")) {
-                        val regex = Regex("(?<=SHUFFLE)\\d+(?=_)")
-                        var offset = regex.find(continuation)?.value?.toInt() ?: return@launch
-                        val posString = continuation.removePrefix("SHUFFLE${offset}_")
-                        val listPosition = fromStringToListInt(posString) ?: return@launch
-                        val theLastLoad = 50 * (offset + 1) >= listPosition.size
-                        localPlaylistRepository
-                            .getPlaylistPairSongByListPosition(
-                                longId,
-                                listPosition.subList(50 * offset, if (theLastLoad) listPosition.size else 50 * (offset + 1)),
-                            ).singleOrNull()
-                            ?.let { pair ->
-                                Logger.w("Check loadMore response", pair.size.toString())
-                                songRepository.getSongsByListVideoId(pair.map { it.songId }).lastOrNull()?.let { songs ->
-                                    if (songs.isNotEmpty()) {
-                                        delay(300)
-                                        loadMoreCatalog(songs.toArrayListTrack())
-                                        offset++
-                                        _queueData.update {
-                                            it.copy(
-                                                data =
-                                                    it.data.copy(
-                                                        continuation =
-                                                            if (!theLastLoad) {
-                                                                "SHUFFLE${offset}_$posString"
-                                                            } else {
-                                                                null
-                                                            },
-                                                    ),
-                                            )
+                        val longId =
+                            try {
+                                playlistId.replace(LOCAL_PLAYLIST_ID, "").toLong()
+                            } catch (e: NumberFormatException) {
+                                return@launch
+                            }
+                        Logger.w("Check loadMore", longId.toString())
+                        if (continuation.startsWith("SHUFFLE")) {
+                            val regex = Regex("(?<=SHUFFLE)\\d+(?=_)")
+                            var offset = regex.find(continuation)?.value?.toInt() ?: return@launch
+                            val posString = continuation.removePrefix("SHUFFLE${offset}_")
+                            val listPosition = fromStringToListInt(posString) ?: return@launch
+                            val theLastLoad = 50 * (offset + 1) >= listPosition.size
+                            localPlaylistRepository
+                                .getPlaylistPairSongByListPosition(
+                                    longId,
+                                    listPosition.subList(50 * offset, if (theLastLoad) listPosition.size else 50 * (offset + 1)),
+                                ).singleOrNull()
+                                ?.let { pair ->
+                                    Logger.w("Check loadMore response", pair.size.toString())
+                                    songRepository.getSongsByListVideoId(pair.map { it.songId }).lastOrNull()?.let { songs ->
+                                        if (songs.isNotEmpty()) {
+                                            delay(300)
+                                            loadMoreCatalog(songs.toArrayListTrack())
+                                            offset++
+                                            _queueData.update {
+                                                it.copy(
+                                                    data =
+                                                        it.data.copy(
+                                                            continuation =
+                                                                if (!theLastLoad) {
+                                                                    "SHUFFLE${offset}_$posString"
+                                                                } else {
+                                                                    null
+                                                                },
+                                                        ),
+                                                )
+                                            }
                                         }
                                     }
                                 }
-                            }
-                    } else if (
-                        continuation.startsWith(ASC) ||
-                        continuation.startsWith(DESC) ||
-                        continuation.startsWith(CUSTOM_ORDER) ||
-                        continuation.startsWith(TITLE)
-                    ) {
-                        val filter =
-                            if (continuation.startsWith(ASC)) {
-                                FilterState.OlderFirst
-                            } else if (continuation.startsWith(DESC)) {
-                                FilterState.NewerFirst
-                            } else if (continuation.startsWith(CUSTOM_ORDER)) {
-                                FilterState.CustomOrder
-                            } else {
-                                FilterState.Title
-                            }
-                        val converters = Converters()
+                        } else if (
+                            continuation.startsWith(ASC) ||
+                            continuation.startsWith(DESC) ||
+                            continuation.startsWith(CUSTOM_ORDER) ||
+                            continuation.startsWith(TITLE)
+                        ) {
+                            val filter =
+                                if (continuation.startsWith(ASC)) {
+                                    FilterState.OlderFirst
+                                } else if (continuation.startsWith(DESC)) {
+                                    FilterState.NewerFirst
+                                } else if (continuation.startsWith(CUSTOM_ORDER)) {
+                                    FilterState.CustomOrder
+                                } else {
+                                    FilterState.Title
+                                }
+                            val converters = Converters()
 
-                        when (filter) {
-                            FilterState.NewerFirst, FilterState.OlderFirst -> {
-                                val localDateTime =
-                                    try {
-                                        val timestampString =
-                                            if (filter == FilterState.OlderFirst) {
-                                                continuation.removePrefix(ASC)
-                                            } else {
-                                                continuation.removePrefix(DESC)
-                                            }
-                                        val timestamp = timestampString.toLong()
-                                        converters.fromTimestamp(timestamp)
-                                            ?: return@launch
-                                    } catch (e: Exception) {
-                                        Logger.e(TAG, "loadMore: Failed to parse timestamp", e)
-                                        return@launch
-                                    }
-                                localPlaylistRepository
-                                    .getPlaylistPairSongByTime(
-                                        longId,
-                                        filter,
-                                        localDateTime,
-                                    ).lastOrNull()
-                                    ?.let { pair ->
-                                        Logger.w("Check loadMore response", pair.size.toString())
-                                        songRepository.getSongsByListVideoId(pair.map { it.songId }).single().let { songs ->
-                                            if (songs.isNotEmpty()) {
-                                                delay(300)
-                                                loadMoreCatalog(songs.toArrayListTrack())
-                                                _queueData.update {
-                                                    it.copy(
-                                                        data =
-                                                            it.data.copy(
-                                                                continuation =
-                                                                    if (filter ==
-                                                                        FilterState.OlderFirst
-                                                                    ) {
-                                                                        ASC +
-                                                                            pair.lastOrNull()?.inPlaylist?.let { inPlaylist ->
-                                                                                converters.dateToTimestamp(inPlaylist)
-                                                                            }
-                                                                    } else {
-                                                                        DESC +
-                                                                            pair.lastOrNull()?.inPlaylist?.let { inPlaylist ->
-                                                                                converters.dateToTimestamp(inPlaylist)
-                                                                            }
-                                                                    },
-                                                            ),
-                                                    )
+                            when (filter) {
+                                FilterState.NewerFirst, FilterState.OlderFirst -> {
+                                    val localDateTime =
+                                        try {
+                                            val timestampString =
+                                                if (filter == FilterState.OlderFirst) {
+                                                    continuation.removePrefix(ASC)
+                                                } else {
+                                                    continuation.removePrefix(DESC)
                                                 }
-                                            } else {
-                                                _queueData.update {
-                                                    it.copy(
-                                                        queueState = QueueData.StateSource.STATE_INITIALIZED,
-                                                    )
+                                            val timestamp = timestampString.toLong()
+                                            converters.fromTimestamp(timestamp)
+                                                ?: return@launch
+                                        } catch (e: Exception) {
+                                            Logger.e(TAG, "loadMore: Failed to parse timestamp", e)
+                                            return@launch
+                                        }
+                                    localPlaylistRepository
+                                        .getPlaylistPairSongByTime(
+                                            longId,
+                                            filter,
+                                            localDateTime,
+                                        ).lastOrNull()
+                                        ?.let { pair ->
+                                            Logger.w("Check loadMore response", pair.size.toString())
+                                            songRepository.getSongsByListVideoId(pair.map { it.songId }).single().let { songs ->
+                                                if (songs.isNotEmpty()) {
+                                                    delay(300)
+                                                    loadMoreCatalog(songs.toArrayListTrack())
+                                                    _queueData.update {
+                                                        it.copy(
+                                                            data =
+                                                                it.data.copy(
+                                                                    continuation =
+                                                                        if (filter ==
+                                                                            FilterState.OlderFirst
+                                                                        ) {
+                                                                            ASC +
+                                                                                pair.lastOrNull()?.inPlaylist?.let { inPlaylist ->
+                                                                                    converters.dateToTimestamp(inPlaylist)
+                                                                                }
+                                                                        } else {
+                                                                            DESC +
+                                                                                pair.lastOrNull()?.inPlaylist?.let { inPlaylist ->
+                                                                                    converters.dateToTimestamp(inPlaylist)
+                                                                                }
+                                                                        },
+                                                                ),
+                                                        )
+                                                    }
+                                                } else {
+                                                    _queueData.update {
+                                                        it.copy(
+                                                            queueState = QueueData.StateSource.STATE_INITIALIZED,
+                                                        )
+                                                    }
+                                                    reorderShuffledQueue(player.getCurrentMediaTimeLine())
                                                 }
-                                                reorderShuffledQueue(player.getCurrentMediaTimeLine())
                                             }
                                         }
-                                    }
-                            }
+                                }
 
-                            FilterState.Title, FilterState.CustomOrder -> {
-                                val offset =
-                                    if (filter == FilterState.CustomOrder) {
-                                        continuation.removePrefix(CUSTOM_ORDER).toInt()
-                                    } else {
-                                        continuation.removePrefix(TITLE).toInt()
-                                    }
-                                localPlaylistRepository
-                                    .getPlaylistPairSongByOffset(
-                                        longId,
-                                        offset,
-                                        filter,
-                                    ).lastOrNull()
-                                    ?.let { pair ->
-                                        Logger.w("Check loadMore response", pair.size.toString())
-                                        songRepository.getSongsByListVideoId(pair.map { it.songId }).single().let { songs ->
-                                            if (songs.isNotEmpty()) {
-                                                delay(300)
-                                                loadMoreCatalog(songs.toArrayListTrack())
-                                                _queueData.update {
-                                                    it.copy(
-                                                        data =
-                                                            it.data.copy(
-                                                                continuation =
-                                                                    if (filter ==
-                                                                        FilterState.CustomOrder
-                                                                    ) {
-                                                                        CUSTOM_ORDER + (offset + 1)
-                                                                    } else {
-                                                                        TITLE + (offset + 1).toString()
-                                                                    },
-                                                            ),
-                                                    )
+                                FilterState.Title, FilterState.CustomOrder -> {
+                                    val offset =
+                                        if (filter == FilterState.CustomOrder) {
+                                            continuation.removePrefix(CUSTOM_ORDER).toInt()
+                                        } else {
+                                            continuation.removePrefix(TITLE).toInt()
+                                        }
+                                    localPlaylistRepository
+                                        .getPlaylistPairSongByOffset(
+                                            longId,
+                                            offset,
+                                            filter,
+                                        ).lastOrNull()
+                                        ?.let { pair ->
+                                            Logger.w("Check loadMore response", pair.size.toString())
+                                            songRepository.getSongsByListVideoId(pair.map { it.songId }).single().let { songs ->
+                                                if (songs.isNotEmpty()) {
+                                                    delay(300)
+                                                    loadMoreCatalog(songs.toArrayListTrack())
+                                                    _queueData.update {
+                                                        it.copy(
+                                                            data =
+                                                                it.data.copy(
+                                                                    continuation =
+                                                                        if (filter ==
+                                                                            FilterState.CustomOrder
+                                                                        ) {
+                                                                            CUSTOM_ORDER + (offset + 1)
+                                                                        } else {
+                                                                            TITLE + (offset + 1).toString()
+                                                                        },
+                                                                ),
+                                                        )
+                                                    }
+                                                } else {
+                                                    _queueData.update {
+                                                        it.copy(
+                                                            queueState = QueueData.StateSource.STATE_INITIALIZED,
+                                                        )
+                                                    }
+                                                    reorderShuffledQueue(player.getCurrentMediaTimeLine())
                                                 }
-                                            } else {
-                                                _queueData.update {
-                                                    it.copy(
-                                                        queueState = QueueData.StateSource.STATE_INITIALIZED,
-                                                    )
-                                                }
-                                                reorderShuffledQueue(player.getCurrentMediaTimeLine())
                                             }
                                         }
-                                    }
+                                }
                             }
+                        }
+                    } catch (e: Throwable) {
+                        Logger.e(TAG, "loadMore local playlist failed", e)
+                        _queueData.update {
+                            it.copy(
+                                queueState = QueueData.StateSource.STATE_INITIALIZED,
+                            )
                         }
                     }
                 }
             } else {
                 coroutineScope.launch {
-                    _queueData.update {
-                        it.copy(
-                            queueState = QueueData.StateSource.STATE_INITIALIZING,
-                        )
-                    }
-                    Logger.w(TAG, "Check loadMore continuation $continuation")
-                    songRepository
-                        .getContinueTrack(playlistId, continuation)
-                        .lastOrNull()
-                        .let { response ->
-                            val list = response?.first
-                            if (list != null) {
-                                Logger.w(TAG, "Check loadMore response $response")
-                                loadMoreCatalog(list)
-                                _queueData.update {
-                                    it.copy(
-                                        data =
-                                            it.data.copy(
-                                                continuation = response.second,
-                                            ),
-                                    )
-                                }
-                            } else {
-                                _queueData.update {
-                                    it.copy(
-                                        data =
-                                            it.data.copy(
-                                                continuation = null,
-                                            ),
-                                    )
-                                }
-                                if (runBlocking { dataStoreManager.endlessQueue.first() } == TRUE) {
-                                    Logger.w(TAG, "loadMore: Endless Queue")
-                                    val lastTrack =
-                                        queueData.value.data.listTracks
-                                            .lastOrNull() ?: return@launch
-                                    val radioId = "RDAMVM${lastTrack.videoId}"
-                                    if (radioId == queueData.value.data.playlistId) {
-                                        Logger.w(TAG, "loadMore: Already in radio mode")
-                                        return@launch
-                                    }
+                    try {
+                        _queueData.update {
+                            it.copy(
+                                queueState = QueueData.StateSource.STATE_INITIALIZING,
+                            )
+                        }
+                        Logger.w(TAG, "Check loadMore continuation $continuation")
+                        songRepository
+                            .getContinueTrack(playlistId, continuation)
+                            .lastOrNull()
+                            .let { response ->
+                                val list = response?.first
+                                if (list != null) {
+                                    Logger.w(TAG, "Check loadMore response $response")
+                                    loadMoreCatalog(list)
                                     _queueData.update {
                                         it.copy(
                                             data =
                                                 it.data.copy(
-                                                    playlistId = radioId,
+                                                    continuation = response.second,
                                                 ),
-                                            queueState = QueueData.StateSource.STATE_INITIALIZED,
                                         )
                                     }
-                                    reorderShuffledQueue(player.getCurrentMediaTimeLine())
-                                    Logger.d("Check loadMore", "queueData: ${queueData.value}")
-                                    getRelated(lastTrack.videoId)
+                                } else {
+                                    _queueData.update {
+                                        it.copy(
+                                            data =
+                                                it.data.copy(
+                                                    continuation = null,
+                                                ),
+                                        )
+                                    }
+                                    if (runBlocking { dataStoreManager.endlessQueue.first() } == TRUE) {
+                                        Logger.w(TAG, "loadMore: Endless Queue")
+                                        val lastTrack =
+                                            queueData.value.data.listTracks
+                                                .lastOrNull() ?: return@launch
+                                        val radioId = "RDAMVM${lastTrack.videoId}"
+                                        if (radioId == queueData.value.data.playlistId) {
+                                            Logger.w(TAG, "loadMore: Already in radio mode")
+                                            return@launch
+                                        }
+                                        _queueData.update {
+                                            it.copy(
+                                                data =
+                                                    it.data.copy(
+                                                        playlistId = radioId,
+                                                    ),
+                                                queueState = QueueData.StateSource.STATE_INITIALIZED,
+                                            )
+                                        }
+                                        reorderShuffledQueue(player.getCurrentMediaTimeLine())
+                                        Logger.d("Check loadMore", "queueData: ${queueData.value}")
+                                        getRelated(lastTrack.videoId)
+                                    }
                                 }
                             }
+                    } catch (e: Throwable) {
+                        Logger.e(TAG, "loadMore remote playlist failed", e)
+                        _queueData.update {
+                            it.copy(
+                                queueState = QueueData.StateSource.STATE_INITIALIZED,
+                            )
                         }
+                    }
                 }
             }
         } else if (runBlocking { dataStoreManager.endlessQueue.first() } == TRUE) {
@@ -1328,33 +1378,42 @@ internal class MediaServiceHandlerImpl(
     override fun getRelated(videoId: String) {
         if (queueData.value.queueState == QueueData.StateSource.STATE_INITIALIZING) return
         coroutineScope.launch {
-            songRepository.getRelatedData(videoId).collect { response ->
-                when (response) {
-                    is Resource.Success -> {
-                        loadMoreCatalog(response.data?.first?.toCollection(arrayListOf()) ?: arrayListOf())
-                        _queueData.update {
-                            it.copy(
-                                data =
-                                    it.data.copy(
-                                        continuation = response.data?.second,
-                                    ),
-                            )
+            try {
+                songRepository.getRelatedData(videoId).collect { response ->
+                    when (response) {
+                        is Resource.Success -> {
+                            loadMoreCatalog(response.data?.first?.toCollection(arrayListOf()) ?: arrayListOf())
+                            _queueData.update {
+                                it.copy(
+                                    data =
+                                        it.data.copy(
+                                            continuation = response.data?.second,
+                                        ),
+                                )
+                            }
                         }
-                    }
 
-                    is Resource.Error -> {
-                        Logger.d("Check Related", "getRelated: ${response.message}")
-                        _queueData.update {
-                            it.copy(
-                                queueState = QueueData.StateSource.STATE_INITIALIZED,
-                                data =
-                                    it.data.copy(
-                                        continuation = null,
-                                    ),
-                            )
+                        is Resource.Error -> {
+                            Logger.d("Check Related", "getRelated: ${response.message}")
+                            _queueData.update {
+                                it.copy(
+                                    queueState = QueueData.StateSource.STATE_INITIALIZED,
+                                    data =
+                                        it.data.copy(
+                                            continuation = null,
+                                        ),
+                                )
+                            }
+                            reorderShuffledQueue(player.getCurrentMediaTimeLine())
                         }
-                        reorderShuffledQueue(player.getCurrentMediaTimeLine())
                     }
+                }
+            } catch (e: Throwable) {
+                Logger.e(TAG, "getRelated failed", e)
+                _queueData.update {
+                    it.copy(
+                        queueState = QueueData.StateSource.STATE_INITIALIZED,
+                    )
                 }
             }
         }

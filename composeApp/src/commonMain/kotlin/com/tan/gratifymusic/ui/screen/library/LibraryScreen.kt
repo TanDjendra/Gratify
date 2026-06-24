@@ -72,7 +72,7 @@ import com.tan.gratifymusic.ui.component.GridLibraryPlaylist
 import com.tan.gratifymusic.ui.component.LibraryItem
 import com.tan.gratifymusic.ui.component.LibraryItemState
 import com.tan.gratifymusic.ui.component.LibraryItemType
-import com.tan.gratifymusic.ui.component.LibraryTilingBox
+import com.tan.gratifymusic.ui.component.LibraryEmptyRecommendationBox
 import com.tan.gratifymusic.ui.navigation.destination.home.AnalyticsDestination
 import com.tan.gratifymusic.ui.theme.transparent
 import com.tan.gratifymusic.ui.theme.typo
@@ -87,35 +87,29 @@ import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
-import gratifymusic.composeapp.generated.resources.Res
-import gratifymusic.composeapp.generated.resources.baseline_people_alt_24
-import gratifymusic.composeapp.generated.resources.chart
-import gratifymusic.composeapp.generated.resources.create
-import gratifymusic.composeapp.generated.resources.downloaded_playlists
-import gratifymusic.composeapp.generated.resources.favorite_playlists
-import gratifymusic.composeapp.generated.resources.favorite_podcasts
-import gratifymusic.composeapp.generated.resources.library
-import gratifymusic.composeapp.generated.resources.mix_for_you
-import gratifymusic.composeapp.generated.resources.no_YouTube_playlists
-import gratifymusic.composeapp.generated.resources.no_charts_found
-import gratifymusic.composeapp.generated.resources.no_favorite_playlists
-import gratifymusic.composeapp.generated.resources.no_favorite_podcasts
-import gratifymusic.composeapp.generated.resources.no_mixes_found
-import gratifymusic.composeapp.generated.resources.no_playlists_added
-import gratifymusic.composeapp.generated.resources.no_playlists_downloaded
-import gratifymusic.composeapp.generated.resources.playlist_name
-import gratifymusic.composeapp.generated.resources.playlist_name_cannot_be_empty
-import gratifymusic.composeapp.generated.resources.gratifymusic_charts
-import gratifymusic.composeapp.generated.resources.your_library
-import gratifymusic.composeapp.generated.resources.your_playlists
-import gratifymusic.composeapp.generated.resources.your_youtube_playlists
+import com.tan.gratifymusic.viewModel.SharedViewModel
+import gratifymusic.composeapp.generated.resources.*
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.graphics.Brush
+import com.tan.gratifymusic.extension.angledGradientBackground
+import gratifymusic.composeapp.generated.resources.round_library_music_24
+import gratifymusic.composeapp.generated.resources.baseline_queue_music_24
+import gratifymusic.composeapp.generated.resources.baseline_sensors_24
+import gratifymusic.composeapp.generated.resources.baseline_playlist_add_24
+import gratifymusic.composeapp.generated.resources.baseline_favorite_24
+import gratifymusic.composeapp.generated.resources.baseline_downloaded
+import gratifymusic.composeapp.generated.resources.ic_microphone
+import gratifymusic.composeapp.generated.resources.baseline_trending_up_24
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class)
 @Composable
 fun LibraryScreen(
     innerPadding: PaddingValues,
     viewModel: LibraryViewModel = koinViewModel(),
+    sharedViewModel: SharedViewModel = koinInject(),
     navController: NavController,
     onScrolling: (onTop: Boolean) -> Unit = {},
 ) {
@@ -133,6 +127,14 @@ fun LibraryScreen(
     val chartPlaylists by viewModel.chartPlaylists.collectAsStateWithLifecycle()
     val recentlyAdded by viewModel.recentlyAdded.collectAsStateWithLifecycle()
     val accountThumbnail by viewModel.accountThumbnail.collectAsStateWithLifecycle()
+    val navigateToLibraryFilter by sharedViewModel.navigateToLibraryFilter.collectAsStateWithLifecycle()
+
+    LaunchedEffect(navigateToLibraryFilter) {
+        navigateToLibraryFilter?.let { filter ->
+            viewModel.setCurrentScreen(filter)
+            sharedViewModel.setNavigateToLibraryFilter(null)
+        }
+    }
     val hazeState =
         rememberHazeState(
             blurEnabled = true,
@@ -220,7 +222,26 @@ fun LibraryScreen(
                     state = state,
                 ) {
                     item {
-                        LibraryTilingBox(navController)
+                        Text(
+                            text = stringResource(Res.string.your_library),
+                            style = typo().titleLarge,
+                            color = Color.White,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
+                        )
+                    }
+
+                    if (listCanvasSong.data.isNullOrEmpty() && recentlyAdded.data.isNullOrEmpty() &&
+                        listCanvasSong !is LocalResource.Loading && recentlyAdded !is LocalResource.Loading) {
+                        item {
+                            LibraryEmptyRecommendationBox(
+                                iconRes = Res.drawable.round_library_music_24,
+                                gradientColors = listOf(Color(0xFF3B82F6), Color(0xFF1E3A8A)),
+                                emptyDescText = Res.string.library_your_library_desc,
+                                emptyRecText = Res.string.library_your_library_rec
+                            )
+                        }
                     }
 
                     if (!listCanvasSong.data.isNullOrEmpty()) {
@@ -259,10 +280,14 @@ fun LibraryScreen(
 
             LibraryChipType.YOUTUBE_MUSIC_PLAYLIST -> {
                 GridLibraryPlaylist(
-                    navController,
-                    innerPadding.copy(top = topAppBarHeight),
-                    youTubePlaylist,
-                    emptyText = Res.string.no_YouTube_playlists,
+                    navController = navController,
+                    contentPadding = innerPadding.copy(top = topAppBarHeight),
+                    data = youTubePlaylist,
+                    titleText = Res.string.your_youtube_playlists,
+                    iconRes = Res.drawable.baseline_queue_music_24,
+                    gradientColors = listOf(Color(0xFFFF0000), Color(0xFF8B0000)),
+                    emptyDescText = Res.string.library_yt_playlists_desc,
+                    emptyRecText = Res.string.library_yt_playlists_rec,
                     onScrolling = onScrolling,
                 ) {
                     viewModel.getYouTubePlaylist()
@@ -271,10 +296,14 @@ fun LibraryScreen(
 
             LibraryChipType.YOUTUBE_MIX_FOR_YOU -> {
                 GridLibraryPlaylist(
-                    navController,
-                    innerPadding.copy(top = topAppBarHeight),
-                    youTubeMixForYou,
-                    emptyText = Res.string.no_mixes_found,
+                    navController = navController,
+                    contentPadding = innerPadding.copy(top = topAppBarHeight),
+                    data = youTubeMixForYou,
+                    titleText = Res.string.mix_for_you,
+                    iconRes = Res.drawable.baseline_sensors_24,
+                    gradientColors = listOf(Color(0xFF8B5CF6), Color(0xFF6D28D9)),
+                    emptyDescText = Res.string.library_mix_for_you_desc,
+                    emptyRecText = Res.string.library_mix_for_you_rec,
                     onScrolling = onScrolling,
                 ) {
                     viewModel.getYouTubeMixedForYou()
@@ -283,11 +312,15 @@ fun LibraryScreen(
 
             LibraryChipType.LOCAL_PLAYLIST -> {
                 GridLibraryPlaylist(
-                    navController,
-                    innerPadding.copy(top = topAppBarHeight),
-                    yourLocalPlaylist,
+                    navController = navController,
+                    contentPadding = innerPadding.copy(top = topAppBarHeight),
+                    data = yourLocalPlaylist,
+                    titleText = Res.string.your_playlists,
+                    iconRes = Res.drawable.baseline_playlist_add_24,
+                    gradientColors = listOf(Color(0xFF06B6D4), Color(0xFF0891B2)),
+                    emptyDescText = Res.string.library_local_playlists_desc,
+                    emptyRecText = Res.string.library_local_playlists_rec,
                     onScrolling = onScrolling,
-                    emptyText = Res.string.no_playlists_added,
                     createNewPlaylist = {
                         showAddSheet = true
                     },
@@ -298,10 +331,14 @@ fun LibraryScreen(
 
             LibraryChipType.FAVORITE_PLAYLIST -> {
                 GridLibraryPlaylist(
-                    navController,
-                    innerPadding.copy(top = topAppBarHeight),
-                    favoritePlaylist,
-                    emptyText = Res.string.no_favorite_playlists,
+                    navController = navController,
+                    contentPadding = innerPadding.copy(top = topAppBarHeight),
+                    data = favoritePlaylist,
+                    titleText = Res.string.favorite_playlists,
+                    iconRes = Res.drawable.baseline_favorite_24,
+                    gradientColors = listOf(Color(0xFFFD297B), Color(0xFFFF5858)),
+                    emptyDescText = Res.string.library_favorite_playlists_desc,
+                    emptyRecText = Res.string.library_favorite_playlists_rec,
                     onScrolling = onScrolling,
                 ) {
                     viewModel.getPlaylistFavorite()
@@ -310,10 +347,14 @@ fun LibraryScreen(
 
             LibraryChipType.DOWNLOADED_PLAYLIST -> {
                 GridLibraryPlaylist(
-                    navController,
-                    innerPadding.copy(top = topAppBarHeight),
-                    downloadedPlaylist,
-                    emptyText = Res.string.no_playlists_downloaded,
+                    navController = navController,
+                    contentPadding = innerPadding.copy(top = topAppBarHeight),
+                    data = downloadedPlaylist,
+                    titleText = Res.string.downloaded_playlists,
+                    iconRes = Res.drawable.baseline_downloaded,
+                    gradientColors = listOf(Color(0xFF10B981), Color(0xFF059669)),
+                    emptyDescText = Res.string.library_downloaded_playlists_desc,
+                    emptyRecText = Res.string.library_downloaded_playlists_rec,
                     onScrolling = onScrolling,
                 ) {
                     viewModel.getDownloadedPlaylist()
@@ -322,10 +363,14 @@ fun LibraryScreen(
 
             LibraryChipType.FAVORITE_PODCAST -> {
                 GridLibraryPlaylist(
-                    navController,
-                    innerPadding.copy(top = topAppBarHeight),
-                    favoritePodcasts,
-                    emptyText = Res.string.no_favorite_podcasts,
+                    navController = navController,
+                    contentPadding = innerPadding.copy(top = topAppBarHeight),
+                    data = favoritePodcasts,
+                    titleText = Res.string.favorite_podcasts,
+                    iconRes = Res.drawable.ic_microphone,
+                    gradientColors = listOf(Color(0xFFF59E0B), Color(0xFFD97706)),
+                    emptyDescText = Res.string.library_favorite_podcasts_desc,
+                    emptyRecText = Res.string.library_favorite_podcasts_rec,
                     onScrolling = onScrolling,
                 ) {
                     viewModel.getFavoritePodcasts()
@@ -334,10 +379,14 @@ fun LibraryScreen(
 
             LibraryChipType.CHART -> {
                 GridLibraryPlaylist(
-                    navController,
-                    innerPadding.copy(top = topAppBarHeight),
-                    chartPlaylists,
-                    emptyText = Res.string.no_charts_found,
+                    navController = navController,
+                    contentPadding = innerPadding.copy(top = topAppBarHeight),
+                    data = chartPlaylists,
+                    titleText = Res.string.gratifymusic_charts,
+                    iconRes = Res.drawable.baseline_trending_up_24,
+                    gradientColors = listOf(Color(0xFFEC4899), Color(0xFFBE185D)),
+                    emptyDescText = Res.string.library_charts_desc,
+                    emptyRecText = Res.string.library_charts_rec,
                     onScrolling = onScrolling,
                 ) {
                     viewModel.getChartPlaylists()
@@ -495,28 +544,70 @@ fun LibraryScreen(
                     .padding(horizontal = 15.dp)
                     .padding(bottom = 8.dp)
                     .background(Color.Transparent),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             LibraryChipType.entries.forEach { type ->
                 if ((type == LibraryChipType.YOUTUBE_MUSIC_PLAYLIST || type == LibraryChipType.YOUTUBE_MIX_FOR_YOU) && !loggedIn) {
                     return@forEach
                 }
-                Chip(
-                    isAnimated = false,
-                    isSelected = type == currentFilter,
-                    text =
-                        when (type) {
-                            LibraryChipType.YOUR_LIBRARY -> stringResource(Res.string.your_library)
-                            LibraryChipType.YOUTUBE_MUSIC_PLAYLIST -> stringResource(Res.string.your_youtube_playlists)
-                            LibraryChipType.YOUTUBE_MIX_FOR_YOU -> stringResource(Res.string.mix_for_you)
-                            LibraryChipType.LOCAL_PLAYLIST -> stringResource(Res.string.your_playlists)
-                            LibraryChipType.FAVORITE_PLAYLIST -> stringResource(Res.string.favorite_playlists)
-                            LibraryChipType.DOWNLOADED_PLAYLIST -> stringResource(Res.string.downloaded_playlists)
-                            LibraryChipType.FAVORITE_PODCAST -> stringResource(Res.string.favorite_podcasts)
-                            LibraryChipType.CHART -> stringResource(Res.string.gratifymusic_charts)
-                        },
+                val isSelected = type == currentFilter
+                val (iconRes, gradientColors) = when (type) {
+                    LibraryChipType.YOUR_LIBRARY -> 
+                        Res.drawable.round_library_music_24 to listOf(Color(0xFF3B82F6), Color(0xFF1E3A8A))
+                    LibraryChipType.YOUTUBE_MUSIC_PLAYLIST -> 
+                        Res.drawable.baseline_queue_music_24 to listOf(Color(0xFFFF0000), Color(0xFF8B0000))
+                    LibraryChipType.YOUTUBE_MIX_FOR_YOU -> 
+                        Res.drawable.baseline_sensors_24 to listOf(Color(0xFF8B5CF6), Color(0xFF6D28D9))
+                    LibraryChipType.LOCAL_PLAYLIST -> 
+                        Res.drawable.baseline_playlist_add_24 to listOf(Color(0xFF06B6D4), Color(0xFF0891B2))
+                    LibraryChipType.FAVORITE_PLAYLIST -> 
+                        Res.drawable.baseline_favorite_24 to listOf(Color(0xFFFD297B), Color(0xFFFF5858))
+                    LibraryChipType.DOWNLOADED_PLAYLIST -> 
+                        Res.drawable.baseline_downloaded to listOf(Color(0xFF10B981), Color(0xFF059669))
+                    LibraryChipType.FAVORITE_PODCAST -> 
+                        Res.drawable.ic_microphone to listOf(Color(0xFFF59E0B), Color(0xFFD97706))
+                    LibraryChipType.CHART -> 
+                        Res.drawable.baseline_trending_up_24 to listOf(Color(0xFFEC4899), Color(0xFFBE185D))
+                }
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .then(
+                            if (isSelected) {
+                                Modifier
+                                    .angledGradientBackground(gradientColors, 25f)
+                                    .border(
+                                        width = 1.dp,
+                                        brush = Brush.verticalGradient(
+                                            colors = listOf(
+                                                Color.White.copy(alpha = 0.4f),
+                                                Color.White.copy(alpha = 0.1f)
+                                            )
+                                        ),
+                                        shape = RoundedCornerShape(14.dp)
+                                    )
+                            } else {
+                                Modifier
+                                    .background(Color.White.copy(alpha = 0.08f))
+                                    .border(
+                                        width = 1.dp,
+                                        color = Color.White.copy(alpha = 0.05f),
+                                        shape = RoundedCornerShape(14.dp)
+                                    )
+                            }
+                        )
+                        .clickable {
+                            viewModel.setCurrentScreen(type)
+                        }
                 ) {
-                    viewModel.setCurrentScreen(type)
+                    Icon(
+                        painter = painterResource(iconRes),
+                        contentDescription = type.name,
+                        tint = if (isSelected) Color.White else Color.White.copy(alpha = 0.6f),
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
         }

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -53,6 +54,17 @@ fun AppBottomNavigationBar(
                 else -> BottomNavScreen.Home.ordinal // Default to Home if not recognized
             },
         )
+    }
+    LaunchedEffect(currentBackStackEntry) {
+        currentBackStackEntry?.destination?.let { dest ->
+            if (dest.hasRoute(HomeDestination::class)) {
+                selectedIndex = BottomNavScreen.Home.ordinal
+            } else if (dest.hasRoute(SearchDestination::class)) {
+                selectedIndex = BottomNavScreen.Search.ordinal
+            } else if (dest.hasRoute(LibraryDestination::class)) {
+                selectedIndex = BottomNavScreen.Library.ordinal
+            }
+        }
     }
     Box(
         modifier =
@@ -154,6 +166,17 @@ fun AppNavigationRail(
                 else -> BottomNavScreen.Home.ordinal // Default to Home if not recognized
             },
         )
+    }
+    LaunchedEffect(currentBackStackEntry) {
+        currentBackStackEntry?.destination?.let { dest ->
+            if (dest.hasRoute(HomeDestination::class)) {
+                selectedIndex = BottomNavScreen.Home.ordinal
+            } else if (dest.hasRoute(SearchDestination::class)) {
+                selectedIndex = BottomNavScreen.Search.ordinal
+            } else if (dest.hasRoute(LibraryDestination::class)) {
+                selectedIndex = BottomNavScreen.Library.ordinal
+            }
+        }
     }
     NavigationRail {
         Spacer(Modifier.height(16.dp))

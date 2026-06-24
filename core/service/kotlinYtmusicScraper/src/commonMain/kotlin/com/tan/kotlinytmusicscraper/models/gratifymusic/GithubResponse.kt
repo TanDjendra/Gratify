@@ -43,4 +43,6 @@ data class GithubResponse(
     val url: String?,
     @SerialName("zipball_url")
     val zipballUrl: String?,
+    @SerialName("min_version")
+    val minVersion: String? = null,
 )

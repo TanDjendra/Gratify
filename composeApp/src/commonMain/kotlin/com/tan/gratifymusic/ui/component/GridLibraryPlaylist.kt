@@ -60,9 +60,12 @@ import com.tan.gratifymusic.ui.theme.seed
 import com.tan.gratifymusic.ui.theme.typo
 import com.tan.gratifymusic.ui.theme.white
 import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.stringResource
 import gratifymusic.composeapp.generated.resources.Res
 import gratifymusic.composeapp.generated.resources.create
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.fillMaxWidth
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,7 +73,11 @@ internal inline fun <reified T> GridLibraryPlaylist(
     navController: NavController,
     contentPadding: PaddingValues,
     data: LocalResource<List<T>>,
-    emptyText: StringResource,
+    titleText: StringResource,
+    iconRes: DrawableResource,
+    gradientColors: List<Color>,
+    emptyDescText: StringResource,
+    emptyRecText: StringResource,
     noinline onScrolling: (onTop: Boolean) -> Unit = { _ -> },
     noinline createNewPlaylist: (() -> Unit)? = null,
     noinline onReload: () -> Unit,
@@ -120,6 +127,16 @@ internal inline fun <reified T> GridLibraryPlaylist(
                     contentPadding = contentPadding,
                     state = state,
                 ) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Text(
+                            text = stringResource(titleText),
+                            style = typo().titleLarge,
+                            color = Color.White,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
+                        )
+                    }
                     if (createNewPlaylist != null) {
                         item {
                             Box(
@@ -259,17 +276,28 @@ internal inline fun <reified T> GridLibraryPlaylist(
                     Modifier.fillMaxSize(),
                 )
             } else {
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center,
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = contentPadding
                 ) {
-                    Text(
-                        text = stringResource(emptyText),
-                        style = typo().bodyMedium,
-                        color = Color.White,
-                    )
+                    item {
+                        Text(
+                            text = stringResource(titleText),
+                            style = typo().titleLarge,
+                            color = Color.White,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
+                        )
+                    }
+                    item {
+                        LibraryEmptyRecommendationBox(
+                            iconRes = iconRes,
+                            gradientColors = gradientColors,
+                            emptyDescText = emptyDescText,
+                            emptyRecText = emptyRecText
+                        )
+                    }
                 }
             }
         }

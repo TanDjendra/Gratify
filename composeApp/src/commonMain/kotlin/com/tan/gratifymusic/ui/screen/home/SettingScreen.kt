@@ -77,10 +77,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withLink
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -153,7 +154,30 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import gratifymusic.composeapp.generated.resources.Res
+import gratifymusic.composeapp.generated.resources.settings_category_account
+import gratifymusic.composeapp.generated.resources.settings_category_account_desc
+import gratifymusic.composeapp.generated.resources.settings_category_content_display
+import gratifymusic.composeapp.generated.resources.settings_category_content_display_desc
+import gratifymusic.composeapp.generated.resources.settings_category_privacy_social
+import gratifymusic.composeapp.generated.resources.settings_category_privacy_social_desc
+import gratifymusic.composeapp.generated.resources.settings_category_playback
+import gratifymusic.composeapp.generated.resources.settings_category_playback_desc
+import gratifymusic.composeapp.generated.resources.settings_category_media_quality
+import gratifymusic.composeapp.generated.resources.settings_category_media_quality_desc
+import gratifymusic.composeapp.generated.resources.settings_category_data_saver
+import gratifymusic.composeapp.generated.resources.settings_category_data_saver_desc
+import gratifymusic.composeapp.generated.resources.settings_category_storage_backup
+import gratifymusic.composeapp.generated.resources.settings_category_storage_backup_desc
+import gratifymusic.composeapp.generated.resources.settings_category_about_support
+import gratifymusic.composeapp.generated.resources.settings_category_about_support_desc
 import gratifymusic.composeapp.generated.resources.about_us
+import gratifymusic.composeapp.generated.resources.instagram
+import gratifymusic.composeapp.generated.resources.baseline_signal_cellular_alt_24
+import gratifymusic.composeapp.generated.resources.outline_download_for_offline_24
+import gratifymusic.composeapp.generated.resources.baseline_settings_24
+import gratifymusic.composeapp.generated.resources.baseline_info_24
+import gratifymusic.composeapp.generated.resources.baseline_lyrics_24
+import gratifymusic.composeapp.generated.resources.baseline_play_circle_24
 import gratifymusic.composeapp.generated.resources.add_an_account
 import gratifymusic.composeapp.generated.resources.ai
 import gratifymusic.composeapp.generated.resources.ai_api_key
@@ -358,6 +382,7 @@ fun SettingScreen(
     val coroutineScope = rememberCoroutineScope()
 
     var width by rememberSaveable { mutableIntStateOf(0) }
+    var activeCategory by rememberSaveable { mutableStateOf<SettingCategory?>(null) }
 
     // Backup and restore
     val formatter =
@@ -511,257 +536,372 @@ fun SettingScreen(
         item {
             Spacer(Modifier.height(64.dp))
         }
-        item(key = "user_interface") {
-            Column {
-                Spacer(Modifier.height(16.dp))
-                Text(text = stringResource(Res.string.user_interface), style = typo().labelMedium, color = white)
-                SettingItem(
-                    title = stringResource(Res.string.translucent_bottom_navigation_bar),
-                    subtitle = stringResource(Res.string.you_can_see_the_content_below_the_bottom_bar),
-                    smallSubtitle = true,
-                    switch = (enableTranslucentNavBar to { viewModel.setTranslucentBottomBar(it) }),
-                )
-                SettingItem(
-                    title = stringResource(Res.string.blur_fullscreen_lyrics),
-                    subtitle = stringResource(Res.string.blur_fullscreen_lyrics_description),
-                    smallSubtitle = true,
-                    switch = (blurFullscreenLyrics to { viewModel.setBlurFullscreenLyrics(it) }),
-                )
-                SettingItem(
-                    title = stringResource(Res.string.blur_player_background),
-                    subtitle = stringResource(Res.string.blur_player_background_description),
-                    smallSubtitle = true,
-                    switch = (blurPlayerBackground to { viewModel.setBlurPlayerBackground(it) }),
-                )
-                if (getPlatform() == Platform.Android) {
+        if (activeCategory == null) {
+            item(key = "categories_list") {
+                Column {
+                    Spacer(Modifier.height(16.dp))
+                    SettingCategoryRow(stringResource(Res.string.settings_category_account), stringResource(Res.string.settings_category_account_desc), Res.drawable.baseline_people_alt_24) { activeCategory = SettingCategory.AKUN }
+                    SettingCategoryRow(stringResource(Res.string.settings_category_content_display), stringResource(Res.string.settings_category_content_display_desc), Res.drawable.baseline_lyrics_24) { activeCategory = SettingCategory.KONTEN_TAMPILAN }
+                    SettingCategoryRow(stringResource(Res.string.settings_category_privacy_social), stringResource(Res.string.settings_category_privacy_social_desc), Res.drawable.baseline_settings_24) { activeCategory = SettingCategory.PRIVASI_SOSIAL }
+                    SettingCategoryRow(stringResource(Res.string.settings_category_playback), stringResource(Res.string.settings_category_playback_desc), Res.drawable.baseline_play_circle_24) { activeCategory = SettingCategory.PLAYBACK }
+                    SettingCategoryRow(stringResource(Res.string.settings_category_media_quality), stringResource(Res.string.settings_category_media_quality_desc), Res.drawable.baseline_signal_cellular_alt_24) { activeCategory = SettingCategory.KUALITAS_MEDIA }
+                    SettingCategoryRow(stringResource(Res.string.settings_category_data_saver), stringResource(Res.string.settings_category_data_saver_desc), Res.drawable.outline_download_for_offline_24) { activeCategory = SettingCategory.MODE_HEMAT_DATA }
+                    SettingCategoryRow(stringResource(Res.string.settings_category_storage_backup), stringResource(Res.string.settings_category_storage_backup_desc), Res.drawable.baseline_settings_24) { activeCategory = SettingCategory.PENYIMPANAN }
+                    SettingCategoryRow(stringResource(Res.string.settings_category_about_support), stringResource(Res.string.settings_category_about_support_desc), Res.drawable.baseline_info_24) { activeCategory = SettingCategory.TENTANG_DUKUNGAN }
+                    
+                    Spacer(Modifier.height(32.dp))
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = stringResource(Res.string.log_out),
+                            style = typo().bodyLarge.copy(color = Color.Black, fontWeight = FontWeight.Bold),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(24.dp))
+                                .background(Color.White)
+                                .clickable {
+                                    viewModel.setBasicAlertData(
+                                        SettingBasicAlertState(
+                                            title = runBlocking { getString(Res.string.warning) },
+                                            message = runBlocking { getString(Res.string.log_out_warning) },
+                                            confirm = runBlocking { getString(Res.string.log_out) } to {
+                                                viewModel.setBasicAlertData(null)
+                                                viewModel.logOutAllYouTube()
+                                                viewModel.setSpotifyLogIn(false)
+                                                viewModel.logOutDiscord()
+                                            },
+                                            dismiss = runBlocking { getString(Res.string.cancel) }
+                                        )
+                                    )
+                                }
+                                .padding(horizontal = 32.dp, vertical = 12.dp)
+                        )
+                    }
+                    Spacer(Modifier.height(48.dp))
+                }
+            }
+        }
+        if (activeCategory == SettingCategory.KONTEN_TAMPILAN) {
+            item(key = "user_interface") {
+                Column {
+                    Spacer(Modifier.height(16.dp))
+                    Text(text = stringResource(Res.string.user_interface), style = typo().labelMedium, color = white)
                     SettingItem(
-                        title = stringResource(Res.string.enable_liquid_glass_effect),
-                        subtitle = stringResource(Res.string.enable_liquid_glass_effect_description),
+                        title = stringResource(Res.string.translucent_bottom_navigation_bar),
+                        subtitle = stringResource(Res.string.you_can_see_the_content_below_the_bottom_bar),
                         smallSubtitle = true,
-                        switch = (enableLiquidGlass to { viewModel.setEnableLiquidGlass(it) }),
-                        isEnable = getPlatform() == Platform.Android,
+                        switch = (enableTranslucentNavBar to { viewModel.setTranslucentBottomBar(it) }),
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.blur_fullscreen_lyrics),
+                        subtitle = stringResource(Res.string.blur_fullscreen_lyrics_description),
+                        smallSubtitle = true,
+                        switch = (blurFullscreenLyrics to { viewModel.setBlurFullscreenLyrics(it) }),
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.blur_player_background),
+                        subtitle = stringResource(Res.string.blur_player_background_description),
+                        smallSubtitle = true,
+                        switch = (blurPlayerBackground to { viewModel.setBlurPlayerBackground(it) }),
+                    )
+                    if (getPlatform() == Platform.Android) {
+                        SettingItem(
+                            title = stringResource(Res.string.enable_liquid_glass_effect),
+                            subtitle = stringResource(Res.string.enable_liquid_glass_effect_description),
+                            smallSubtitle = true,
+                            switch = (enableLiquidGlass to { viewModel.setEnableLiquidGlass(it) }),
+                            isEnable = getPlatform() == Platform.Android,
+                        )
+                    }
+                }
+            }
+        }
+        if (activeCategory == SettingCategory.AKUN) {
+            item(key = "youtube_account_section") {
+                Column {
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        text = stringResource(Res.string.youtube_account),
+                        style = typo().labelMedium,
+                        color = white,
+                        modifier = Modifier.padding(vertical = 8.dp),
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.youtube_account),
+                        subtitle = stringResource(Res.string.manage_your_youtube_accounts),
+                        onClick = {
+                            viewModel.getAllGoogleAccount()
+                            showYouTubeAccountDialog = true
+                        },
                     )
                 }
             }
         }
-        item(key = "content") {
-            Column {
-                Text(
-                    text = stringResource(Res.string.content),
-                    style = typo().labelMedium,
-                    color = white,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
-                SettingItem(
-                    title = stringResource(Res.string.youtube_account),
-                    subtitle = stringResource(Res.string.manage_your_youtube_accounts),
-                    onClick = {
-                        viewModel.getAllGoogleAccount()
-                        showYouTubeAccountDialog = true
-                    },
-                )
-                SettingItem(
-                    title = stringResource(Res.string.language),
-                    subtitle = SUPPORTED_LANGUAGE.getLanguageFromCode(language ?: "en-US"),
-                    onClick = {
-                        viewModel.setAlertData(
-                            SettingAlertState(
-                                title = runBlocking { getString(Res.string.language) },
-                                selectOne =
-                                    SettingAlertState.SelectData(
-                                        listSelect =
-                                            SUPPORTED_LANGUAGE.items.map {
-                                                (it.toString() == SUPPORTED_LANGUAGE.getLanguageFromCode(language ?: "en-US")) to it.toString()
-                                            },
-                                    ),
-                                confirm =
-                                    runBlocking { getString(Res.string.change) } to { state ->
-                                        val code = SUPPORTED_LANGUAGE.getCodeFromLanguage(state.selectOne?.getSelected() ?: "English")
-                                        viewModel.setBasicAlertData(
-                                            SettingBasicAlertState(
-                                                title = runBlocking { getString(Res.string.warning) },
-                                                message = runBlocking { getString(Res.string.change_language_warning) },
-                                                confirm =
-                                                    runBlocking { getString(Res.string.change) } to {
-                                                        sharedViewModel.activityRecreate()
-                                                        viewModel.setBasicAlertData(null)
-                                                        viewModel.changeLanguage(code)
-                                                    },
-                                                dismiss = runBlocking { getString(Res.string.cancel) },
-                                            ),
-                                        )
-                                    },
-                                dismiss = runBlocking { getString(Res.string.cancel) },
-                            ),
-                        )
-                    },
-                )
-                SettingItem(
-                    title = stringResource(Res.string.content_country),
-                    subtitle = location ?: "",
-                    onClick = {
-                        viewModel.setAlertData(
-                            SettingAlertState(
-                                title = runBlocking { getString(Res.string.content_country) },
-                                selectOne =
-                                    SettingAlertState.SelectData(
-                                        listSelect =
-                                            SUPPORTED_LOCATION.items.map { item ->
-                                                (item.toString() == location) to item.toString()
-                                            },
-                                    ),
-                                confirm =
-                                    runBlocking { getString(Res.string.change) } to { state ->
-                                        viewModel.changeLocation(
-                                            state.selectOne?.getSelected() ?: "US",
-                                        )
-                                    },
-                                dismiss = runBlocking { getString(Res.string.cancel) },
-                            ),
-                        )
-                    },
-                )
-                SettingItem(
-                    title = stringResource(Res.string.quality),
-                    subtitle = quality ?: "",
-                    smallSubtitle = true,
-                    onClick = {
-                        viewModel.setAlertData(
-                            SettingAlertState(
-                                title = runBlocking { getString(Res.string.quality) },
-                                selectOne =
-                                    SettingAlertState.SelectData(
-                                        listSelect =
-                                            QUALITY.items.map { item ->
-                                                (item.toString() == quality) to item.toString()
-                                            },
-                                    ),
-                                confirm =
-                                    runBlocking { getString(Res.string.change) } to { state ->
-                                        viewModel.changeQuality(state.selectOne?.getSelected())
-                                    },
-                                dismiss = runBlocking { getString(Res.string.cancel) },
-                            ),
-                        )
-                    },
-                )
-                SettingItem(
-                    title = stringResource(Res.string.download_quality),
-                    subtitle = downloadQuality ?: "",
-                    smallSubtitle = true,
-                    onClick = {
-                        viewModel.setAlertData(
-                            SettingAlertState(
-                                title = runBlocking { getString(Res.string.download_quality) },
-                                selectOne =
-                                    SettingAlertState.SelectData(
-                                        listSelect =
-                                            QUALITY.items.map { item ->
-                                                (item.toString() == downloadQuality) to item.toString()
-                                            },
-                                    ),
-                                confirm =
-                                    runBlocking { getString(Res.string.change) } to { state ->
-                                        state.selectOne?.getSelected()?.let { viewModel.setDownloadQuality(it) }
-                                    },
-                                dismiss = runBlocking { getString(Res.string.cancel) },
-                            ),
-                        )
-                    },
-                )
-                SettingItem(
-                    title = stringResource(Res.string.play_video_for_video_track_instead_of_audio_only),
-                    subtitle = stringResource(Res.string.such_as_music_video_lyrics_video_podcasts_and_more),
-                    smallSubtitle = true,
-                    switch = (playVideo to { viewModel.setPlayVideoInsteadOfAudio(it) }),
-                )
-                SettingItem(
-                    title = stringResource(Res.string.video_quality),
-                    subtitle = videoQuality ?: "",
-                    onClick = {
-                        viewModel.setAlertData(
-                            SettingAlertState(
-                                title = runBlocking { getString(Res.string.video_quality) },
-                                selectOne =
-                                    SettingAlertState.SelectData(
-                                        listSelect =
-                                            VIDEO_QUALITY.items.map { item ->
-                                                (item.toString() == videoQuality) to item.toString()
-                                            },
-                                    ),
-                                confirm =
-                                    runBlocking { getString(Res.string.change) } to { state ->
-                                        viewModel.changeVideoQuality(state.selectOne?.getSelected() ?: "")
-                                    },
-                                dismiss = runBlocking { getString(Res.string.cancel) },
-                            ),
-                        )
-                    },
-                )
-                SettingItem(
-                    title = stringResource(Res.string.video_download_quality),
-                    subtitle = videoDownloadQuality ?: "",
-                    onClick = {
-                        viewModel.setAlertData(
-                            SettingAlertState(
-                                title = runBlocking { getString(Res.string.video_download_quality) },
-                                selectOne =
-                                    SettingAlertState.SelectData(
-                                        listSelect =
-                                            VIDEO_QUALITY.items.map { item ->
-                                                (item.toString() == videoDownloadQuality) to item.toString()
-                                            },
-                                    ),
-                                confirm =
-                                    runBlocking { getString(Res.string.change) } to { state ->
-                                        viewModel.setVideoDownloadQuality(state.selectOne?.getSelected() ?: "")
-                                    },
-                                dismiss = runBlocking { getString(Res.string.cancel) },
-                            ),
-                        )
-                    },
-                )
-                SettingItem(
-                    title = stringResource(Res.string.send_back_listening_data_to_google),
-                    subtitle =
-                        stringResource(
-                            Res.string
-                                .upload_your_listening_history_to_youtube_music_server_it_will_make_yt_music_recommendation_system_better_working_only_if_logged_in,
-                        ),
-                    smallSubtitle = true,
-                    switch = (sendData to { viewModel.setSendBackToGoogle(it) }),
-                )
-                SettingItem(
-                    title = stringResource(Res.string.play_explicit_content),
-                    subtitle = stringResource(Res.string.play_explicit_content_description),
-                    switch = (explicitContentEnabled to { viewModel.setExplicitContentEnabled(it) }),
-                )
-                SettingItem(
-                    title = stringResource(Res.string.keep_your_youtube_playlist_offline),
-                    subtitle = stringResource(Res.string.keep_your_youtube_playlist_offline_description),
-                    switch = (keepYoutubePlaylistOffline to { viewModel.setKeepYouTubePlaylistOffline(it) }),
-                )
-                SettingItem(
-                    title = stringResource(Res.string.local_tracking_title),
-                    subtitle = stringResource(Res.string.local_tracking_description),
-                    switch = (localTrackingEnabled to { viewModel.setLocalTrackingEnabled(it) }),
-                )
-                /*
-                SettingItem(
-                    title = stringResource(Res.string.combine_local_and_youtube_liked_songs),
-                    subtitle = stringResource(Res.string.combine_local_and_youtube_liked_songs_description),
-                    switch = (combineLocalAndYouTubeLiked to { viewModel.setCombineLocalAndYouTubeLiked(it) })
-                )
-                 */
-                SettingItem(
-                    title = stringResource(Res.string.proxy),
-                    subtitle = stringResource(Res.string.proxy_description),
-                    switch = (usingProxy to { viewModel.setUsingProxy(it) }),
-                )
+
+        if (activeCategory == SettingCategory.KONTEN_TAMPILAN) {
+            item(key = "content_display_section") {
+                Column {
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        text = stringResource(Res.string.content),
+                        style = typo().labelMedium,
+                        color = white,
+                        modifier = Modifier.padding(vertical = 8.dp),
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.language),
+                        subtitle = SUPPORTED_LANGUAGE.getLanguageFromCode(language ?: "en-US"),
+                        onClick = {
+                            viewModel.setAlertData(
+                                SettingAlertState(
+                                    title = runBlocking { getString(Res.string.language) },
+                                    selectOne =
+                                        SettingAlertState.SelectData(
+                                            listSelect =
+                                                SUPPORTED_LANGUAGE.items.map {
+                                                    (it.toString() == SUPPORTED_LANGUAGE.getLanguageFromCode(language ?: "en-US")) to it.toString()
+                                                },
+                                        ),
+                                    confirm =
+                                        runBlocking { getString(Res.string.change) } to { state ->
+                                            val code = SUPPORTED_LANGUAGE.getCodeFromLanguage(state.selectOne?.getSelected() ?: "English")
+                                            viewModel.setBasicAlertData(
+                                                SettingBasicAlertState(
+                                                    title = runBlocking { getString(Res.string.warning) },
+                                                    message = runBlocking { getString(Res.string.change_language_warning) },
+                                                    confirm =
+                                                        runBlocking { getString(Res.string.change) } to {
+                                                            sharedViewModel.activityRecreate()
+                                                            viewModel.setBasicAlertData(null)
+                                                            viewModel.changeLanguage(code)
+                                                        },
+                                                    dismiss = runBlocking { getString(Res.string.cancel) },
+                                                ),
+                                            )
+                                        },
+                                    dismiss = runBlocking { getString(Res.string.cancel) },
+                                ),
+                            )
+                        },
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.content_country),
+                        subtitle = location ?: "",
+                        onClick = {
+                            viewModel.setAlertData(
+                                SettingAlertState(
+                                    title = runBlocking { getString(Res.string.content_country) },
+                                    selectOne =
+                                        SettingAlertState.SelectData(
+                                            listSelect =
+                                                SUPPORTED_LOCATION.items.map { item ->
+                                                    (item.toString() == location) to item.toString()
+                                                },
+                                        ),
+                                    confirm =
+                                        runBlocking { getString(Res.string.change) } to { state ->
+                                            viewModel.changeLocation(
+                                                state.selectOne?.getSelected() ?: "US",
+                                            )
+                                        },
+                                    dismiss = runBlocking { getString(Res.string.cancel) },
+                                ),
+                            )
+                        },
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.play_explicit_content),
+                        subtitle = stringResource(Res.string.play_explicit_content_description),
+                        switch = (explicitContentEnabled to { viewModel.setExplicitContentEnabled(it) }),
+                    )
+                }
             }
         }
-        item(key = "proxy") {
-            Crossfade(usingProxy) { it ->
+
+        if (activeCategory == SettingCategory.KUALITAS_MEDIA) {
+            item(key = "media_quality_section") {
+                Column {
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        text = "Kualitas Media",
+                        style = typo().labelMedium,
+                        color = white,
+                        modifier = Modifier.padding(vertical = 8.dp),
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.quality),
+                        subtitle = quality ?: "",
+                        smallSubtitle = true,
+                        onClick = {
+                            viewModel.setAlertData(
+                                SettingAlertState(
+                                    title = runBlocking { getString(Res.string.quality) },
+                                    selectOne =
+                                        SettingAlertState.SelectData(
+                                            listSelect =
+                                                QUALITY.items.map { item ->
+                                                    (item.toString() == quality) to item.toString()
+                                                },
+                                        ),
+                                    confirm =
+                                        runBlocking { getString(Res.string.change) } to { state ->
+                                            viewModel.changeQuality(state.selectOne?.getSelected())
+                                        },
+                                    dismiss = runBlocking { getString(Res.string.cancel) },
+                                ),
+                            )
+                        },
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.video_quality),
+                        subtitle = videoQuality ?: "",
+                        onClick = {
+                            viewModel.setAlertData(
+                                SettingAlertState(
+                                    title = runBlocking { getString(Res.string.video_quality) },
+                                    selectOne =
+                                        SettingAlertState.SelectData(
+                                            listSelect =
+                                                VIDEO_QUALITY.items.map { item ->
+                                                    (item.toString() == videoQuality) to item.toString()
+                                                },
+                                        ),
+                                    confirm =
+                                        runBlocking { getString(Res.string.change) } to { state ->
+                                            viewModel.changeVideoQuality(state.selectOne?.getSelected() ?: "")
+                                        },
+                                    dismiss = runBlocking { getString(Res.string.cancel) },
+                                ),
+                            )
+                        },
+                    )
+                }
+            }
+        }
+
+        if (activeCategory == SettingCategory.MODE_HEMAT_DATA) {
+            item(key = "data_saver_section") {
+                Column {
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        text = "Mode Hemat Data dan Offline",
+                        style = typo().labelMedium,
+                        color = white,
+                        modifier = Modifier.padding(vertical = 8.dp),
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.keep_your_youtube_playlist_offline),
+                        subtitle = stringResource(Res.string.keep_your_youtube_playlist_offline_description),
+                        switch = (keepYoutubePlaylistOffline to { viewModel.setKeepYouTubePlaylistOffline(it) }),
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.download_quality),
+                        subtitle = downloadQuality ?: "",
+                        smallSubtitle = true,
+                        onClick = {
+                            viewModel.setAlertData(
+                                SettingAlertState(
+                                    title = runBlocking { getString(Res.string.download_quality) },
+                                    selectOne =
+                                        SettingAlertState.SelectData(
+                                            listSelect =
+                                                QUALITY.items.map { item ->
+                                                    (item.toString() == downloadQuality) to item.toString()
+                                                },
+                                        ),
+                                    confirm =
+                                        runBlocking { getString(Res.string.change) } to { state ->
+                                            state.selectOne?.getSelected()?.let { viewModel.setDownloadQuality(it) }
+                                        },
+                                    dismiss = runBlocking { getString(Res.string.cancel) },
+                                ),
+                            )
+                        },
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.video_download_quality),
+                        subtitle = videoDownloadQuality ?: "",
+                        onClick = {
+                            viewModel.setAlertData(
+                                SettingAlertState(
+                                    title = runBlocking { getString(Res.string.video_download_quality) },
+                                    selectOne =
+                                        SettingAlertState.SelectData(
+                                            listSelect =
+                                                VIDEO_QUALITY.items.map { item ->
+                                                    (item.toString() == videoDownloadQuality) to item.toString()
+                                                },
+                                        ),
+                                    confirm =
+                                        runBlocking { getString(Res.string.change) } to { state ->
+                                            viewModel.setVideoDownloadQuality(state.selectOne?.getSelected() ?: "")
+                                        },
+                                    dismiss = runBlocking { getString(Res.string.cancel) },
+                                ),
+                            )
+                        },
+                    )
+                }
+            }
+        }
+
+        if (activeCategory == SettingCategory.PLAYBACK) {
+            item(key = "playback_video_track_section") {
+                Column {
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        text = "Konten & Pemutaran Video",
+                        style = typo().labelMedium,
+                        color = white,
+                        modifier = Modifier.padding(vertical = 8.dp),
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.play_video_for_video_track_instead_of_audio_only),
+                        subtitle = stringResource(Res.string.such_as_music_video_lyrics_video_podcasts_and_more),
+                        smallSubtitle = true,
+                        switch = (playVideo to { viewModel.setPlayVideoInsteadOfAudio(it) }),
+                    )
+                }
+            }
+        }
+
+        if (activeCategory == SettingCategory.PRIVASI_SOSIAL) {
+            item(key = "privacy_social_section") {
+                Column {
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        text = "Privasi dan Sosial",
+                        style = typo().labelMedium,
+                        color = white,
+                        modifier = Modifier.padding(vertical = 8.dp),
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.send_back_listening_data_to_google),
+                        subtitle =
+                            stringResource(
+                                Res.string
+                                    .upload_your_listening_history_to_youtube_music_server_it_will_make_yt_music_recommendation_system_better_working_only_if_logged_in,
+                            ),
+                        smallSubtitle = true,
+                        switch = (sendData to { viewModel.setSendBackToGoogle(it) }),
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.local_tracking_title),
+                        subtitle = stringResource(Res.string.local_tracking_description),
+                        switch = (localTrackingEnabled to { viewModel.setLocalTrackingEnabled(it) }),
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.proxy),
+                        subtitle = stringResource(Res.string.proxy_description),
+                        switch = (usingProxy to { viewModel.setUsingProxy(it) }),
+                    )
+                }
+            }
+        }
+        if (activeCategory == SettingCategory.PRIVASI_SOSIAL) {
+            item(key = "proxy") {
+                Crossfade(usingProxy) { it ->
                 if (it) {
                     Column {
                         SettingItem(
@@ -923,7 +1063,8 @@ fun SettingScreen(
                 }
             }
         }
-        if (getPlatform() == Platform.Android) {
+        }
+        if (activeCategory == SettingCategory.PLAYBACK && getPlatform() == Platform.Android) {
             item(key = "audio") {
                 Column {
                     Text(
@@ -954,8 +1095,9 @@ fun SettingScreen(
                 }
             }
         }
-        item(key = "playback") {
-            Column {
+        if (activeCategory == SettingCategory.PLAYBACK) {
+            item(key = "playback") {
+                Column {
                 Text(
                     text = stringResource(Res.string.playback),
                     style = typo().labelMedium,
@@ -986,8 +1128,10 @@ fun SettingScreen(
                 }
             }
         }
+        }
         // Crossfade Settings (all platforms)
-        item(key = "crossfade_settings") {
+        if (activeCategory == SettingCategory.PLAYBACK) {
+            item(key = "crossfade_settings") {
             Column {
                 SettingItem(
                     title = stringResource(Res.string.crossfade),
@@ -1068,8 +1212,10 @@ fun SettingScreen(
                 }
             }
         }
-        item(key = "lyrics") {
-            Column {
+        }
+        if (activeCategory == SettingCategory.PLAYBACK) {
+            item(key = "lyrics") {
+                Column {
                 Text(
                     text = stringResource(Res.string.lyrics),
                     style = typo().labelMedium,
@@ -1234,8 +1380,10 @@ fun SettingScreen(
                 )
             }
         }
-        item(key = "AI") {
-            Column {
+        }
+        if (activeCategory == SettingCategory.PLAYBACK) {
+            item(key = "AI") {
+                Column {
                 Text(text = stringResource(Res.string.ai), style = typo().labelMedium, color = white, modifier = Modifier.padding(vertical = 8.dp))
                 SettingItem(
                     title = stringResource(Res.string.ai_provider),
@@ -1410,8 +1558,10 @@ fun SettingScreen(
                 )
             }
         }
-        item(key = "spotify") {
-            Column {
+        }
+        if (activeCategory == SettingCategory.AKUN) {
+            item(key = "spotify") {
+                Column {
                 Text(
                     text = stringResource(Res.string.spotify),
                     style = typo().labelMedium,
@@ -1458,8 +1608,10 @@ fun SettingScreen(
                 )
             }
         }
-        item(key = "discord") {
-            Column {
+        }
+        if (activeCategory == SettingCategory.AKUN) {
+            item(key = "discord") {
+                Column {
                 Text(
                     text = stringResource(Res.string.discord_integration),
                     style = typo().labelMedium,
@@ -1495,8 +1647,10 @@ fun SettingScreen(
                 )
             }
         }
-        item(key = "sponsor_block") {
-            Column {
+        }
+        if (activeCategory == SettingCategory.PLAYBACK) {
+            item(key = "sponsor_block") {
+                Column {
                 Text(
                     text = stringResource(Res.string.sponsorBlock),
                     style = typo().labelMedium,
@@ -1572,7 +1726,8 @@ fun SettingScreen(
                 )
             }
         }
-        if (getPlatform() == Platform.Android) {
+        }
+        if (activeCategory == SettingCategory.PENYIMPANAN && getPlatform() == Platform.Android) {
             item(key = "storage") {
                 Column {
                     Text(
@@ -1884,8 +2039,9 @@ fun SettingScreen(
                 }
             }
         }
-        item(key = "backup") {
-            Column {
+        if (activeCategory == SettingCategory.PENYIMPANAN) {
+            item(key = "backup") {
+                Column {
                 Text(
                     text = stringResource(Res.string.backup),
                     style = typo().labelMedium,
@@ -2024,8 +2180,10 @@ fun SettingScreen(
                 )
             }
         }
-        item(key = "about_us") {
-            Column {
+        }
+        if (activeCategory == SettingCategory.TENTANG_DUKUNGAN) {
+            item(key = "about_us") {
+                Column {
                 Text(
                     text = stringResource(Res.string.about_us),
                     style = typo().labelMedium,
@@ -2037,6 +2195,13 @@ fun SettingScreen(
                     subtitle = stringResource(Res.string.version_format, VersionManager.getVersionName()),
                     onClick = {
                         navController.navigate(CreditDestination)
+                    },
+                )
+                SettingItem(
+                    title = stringResource(Res.string.instagram),
+                    subtitle = "@calestaan",
+                    onClick = {
+                        uriHandler.openUri("https://instagram.com/calestaan")
                     },
                 )
                 SettingItem(
@@ -2057,8 +2222,11 @@ fun SettingScreen(
                 )
             }
         }
-        item(key = "end") {
-            EndOfPage()
+        }
+        if (activeCategory != null) {
+            item(key = "end") {
+                EndOfPage()
+            }
         }
     }
     val basisAlertData by viewModel.basicAlertData.collectAsStateWithLifecycle()
@@ -2454,10 +2622,17 @@ fun SettingScreen(
     TopAppBar(
         title = {
             Text(
-                text =
-                    stringResource(
-                        Res.string.settings,
-                    ),
+                text = when (activeCategory) {
+                    null -> stringResource(Res.string.settings)
+                    SettingCategory.AKUN -> stringResource(Res.string.settings_category_account)
+                    SettingCategory.KONTEN_TAMPILAN -> stringResource(Res.string.settings_category_content_display)
+                    SettingCategory.PRIVASI_SOSIAL -> stringResource(Res.string.settings_category_privacy_social)
+                    SettingCategory.PLAYBACK -> stringResource(Res.string.settings_category_playback)
+                    SettingCategory.KUALITAS_MEDIA -> stringResource(Res.string.settings_category_media_quality)
+                    SettingCategory.MODE_HEMAT_DATA -> stringResource(Res.string.settings_category_data_saver)
+                    SettingCategory.PENYIMPANAN -> stringResource(Res.string.settings_category_storage_backup)
+                    SettingCategory.TENTANG_DUKUNGAN -> stringResource(Res.string.settings_category_about_support)
+                },
                 style = typo().titleMedium,
             )
         },
@@ -2469,7 +2644,11 @@ fun SettingScreen(
                         .size(32.dp),
                     true,
                 ) {
-                    navController.navigateUp()
+                    if (activeCategory != null) {
+                        activeCategory = null
+                    } else {
+                        navController.navigateUp()
+                    }
                 }
             }
         },
@@ -2483,4 +2662,50 @@ fun SettingScreen(
                 containerColor = Color.Transparent,
             ),
     )
+}
+
+enum class SettingCategory {
+    AKUN,
+    KONTEN_TAMPILAN,
+    PRIVASI_SOSIAL,
+    PLAYBACK,
+    KUALITAS_MEDIA,
+    MODE_HEMAT_DATA,
+    PENYIMPANAN,
+    TENTANG_DUKUNGAN
+}
+
+@Composable
+fun SettingCategoryRow(
+    title: String,
+    subtitle: String,
+    iconRes: org.jetbrains.compose.resources.DrawableResource,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 16.dp, horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            painter = painterResource(iconRes),
+            contentDescription = title,
+            tint = Color.White.copy(alpha = 0.7f),
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = typo().titleMedium.copy(color = Color.White, fontWeight = FontWeight.Bold)
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = subtitle,
+                style = typo().bodySmall.copy(color = Color.White.copy(alpha = 0.6f))
+            )
+        }
+    }
 }

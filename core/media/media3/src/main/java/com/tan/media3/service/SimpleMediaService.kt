@@ -129,8 +129,8 @@ internal class SimpleMediaService :
         controllerFuture.addListener({ controllerFuture.get() }, MoreExecutors.directExecutor())
 
         if (runBlocking { dataStoreManager.keepServiceAlive.first() == DataStoreManager.TRUE }) {
-            val notificationManager = getSystemService<NotificationManager>()
-            notificationManager?.run {
+            val keepServiceNotificationManager = getSystemService<NotificationManager>()
+            keepServiceNotificationManager?.run {
                 createNotificationChannel(
                     NotificationChannel(
                         "media_playback_channel",
@@ -145,7 +145,7 @@ internal class SimpleMediaService :
             }
             playerNotificationManager =
                 PlayerNotificationManager
-                    .Builder(this, 2026, "media_playback_channel")
+                    .Builder(this, MEDIA_NOTIFICATION.NOTIFICATION_ID, "media_playback_channel")
                     .setNotificationListener(
                         object : PlayerNotificationManager.NotificationListener {
                             override fun onNotificationPosted(
@@ -153,18 +153,10 @@ internal class SimpleMediaService :
                                 notification: Notification,
                                 ongoing: Boolean,
                             ) {
-                                fun startFg() {
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                        startForeground(notificationId, notification, FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
-                                    } else {
-                                        startForeground(notificationId, notification)
-                                    }
-                                }
-                                coroutineScope.launch {
-                                    while (coroutineScope.isActive) {
-                                        startFg()
-                                        delay(30.seconds)
-                                    }
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                    startForeground(notificationId, notification, FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+                                } else {
+                                    startForeground(notificationId, notification)
                                 }
                             }
                         },
@@ -200,7 +192,9 @@ internal class SimpleMediaService :
         session: MediaSession,
         startInForegroundRequired: Boolean,
     ) {
-        super.onUpdateNotification(session, startInForegroundRequired)
+        val player = session.player
+        val forceForeground = startInForegroundRequired || player.playWhenReady || player.playbackState == Player.STATE_BUFFERING
+        super.onUpdateNotification(session, forceForeground)
     }
 
     @UnstableApi

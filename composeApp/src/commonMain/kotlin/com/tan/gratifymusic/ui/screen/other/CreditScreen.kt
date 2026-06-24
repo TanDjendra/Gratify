@@ -170,6 +170,20 @@ fun CreditScreen(
                 Text(text = stringResource(Res.string.github))
             }
 
+            // Instagram button
+            TextButton(
+                onClick = {
+                    openUrl("https://instagram.com/calestaan")
+                },
+                modifier =
+                    Modifier
+                        .align(Alignment.Start)
+                        .padding(horizontal = 25.dp)
+                        .defaultMinSize(minHeight = 1.dp, minWidth = 1.dp),
+            ) {
+                Text(text = stringResource(Res.string.instagram))
+            }
+
             // Issue tracker button
             TextButton(
                 onClick = {

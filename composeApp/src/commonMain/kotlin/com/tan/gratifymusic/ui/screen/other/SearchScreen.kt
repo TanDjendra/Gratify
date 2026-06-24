@@ -98,7 +98,9 @@ import com.tan.gratifymusic.ui.navigation.destination.list.AlbumDestination
 import com.tan.gratifymusic.ui.navigation.destination.list.ArtistDestination
 import com.tan.gratifymusic.ui.navigation.destination.list.PlaylistDestination
 import com.tan.gratifymusic.ui.navigation.destination.list.PodcastDestination
+import com.tan.gratifymusic.ui.navigation.destination.home.MoodDestination
 import com.tan.gratifymusic.ui.theme.typo
+import com.tan.gratifymusic.viewModel.HomeViewModel
 import com.tan.gratifymusic.viewModel.SearchScreenUIState
 import com.tan.gratifymusic.viewModel.SearchType
 import com.tan.gratifymusic.viewModel.SearchViewModel
@@ -108,6 +110,10 @@ import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.layout.Arrangement
 import gratifymusic.composeapp.generated.resources.Res
 import gratifymusic.composeapp.generated.resources.albums
 import gratifymusic.composeapp.generated.resources.artists
@@ -135,6 +141,7 @@ import gratifymusic.composeapp.generated.resources.what_do_you_want_to_listen_to
 fun SearchScreen(
     searchViewModel: SearchViewModel = koinInject(),
     sharedViewModel: SharedViewModel = koinInject(),
+    homeViewModel: HomeViewModel = koinInject(),
     navController: NavController,
 ) {
     val uriHandler = LocalUriHandler.current
@@ -142,6 +149,7 @@ fun SearchScreen(
     val searchScreenState by searchViewModel.searchScreenState.collectAsStateWithLifecycle()
     val uiState by searchViewModel.searchScreenUIState.collectAsStateWithLifecycle()
     val searchHistory by searchViewModel.searchHistory.collectAsStateWithLifecycle()
+    val exploreMoodItem by homeViewModel.exploreMoodItem.collectAsStateWithLifecycle()
 
     var searchUIType by rememberSaveable { mutableStateOf(SearchUIType.EMPTY) }
     var searchText by rememberSaveable { mutableStateOf("") }
@@ -534,34 +542,205 @@ fun SearchScreen(
                 }
 
                 SearchUIType.EMPTY -> {
-                    Box(
-                        Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp),
+                    val curatedGradients = remember {
+                        listOf(
+                            Brush.linearGradient(listOf(Color(0xFFE91E63), Color(0xFF9C27B0))), // Pink -> Purple
+                            Brush.linearGradient(listOf(Color(0xFF009688), Color(0xFF00796B))), // Teal
+                            Brush.linearGradient(listOf(Color(0xFF673AB7), Color(0xFF512DA8))), // Purple
+                            Brush.linearGradient(listOf(Color(0xFF3F51B5), Color(0xFF303F9F))), // Indigo
+                            Brush.linearGradient(listOf(Color(0xFFFF5722), Color(0xFFE64A19))), // Orange
+                            Brush.linearGradient(listOf(Color(0xFFFF9800), Color(0xFFF57C00))), // Amber
+                            Brush.linearGradient(listOf(Color(0xFF4CAF50), Color(0xFF388E3C))), // Green
+                            Brush.linearGradient(listOf(Color(0xFF03A9F4), Color(0xFF0288D1))), // Light Blue
+                            Brush.linearGradient(listOf(Color(0xFF9C27B0), Color(0xFFE040FB))), // Purple -> Magenta
+                            Brush.linearGradient(listOf(Color(0xFF00BCD4), Color(0xFF0097A7))), // Cyan
+                            Brush.linearGradient(listOf(Color(0xFF607D8B), Color(0xFF455A64)))  // Blue Grey
+                        )
+                    }
+
+                    val startExploring = remember {
+                        listOf(
+                            FallbackCategory("Musik", HomeViewModel.HOME_PARAMS_RELAX, "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200&auto=format&fit=crop&q=60"),
+                            FallbackCategory("Podcast", HomeViewModel.HOME_PARAMS_FOCUS, "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=200&auto=format&fit=crop&q=60"),
+                            FallbackCategory("Acara Langsung", HomeViewModel.HOME_PARAMS_PARTY, "https://images.unsplash.com/photo-1506157786151-b8491531f063?w=200&auto=format&fit=crop&q=60"),
+                            FallbackCategory("K-Pop Hub", HomeViewModel.HOME_PARAMS_ENERGIZE, "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=200&auto=format&fit=crop&q=60")
+                        )
+                    }
+
+                    val fallbackGenres = remember {
+                        listOf(
+                            FallbackCategory("Indie", HomeViewModel.HOME_PARAMS_RELAX, "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=200&auto=format&fit=crop&q=60"),
+                            FallbackCategory("Musik Indonesia", HomeViewModel.HOME_PARAMS_RELAX, "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200&auto=format&fit=crop&q=60"),
+                            FallbackCategory("K-pop", HomeViewModel.HOME_PARAMS_ENERGIZE, "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=200&auto=format&fit=crop&q=60"),
+                            FallbackCategory("Tangga Lagu", HomeViewModel.HOME_PARAMS_PARTY, "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=200&auto=format&fit=crop&q=60"),
+                            FallbackCategory("Peringkat Podcast", HomeViewModel.HOME_PARAMS_FOCUS, "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=200&auto=format&fit=crop&q=60"),
+                            FallbackCategory("Rilis Baru Podcast", HomeViewModel.HOME_PARAMS_FEEL_GOOD, "https://images.unsplash.com/photo-1487180142328-054b783fc471?w=200&auto=format&fit=crop&q=60"),
+                            FallbackCategory("Video Podcast", HomeViewModel.HOME_PARAMS_COMMUTE, "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=200&auto=format&fit=crop&q=60"),
+                            FallbackCategory("Di mobil", HomeViewModel.HOME_PARAMS_COMMUTE, "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=200&auto=format&fit=crop&q=60"),
+                            FallbackCategory("Anak-anak & Keluarga", HomeViewModel.HOME_PARAMS_SLEEP, "https://images.unsplash.com/photo-1511295742364-92767fa62d9f?w=200&auto=format&fit=crop&q=60"),
+                            FallbackCategory("Hip Hop", HomeViewModel.HOME_PARAMS_PARTY, "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=200&auto=format&fit=crop&q=60"),
+                            FallbackCategory("Rock", HomeViewModel.HOME_PARAMS_ENERGIZE, "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=200&auto=format&fit=crop&q=60"),
+                            FallbackCategory("Temukan", HomeViewModel.HOME_PARAMS_FEEL_GOOD, "https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=200&auto=format&fit=crop&q=60"),
+                            FallbackCategory("Pop", HomeViewModel.HOME_PARAMS_FEEL_GOOD, "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=200&auto=format&fit=crop&q=60"),
+                            FallbackCategory("Jazz", HomeViewModel.HOME_PARAMS_RELAX, "https://images.unsplash.com/photo-1511192336575-5a79af67a629?w=200&auto=format&fit=crop&q=60"),
+                            FallbackCategory("Romance", HomeViewModel.HOME_PARAMS_ROMANCE, "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=200&auto=format&fit=crop&q=60"),
+                            FallbackCategory("Workout", HomeViewModel.HOME_PARAMS_WORKOUT, "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=200&auto=format&fit=crop&q=60")
+                        )
+                    }
+
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize(),
+                        contentPadding = PaddingValues(bottom = 120.dp, start = 16.dp, end = 16.dp, top = 8.dp)
                     ) {
-                        // Default empty state
-                        Column(
-                            modifier = Modifier.align(Alignment.Center),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
+                        item {
                             Text(
-                                text = stringResource(Res.string.everything_you_need),
-                                style = typo().titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth(),
+                                text = "Mulai jelajahi",
+                                style = typo().titleMedium.copy(fontWeight = FontWeight.Bold, color = Color.White),
+                                modifier = Modifier.padding(vertical = 12.dp)
                             )
-                            Spacer(modifier = Modifier.height(10.dp))
+                        }
+
+                        val chunkedExplore = startExploring.chunked(2)
+                        items(chunkedExplore.size) { rowIndex ->
+                            val rowItems = chunkedExplore[rowIndex]
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                rowItems.forEachIndexed { colIndex, item ->
+                                    val gradIndex = (rowIndex * 2 + colIndex) % curatedGradients.size
+                                    ExploreCard(
+                                        title = item.title,
+                                        gradient = curatedGradients[gradIndex],
+                                        imageUrl = item.imageUrl,
+                                        modifier = Modifier.weight(1f),
+                                        onClick = {
+                                            navController.navigate(MoodDestination(item.params))
+                                        }
+                                    )
+                                }
+                                if (rowItems.size < 2) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
+
+                        item {
                             Text(
-                                text = stringResource(Res.string.search_for_songs_artists_albums_playlists_and_more),
-                                style = typo().bodyMedium,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth(),
+                                text = "Temukan sesuatu yang lain",
+                                style = typo().titleMedium.copy(fontWeight = FontWeight.Bold, color = Color.White),
+                                modifier = Modifier.padding(top = 20.dp, bottom = 12.dp)
                             )
+
+                            val moments = exploreMoodItem?.moodsMoments
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                if (!moments.isNullOrEmpty()) {
+                                    items(moments.size) { index ->
+                                        val item = moments[index]
+                                        val gradIndex = (index + 4) % curatedGradients.size
+                                        MoodMomentRowItem(
+                                            title = item.title,
+                                            params = item.params,
+                                            gradient = curatedGradients[gradIndex],
+                                            imageUrl = getUnsplashImageForGenre(item.title),
+                                            navController = navController
+                                        )
+                                    }
+                                } else {
+                                    val fallbackMoods = listOf(
+                                        FallbackCategory("Relax", HomeViewModel.HOME_PARAMS_RELAX, "https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=200&auto=format&fit=crop&q=60"),
+                                        FallbackCategory("Sleep", HomeViewModel.HOME_PARAMS_SLEEP, "https://images.unsplash.com/photo-1511295742364-92767fa62d9f?w=200&auto=format&fit=crop&q=60"),
+                                        FallbackCategory("Energize", HomeViewModel.HOME_PARAMS_ENERGIZE, "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&auto=format&fit=crop&q=60"),
+                                        FallbackCategory("Workout", HomeViewModel.HOME_PARAMS_WORKOUT, "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=200&auto=format&fit=crop&q=60"),
+                                        FallbackCategory("Focus", HomeViewModel.HOME_PARAMS_FOCUS, "https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?w=200&auto=format&fit=crop&q=60"),
+                                        FallbackCategory("Romance", HomeViewModel.HOME_PARAMS_ROMANCE, "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=200&auto=format&fit=crop&q=60")
+                                    )
+                                    items(fallbackMoods.size) { index ->
+                                        val item = fallbackMoods[index]
+                                        val gradIndex = (index + 4) % curatedGradients.size
+                                        MoodMomentRowItem(
+                                            title = item.title,
+                                            params = item.params,
+                                            gradient = curatedGradients[gradIndex],
+                                            imageUrl = item.imageUrl,
+                                            navController = navController
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        item {
+                            Text(
+                                text = "Jelajahi semua",
+                                style = typo().titleMedium.copy(fontWeight = FontWeight.Bold, color = Color.White),
+                                modifier = Modifier.padding(top = 24.dp, bottom = 12.dp)
+                            )
+                        }
+
+                        val genres = exploreMoodItem?.genres
+                        if (!genres.isNullOrEmpty()) {
+                            val chunkedGenres = genres.chunked(2)
+                            items(chunkedGenres.size) { rowIndex ->
+                                val rowItems = chunkedGenres[rowIndex]
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    rowItems.forEachIndexed { colIndex, item ->
+                                        val gradIndex = (rowIndex * 2 + colIndex + 2) % curatedGradients.size
+                                        ExploreCard(
+                                            title = item.title,
+                                            gradient = curatedGradients[gradIndex],
+                                            imageUrl = getUnsplashImageForGenre(item.title),
+                                            modifier = Modifier.weight(1f),
+                                            onClick = {
+                                                navController.navigate(MoodDestination(item.params))
+                                            }
+                                        )
+                                    }
+                                    if (rowItems.size < 2) {
+                                        Spacer(modifier = Modifier.weight(1f))
+                                    }
+                                }
+                            }
+                        } else {
+                            val chunkedFallbackGenres = fallbackGenres.chunked(2)
+                            items(chunkedFallbackGenres.size) { rowIndex ->
+                                val rowItems = chunkedFallbackGenres[rowIndex]
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    rowItems.forEachIndexed { colIndex, item ->
+                                        val gradIndex = (rowIndex * 2 + colIndex + 2) % curatedGradients.size
+                                        ExploreCard(
+                                            title = item.title,
+                                            gradient = curatedGradients[gradIndex],
+                                            imageUrl = item.imageUrl,
+                                            modifier = Modifier.weight(1f),
+                                            onClick = {
+                                                navController.navigate(MoodDestination(item.params))
+                                            }
+                                        )
+                                    }
+                                    if (rowItems.size < 2) {
+                                        Spacer(modifier = Modifier.weight(1f))
+                                    }
+                                }
+                            }
+                        }
+
+                        item {
+                            Spacer(modifier = Modifier.height(20.dp))
                             GratifyMusicChartButton(
-                                modifier =
-                                    Modifier
-                                        .padding(top = 10.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 16.dp),
                             ) {
                                 uriHandler.openUri("https://chart.gratifymusic.org")
                             }
@@ -990,3 +1169,121 @@ enum class SearchUIType {
     SEARCH_SUGGESTIONS,
     SEARCH_RESULTS,
 }
+
+@Composable
+fun ExploreCard(
+    title: String,
+    gradient: Brush,
+    imageUrl: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .height(110.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(gradient)
+            .clickable(onClick = onClick)
+            .padding(12.dp)
+    ) {
+        Text(
+            text = title,
+            style = typo().titleMedium.copy(fontWeight = FontWeight.Bold, color = Color.White),
+            modifier = Modifier.align(Alignment.TopStart)
+        )
+        Box(
+            modifier = Modifier
+                .size(60.dp)
+                .align(Alignment.BottomEnd)
+                .graphicsLayer {
+                    rotationZ = -20f
+                    translationX = 15f
+                    translationY = 15f
+                }
+                .clip(RoundedCornerShape(8.dp))
+        ) {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalPlatformContext.current)
+                    .data(imageUrl)
+                    .crossfade(true)
+                    .diskCachePolicy(CachePolicy.ENABLED)
+                    .build(),
+                placeholder = painterResource(Res.drawable.holder),
+                error = painterResource(Res.drawable.holder),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+    }
+}
+
+@Composable
+fun MoodMomentRowItem(
+    title: String,
+    params: String,
+    gradient: Brush,
+    imageUrl: String,
+    navController: NavController
+) {
+    Box(
+        modifier = Modifier
+            .width(130.dp)
+            .height(180.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(gradient)
+            .clickable {
+                navController.navigate(MoodDestination(params))
+            }
+    ) {
+        AsyncImage(
+            model = ImageRequest.Builder(LocalPlatformContext.current)
+                .data(imageUrl)
+                .crossfade(true)
+                .diskCachePolicy(CachePolicy.ENABLED)
+                .build(),
+            placeholder = painterResource(Res.drawable.holder),
+            error = painterResource(Res.drawable.holder),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+            alpha = 0.6f
+        )
+        Text(
+            text = "#${title.lowercase().replace(" ", "").replace("&", "")}",
+            style = typo().bodyMedium.copy(fontWeight = FontWeight.Bold, color = Color.White),
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(12.dp)
+        )
+    }
+}
+
+fun getUnsplashImageForGenre(title: String): String {
+    val lower = title.lowercase()
+    return when {
+        lower.contains("pop") -> "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=200&auto=format&fit=crop&q=60"
+        lower.contains("rock") -> "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=200&auto=format&fit=crop&q=60"
+        lower.contains("hip") || lower.contains("rap") -> "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=200&auto=format&fit=crop&q=60"
+        lower.contains("jazz") -> "https://images.unsplash.com/photo-1511192336575-5a79af67a629?w=200&auto=format&fit=crop&q=60"
+        lower.contains("classic") -> "https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=200&auto=format&fit=crop&q=60"
+        lower.contains("electron") || lower.contains("dance") || lower.contains("edm") -> "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=200&auto=format&fit=crop&q=60"
+        lower.contains("r&b") || lower.contains("rnb") -> "https://images.unsplash.com/photo-1487180142328-054b783fc471?w=200&auto=format&fit=crop&q=60"
+        lower.contains("chill") || lower.contains("relax") -> "https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=200&auto=format&fit=crop&q=60"
+        lower.contains("workout") || lower.contains("gym") || lower.contains("energi") -> "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=200&auto=format&fit=crop&q=60"
+        lower.contains("focus") || lower.contains("study") -> "https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?w=200&auto=format&fit=crop&q=60"
+        lower.contains("sleep") -> "https://images.unsplash.com/photo-1511295742364-92767fa62d9f?w=200&auto=format&fit=crop&q=60"
+        lower.contains("romance") || lower.contains("love") -> "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=200&auto=format&fit=crop&q=60"
+        lower.contains("podcast") -> "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=200&auto=format&fit=crop&q=60"
+        lower.contains("indie") -> "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=200&auto=format&fit=crop&q=60"
+        lower.contains("indonesia") -> "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200&auto=format&fit=crop&q=60"
+        lower.contains("tangga") || lower.contains("chart") -> "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=200&auto=format&fit=crop&q=60"
+        else -> "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=200&auto=format&fit=crop&q=60"
+    }
+}
+
+data class FallbackCategory(
+    val title: String,
+    val params: String,
+    val imageUrl: String
+)

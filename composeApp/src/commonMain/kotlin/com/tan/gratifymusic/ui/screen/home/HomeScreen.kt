@@ -12,6 +12,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.snapping.SnapLayoutInfoProvider
 import androidx.compose.foundation.gestures.snapping.SnapPosition
@@ -44,9 +45,11 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -73,7 +76,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
@@ -123,6 +128,15 @@ import com.tan.gratifymusic.ui.screen.library.LibraryDynamicPlaylistType
 import com.tan.gratifymusic.ui.navigation.destination.list.PlaylistDestination
 import com.tan.gratifymusic.ui.navigation.destination.login.LoginDestination
 import com.tan.gratifymusic.ui.theme.md_theme_dark_background
+import com.tan.common.LibraryChipType
+import com.tan.gratifymusic.ui.navigation.destination.library.LibraryDestination
+import gratifymusic.composeapp.generated.resources.baseline_favorite_24
+import gratifymusic.composeapp.generated.resources.baseline_playlist_add_24
+import gratifymusic.composeapp.generated.resources.baseline_downloaded
+import gratifymusic.composeapp.generated.resources.liked_songs
+import gratifymusic.composeapp.generated.resources.local_playlists
+import gratifymusic.composeapp.generated.resources.downloaded_music
+import gratifymusic.composeapp.generated.resources.recently_played
 import com.tan.gratifymusic.ui.theme.typo
 import com.tan.gratifymusic.ui.theme.white
 import com.tan.gratifymusic.viewModel.HomeViewModel
@@ -562,15 +576,20 @@ fun HomeScreen(
                                                 with(LocalDensity.current) { topAppBarHeightPx.toDp() },
                                             ),
                                         )
+                                        if (accountInfo != null && accountShow) {
+                                            AccountLayout(
+                                                accountName = accountInfo?.first ?: "",
+                                                url = accountInfo?.second ?: "",
+                                            )
+                                            Spacer(Modifier.height(12.dp))
+                                        }
+                                        QuickAccessGrid(
+                                            navController = navController,
+                                            sharedViewModel = sharedViewModel
+                                        )
+                                        Spacer(Modifier.height(12.dp))
                                     }
                                     Spacer(modifier = Modifier.height(8.dp))
-                                    if (index == 0 && accountInfo != null && accountShow) {
-                                        AccountLayout(
-                                            accountName = accountInfo?.first ?: "",
-                                            url = accountInfo?.second ?: "",
-                                        )
-                                        Spacer(Modifier.height(8.dp))
-                                    }
                                     if (item.title == stringResource(Res.string.quick_picks)) {
                                         AnimatedVisibility(
                                             visible =
@@ -832,6 +851,156 @@ fun HomeScreen(
         }
     }
 }
+
+@Composable
+fun QuickAccessGrid(
+    navController: NavController,
+    sharedViewModel: SharedViewModel,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            QuickAccessCard(
+                title = stringResource(Res.string.liked_songs),
+                backgroundColors = listOf(Color(0xFFFD297B), Color(0xFFFF5858)),
+                icon = {
+                    Icon(
+                        painter = painterResource(Res.drawable.baseline_favorite_24),
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
+                onClick = {
+                    navController.navigate(
+                        LibraryDynamicPlaylistDestination(
+                            type = LibraryDynamicPlaylistType.Favorite.toStringParams()
+                        )
+                    )
+                },
+                modifier = Modifier.weight(1f)
+            )
+            QuickAccessCard(
+                title = stringResource(Res.string.local_playlists),
+                backgroundColors = listOf(Color(0xFF3B82F6), Color(0xFF06B6D4)),
+                icon = {
+                    Icon(
+                        painter = painterResource(Res.drawable.baseline_playlist_add_24),
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(22.dp)
+                    )
+                },
+                onClick = {
+                    sharedViewModel.setNavigateToLibraryFilter(LibraryChipType.LOCAL_PLAYLIST)
+                    navController.navigate(LibraryDestination)
+                },
+                modifier = Modifier.weight(1f)
+            )
+        }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            QuickAccessCard(
+                title = stringResource(Res.string.downloaded_music),
+                backgroundColors = listOf(Color(0xFF10B981), Color(0xFF059669)),
+                icon = {
+                    Icon(
+                        painter = painterResource(Res.drawable.baseline_downloaded),
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(22.dp)
+                    )
+                },
+                onClick = {
+                    navController.navigate(
+                        LibraryDynamicPlaylistDestination(
+                            type = LibraryDynamicPlaylistType.Downloaded.toStringParams()
+                        )
+                    )
+                },
+                modifier = Modifier.weight(1f)
+            )
+            QuickAccessCard(
+                title = stringResource(Res.string.recently_played),
+                backgroundColors = listOf(Color(0xFFF59E0B), Color(0xFFEA580C)),
+                icon = {
+                    Icon(
+                        painter = painterResource(Res.drawable.baseline_history_24),
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(22.dp)
+                    )
+                },
+                onClick = {
+                    navController.navigate(RecentlySongsDestination)
+                },
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+fun QuickAccessCard(
+    title: String,
+    backgroundColors: List<Color>,
+    icon: @Composable () -> Unit,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .angledGradientBackground(backgroundColors, 25f)
+            .border(
+                width = 1.dp,
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.2f),
+                        Color.White.copy(alpha = 0.05f)
+                    )
+                ),
+                shape = RoundedCornerShape(16.dp)
+            )
+            .clickable(onClick = onClick)
+            .padding(16.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.White.copy(alpha = 0.15f))
+            ) {
+                icon()
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = title,
+                style = typo().bodyLarge.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp
+                ),
+                color = Color.White,
+                maxLines = 1
+            )
+        }
+    }
+}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
