@@ -47,7 +47,7 @@ jobs:
         env:
           BASE_64_SIGNING_KEY: ${{ secrets.BASE_64_SIGNING_KEY }}
         run:
-          echo $BASE_64_SIGNING_KEY | base64 -d > gratifymusic.jks
+          echo $BASE_64_SIGNING_KEY | base64 -d > gratify.jks
 
       - name: Update build product flavor
         run: |
@@ -89,7 +89,7 @@ jobs:
         env:
           BASE_64_SIGNING_KEY: ${{ secrets.BASE_64_SIGNING_KEY }}
         run:
-          echo $BASE_64_SIGNING_KEY | base64 -d > gratifymusic.jks
+          echo $BASE_64_SIGNING_KEY | base64 -d > gratify.jks
 
       - name: Update build product flavor
         run: |
