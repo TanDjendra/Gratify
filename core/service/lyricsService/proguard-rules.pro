@@ -37,6 +37,6 @@
 -dontwarn kotlinx.serialization.internal.ClassValueReferences
 -dontwarn org.slf4j.impl.StaticLoggerBinder
 
--keep class org.gratifymusic.lyrics.parser.** { *; }
--keep class org.gratifymusic.lyrics.models.** { *; }
--keep class com.gratifymusic.lyrics.parser.** { *; }
+-keep class com.tan.gratify.lyrics.parser.** { *; }
+-keep class com.tan.gratify.lyrics.models.** { *; }
+-keep class com.gratify.lyrics.parser.** { *; }

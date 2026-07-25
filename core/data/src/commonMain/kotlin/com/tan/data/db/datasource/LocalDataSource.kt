@@ -24,8 +24,14 @@ import com.tan.domain.extension.now
 import com.tan.domain.utils.FilterState
 import kotlinx.datetime.LocalDateTime
 
+import com.tan.domain.manager.DataStoreManager
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flatMapLatest
+
 internal class LocalDataSource(
     private val databaseDao: DatabaseDao,
+    private val dataStoreManager: DataStoreManager,
 ) {
     suspend fun checkpoint() = databaseDao.checkpoint()
 
@@ -113,6 +119,13 @@ internal class LocalDataSource(
         videoId: String,
     ) = databaseDao.updateLiked(liked, videoId)
 
+    /** Varian yang mempertahankan tanggal like asli (dipakai saat memulihkan dari cloud). */
+    suspend fun updateLiked(
+        liked: Int,
+        videoId: String,
+        favoriteAt: LocalDateTime?,
+    ) = databaseDao.updateLiked(liked, videoId, favoriteAt)
+
     suspend fun updateDurationSeconds(
         durationSeconds: Int,
         videoId: String,
@@ -144,6 +157,13 @@ internal class LocalDataSource(
         channelId: String,
     ) = databaseDao.updateFollowed(followed, channelId)
 
+    /** Varian yang mempertahankan tanggal follow asli (dipakai saat memulihkan dari cloud). */
+    suspend fun updateFollowed(
+        followed: Int,
+        channelId: String,
+        followedAt: LocalDateTime?,
+    ) = databaseDao.updateFollowed(followed, channelId, followedAt)
+
     suspend fun getArtist(channelId: String) = databaseDao.getArtist(channelId)
 
     suspend fun getFollowedArtists(
@@ -167,6 +187,13 @@ internal class LocalDataSource(
         liked: Int,
         albumId: String,
     ) = databaseDao.updateAlbumLiked(liked, albumId)
+
+    /** Varian yang mempertahankan tanggal simpan asli (dipakai saat memulihkan dari cloud). */
+    suspend fun updateAlbumLiked(
+        liked: Int,
+        albumId: String,
+        favoriteAt: LocalDateTime?,
+    ) = databaseDao.updateAlbumLiked(liked, albumId, favoriteAt)
 
     suspend fun getAlbum(albumId: String) = databaseDao.getAlbum(albumId)
 
@@ -223,13 +250,34 @@ internal class LocalDataSource(
         playlistId: String,
     ) = databaseDao.updatePlaylistDownloadState(downloadState, playlistId)
 
+    suspend fun getActiveUserEmail(): String {
+        val googleEmail = databaseDao.getUsedGoogleAccount()?.email
+        if (googleEmail != null) return googleEmail
+        return dataStoreManager.getString("AccountEmail").firstOrNull() ?: ""
+    }
+
+    fun getActiveUserEmailFlow(): kotlinx.coroutines.flow.Flow<String> {
+        return combine(
+            databaseDao.getUsedGoogleAccountFlow(),
+            dataStoreManager.getString("AccountEmail")
+        ) { google, email ->
+            google?.email ?: email ?: ""
+        }
+    }
+
     suspend fun getAllLocalPlaylists(
         limit: Int,
         offset: Int,
     ) = databaseDao.getAllLocalPlaylists(
-        limit,
-        offset,
+        ownerEmail = getActiveUserEmail(),
+        limit = limit,
+        offset = offset,
     )
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    fun getAllLocalPlaylistsFlow() = getActiveUserEmailFlow().flatMapLatest { ownerEmail ->
+        databaseDao.getAllLocalPlaylistsFlow(ownerEmail)
+    }
 
     suspend fun getAllDownloadingLocalPlaylists(
         limit: Int,
@@ -241,9 +289,16 @@ internal class LocalDataSource(
 
     suspend fun getLocalPlaylist(id: Long) = databaseDao.getLocalPlaylist(id)
 
-    suspend fun insertLocalPlaylist(localPlaylist: LocalPlaylistEntity) = databaseDao.insertLocalPlaylist(localPlaylist)
+    suspend fun insertLocalPlaylist(localPlaylist: LocalPlaylistEntity): Long {
+        val email = getActiveUserEmail()
+        return databaseDao.insertLocalPlaylist(localPlaylist.copy(ownerEmail = email))
+    }  suspend fun deleteLocalPlaylist(id: Long) = databaseDao.deleteLocalPlaylist(id)
 
-    suspend fun deleteLocalPlaylist(id: Long) = databaseDao.deleteLocalPlaylist(id)
+    suspend fun getLocalPlaylistBySourceSharedId(sharedPlaylistId: String) =
+        databaseDao.getLocalPlaylistBySourceSharedId(sharedPlaylistId)
+
+    suspend fun updateSourceAvailability(sharedPlaylistId: String, availability: Int) =
+        databaseDao.updateSourceAvailability(sharedPlaylistId, availability)
 
     suspend fun updateLocalPlaylistTitle(
         title: String,
@@ -544,4 +599,26 @@ internal class LocalDataSource(
     suspend fun deleteAllYourYouTubePlaylist() =
         databaseDao.deleteAllYourYouTubePlaylist()
 
+    /**
+     * Bersihkan data yang MILIK satu user sebelum perangkat dipakai akun lain.
+     *
+     * Playlist lokal sengaja TIDAK dihapus: cadangannya lewat SocialRepository
+     * (cloud_playlists), bukan UserDataSyncRepository, jadi di sini tidak ada jaminan
+     * playlist itu sudah aman di cloud — menghapusnya bisa jadi kehilangan permanen.
+     */
+    suspend fun clearUserData() {
+        databaseDao.deleteAllYourYouTubePlaylist()
+        // databaseDao.deleteAllLocalPlaylists()
+        // databaseDao.deleteAllPairSongLocalPlaylists()
+        databaseDao.resetAllLikedSongs()
+        databaseDao.resetAllFollowedArtists()
+        databaseDao.resetAllLikedAlbums()
+        databaseDao.deleteQueue()
+        // Jejak pemakaian akun sebelumnya. Semuanya bisa dibangun ulang dari pemakaian
+        // dan riwayat akun lama sudah diunggah ke cloud sebelum wipe, jadi aman dihapus.
+        databaseDao.resetAllTotalPlayTime()
+        databaseDao.deleteAllPlaybackEvents()
+        databaseDao.deleteAllEventArtists()
+        databaseDao.deleteSearchHistory()
+    }
 }

@@ -70,31 +70,31 @@ interface LyricsCanvasRepository {
         targetLanguage: String,
     ): Flow<Resource<Lyrics>>
 
-    fun getGratifyMusicLyrics(videoId: String): Flow<Resource<Lyrics>>
+    fun getGratifyLyrics(videoId: String): Flow<Resource<Lyrics>>
 
-    fun getGratifyMusicTranslatedLyrics(
+    fun getGratifyTranslatedLyrics(
         videoId: String,
         language: String,
     ): Flow<Resource<Lyrics>>
 
-    fun voteGratifyMusicLyrics(
+    fun voteGratifyLyrics(
         lyricsId: String,
         upvote: Boolean,
     ): Flow<Resource<String>>
 
-    fun voteGratifyMusicTranslatedLyrics(
+    fun voteGratifyTranslatedLyrics(
         translatedLyricsId: String,
         upvote: Boolean,
     ): Flow<Resource<String>>
 
-    fun insertGratifyMusicLyrics(
+    fun insertGratifyLyrics(
         dataStoreManager: DataStoreManager,
         track: Track,
         duration: Int,
         lyrics: Lyrics,
     ): Flow<Resource<String>>
 
-    fun insertGratifyMusicTranslatedLyrics(
+    fun insertGratifyTranslatedLyrics(
         dataStoreManager: DataStoreManager,
         track: Track,
         translatedLyrics: Lyrics,

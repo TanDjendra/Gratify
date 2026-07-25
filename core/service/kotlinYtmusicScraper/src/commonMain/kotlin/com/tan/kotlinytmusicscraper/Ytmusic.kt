@@ -143,6 +143,7 @@ class Ytmusic {
             field = value
             httpClient.close()
             httpClient = createClient()
+            extractor.setProxy(value)
         }
 
     private val extractor = Extractor()
@@ -393,8 +394,8 @@ class Ytmusic {
         parameter("prettyPrint", false)
     }
 
-    suspend fun getGratifyMusicChart() =
-        httpClient.get("https://chart.gratifymusic.org/api/playlists") {
+    suspend fun getGratifyChart() =
+        httpClient.get("https://chart.gratify.org/api/playlists") {
             accept(ContentType.Application.Json)
             contentType(ContentType.Application.Json)
         }
@@ -602,7 +603,7 @@ class Ytmusic {
         }
 
     suspend fun checkForFdroidUpdate() =
-        httpClient.get("https://f-droid.org/api/v1/packages/com.tan.gratifymusic") {
+        httpClient.get("https://f-droid.org/api/v1/packages/com.tan.gratify") {
             contentType(ContentType.Application.Json)
         }
 
@@ -1158,10 +1159,12 @@ class Ytmusic {
 
     suspend fun is403Url(url: String): Boolean {
         return try {
-            return httpClient.head(url).status.value in 400..499
+            httpClient.head(url).status.value in 400..499
+        } catch (e: io.ktor.client.plugins.ResponseException) {
+            e.response.status.value in 400..499
         } catch (e: Exception) {
             e.printStackTrace()
-            true
+            false
         }
     }
 
@@ -1211,9 +1214,9 @@ class Ytmusic {
 
         // Remote config (TIDAL credentials) hosted on GitHub raw, fetched on each app launch.
         // Credentials are NOT hard-coded in source — they live only in this remote file,
-        // kept in a separate repo (gratifymusic-files) so the main repo stays credential-free.
+        // kept in a separate repo (gratify-files) so the main repo stays credential-free.
         const val TIDAL_REMOTE_CONFIG_URL =
-            "https://raw.githubusercontent.com/tan/gratifymusic-files/refs/heads/main/remote-config.json"
+            "https://raw.githubusercontent.com/tan/gratify-files/refs/heads/main/remote-config.json"
     }
 }
 

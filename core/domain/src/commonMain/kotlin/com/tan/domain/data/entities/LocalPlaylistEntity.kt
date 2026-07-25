@@ -22,8 +22,16 @@ data class LocalPlaylistEntity(
     @ColumnInfo(name = "youtube_sync_state", defaultValue = "0")
     val syncState: Int = YouTubeSyncState.NotSynced,
     val tracks: List<String>? = null,
-    // Only synced with YouTube playlist
-    // val listSetVideoId: List<String>? = null,
+    @ColumnInfo(name = "source_shared_playlist_id", defaultValue = "NULL")
+    val sourceSharedPlaylistId: String? = null,
+    @ColumnInfo(name = "source_availability", defaultValue = "0")
+    val sourceAvailability: Int = SourceAvailability.AVAILABLE,
+    @ColumnInfo(name = "owner_email", defaultValue = "NULL")
+    val ownerEmail: String? = null,
+    // Nama pembuat asli — diisi saat playlist ini ditambahkan dari playlist publik
+    // orang lain, dipakai untuk menampilkan watermark "Dibuat oleh X".
+    @ColumnInfo(name = "creator_name", defaultValue = "NULL")
+    val creatorName: String? = null,
 ) : PlaylistType,
     HomeContentType {
     override fun playlistType(): PlaylistType.Type = PlaylistType.Type.LOCAL
@@ -32,5 +40,10 @@ data class LocalPlaylistEntity(
         const val NotSynced = 0
         const val Syncing = 1
         const val Synced = 2
+    }
+
+    object SourceAvailability {
+        const val AVAILABLE = 0
+        const val UNAVAILABLE = 1
     }
 }

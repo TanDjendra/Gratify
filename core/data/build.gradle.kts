@@ -85,6 +85,14 @@ kotlin {
 
                 // Koin
                 implementation(libs.koin.core)
+
+                // Supabase
+                implementation(project.dependencies.platform(libs.supabase.bom))
+                implementation(libs.supabase.auth)
+                implementation(libs.supabase.postgrest)
+                implementation(libs.supabase.storage)
+                implementation(libs.multiplatform.settings)
+                implementation(libs.kotlinx.datetime)
             }
         }
 
@@ -112,7 +120,7 @@ kotlin {
         jvmMain {
             dependencies {
                 implementation(projects.mediaJvm)
-                implementation(libs.nowplaying)
+                implementation(projects.nowplayingcenter)
                 implementation(libs.jna)
                 implementation(libs.jna.platform)
             }

@@ -1,4 +1,4 @@
-package com.gratifymusic.media_jvm.download
+package com.gratify.media_jvm.download
 
 import com.tan.common.MERGING_DATA_TYPE
 import com.tan.domain.data.entities.DownloadState
@@ -103,4 +103,4 @@ internal class DownloadUtils(
     }
 }
 
-fun getDownloadPath(): String = System.getProperty("user.home") + File.separator + ".gratifymusic" + File.separator + "downloads"
+fun getDownloadPath(): String = System.getProperty("user.home") + File.separator + ".gratify" + File.separator + "downloads"

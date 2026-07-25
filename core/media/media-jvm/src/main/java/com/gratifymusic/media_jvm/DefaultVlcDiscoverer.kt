@@ -1,5 +1,7 @@
-package com.gratifymusic.media_jvm
+package com.gratify.media_jvm
 
+import com.sun.jna.Library
+import com.sun.jna.Native
 import com.tan.logger.Logger
 import uk.co.caprica.vlcj.binding.lib.LibC
 import uk.co.caprica.vlcj.factory.discovery.strategy.NativeDiscoveryStrategy
@@ -22,7 +24,56 @@ class DefaultVlcDiscoverer : NativeDiscoveryStrategy {
     }
 
     override fun discover(): String? {
-        return findBundledVlcPath()
+        val bundled = findBundledVlcPath()
+        if (bundled != null) return bundled
+
+        // Fallback to system-wide VLC installation
+        val os = System.getProperty("os.name", "").lowercase()
+        return when {
+            os.contains("win") -> {
+                try {
+                    val systemVlc = uk.co.caprica.vlcj.factory.discovery.strategy.WindowsNativeDiscoveryStrategy().discover()
+                    if (systemVlc != null) {
+                        Logger.i(tag, "Found system-wide VLC on Windows: $systemVlc")
+                        systemVlc
+                    } else {
+                        // Manual check for standard Windows VLC directories if registry discovery failed
+                        val paths = listOf(
+                            "C:\\Program Files\\VideoLAN\\VLC",
+                            "D:\\Program Files\\VideoLAN\\VLC",
+                            "D:\\VLC",
+                            "C:\\Program Files (x86)\\VideoLAN\\VLC"
+                        )
+                        var foundPath: String? = null
+                        for (p in paths) {
+                            val f = File(p)
+                            if (f.exists() && hasVlcLib(f)) {
+                                foundPath = f.absolutePath
+                                Logger.i(tag, "Found VLC in standard Windows directory: $foundPath")
+                                break
+                            }
+                        }
+                        foundPath
+                    }
+                } catch (e: Throwable) {
+                    Logger.e(tag, "Failed to search system-wide VLC on Windows: $e")
+                    null
+                }
+            }
+            os.contains("nix") || os.contains("nux") -> {
+                try {
+                    val systemVlc = uk.co.caprica.vlcj.factory.discovery.strategy.LinuxNativeDiscoveryStrategy().discover()
+                    if (systemVlc != null) {
+                        Logger.i(tag, "Found system-wide VLC on Linux: $systemVlc")
+                        systemVlc
+                    } else null
+                } catch (e: Throwable) {
+                    Logger.e(tag, "Failed to search system-wide VLC on Linux: $e")
+                    null
+                }
+            }
+            else -> null
+        }
     }
 
     override fun onFound(path: String): Boolean {
@@ -40,10 +91,17 @@ class DefaultVlcDiscoverer : NativeDiscoveryStrategy {
         // we have to do it ourselves — otherwise libvlc_new() returns NULL
         // with the bundled VLC because libvlc cannot locate the plugins
         // subdirectory next to libvlc.so.
+        val os = System.getProperty("os.name", "").lowercase()
         return try {
-            val ok = LibC.INSTANCE.setenv("VLC_PLUGIN_PATH", path, 1) == 0
-            Logger.i(tag, "VLC plugin path set to $path (setenv ok=$ok)")
-            ok
+            if (os.contains("win")) {
+                val ok = WinKernel32.INSTANCE.SetEnvironmentVariableA("VLC_PLUGIN_PATH", path)
+                Logger.i(tag, "VLC plugin path set to $path (SetEnvironmentVariable ok=$ok)")
+                ok
+            } else {
+                val ok = LibC.INSTANCE.setenv("VLC_PLUGIN_PATH", path, 1) == 0
+                Logger.i(tag, "VLC plugin path set to $path (setenv ok=$ok)")
+                ok
+            }
         } catch (t: Throwable) {
             Logger.e(tag, "Failed to set VLC_PLUGIN_PATH env var to $path: $t")
             false
@@ -108,5 +166,15 @@ class DefaultVlcDiscoverer : NativeDiscoveryStrategy {
             dir.listFiles()?.any {
                 it.name.startsWith("libvlc") || it.name == "vlc.dll"
             } == true
+    }
+}
+
+interface WinKernel32 : Library {
+    fun SetEnvironmentVariableA(lpName: String, lpValue: String): Boolean
+
+    companion object {
+        val INSTANCE: WinKernel32 by lazy {
+            Native.load("kernel32", WinKernel32::class.java)
+        }
     }
 }

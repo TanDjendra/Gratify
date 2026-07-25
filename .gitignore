@@ -43,3 +43,19 @@ sentry.properties
 /desktopApp/generated.conveyor.conf
 # Conveyor output directory
 /output/
+# Local crash/debug dumps
+logcat_crash.txt
+# Supabase local config
+/supabase/
+
+# Signing keystore - NEVER commit
+gratify.jks
+*.jks
+*.keystore
+# Local test/scratch files
+req.json
+build_output*.txt
+temp_search_screen.kt
+test_import.kt
+test.gradle
+test_supabase.ps1

@@ -58,9 +58,11 @@
 
 -dontwarn org.slf4j.impl.StaticLoggerBinder
 -dontwarn kotlinx.serialization.internal.ClassValueReferences
--keep class com.tan.gratifymusic.data.model.** { *; }
--keep class com.tan.gratifymusic.extension.AllExtKt { *; }
--keep class com.tan.gratifymusic.extension.AllExtKt$* { *; }
+-keep class kotlinx.datetime.** { *; }
+-keep class io.github.jan.supabase.** { *; }
+-keep class com.tan.gratify.data.model.** { *; }
+-keep class com.tan.gratify.extension.AllExtKt { *; }
+-keep class com.tan.gratify.extension.AllExtKt$* { *; }
 -keep class com.tan.kotlinytmusicscraper.extension.MapExtKt$* { *; }
 
 ## Removes all Logs as they cause perfomance issues in prod
@@ -210,9 +212,9 @@
 
 -keep class com.tan.kotlinytmusicscraper.** { *; }
 
--keep class org.gratifymusic.lyrics.parser.** { *; }
--keep class org.gratifymusic.lyrics.models.** { *; }
--keep class com.gratifymusic.lyrics.parser.** { *; }
+-keep class com.tan.gratify.lyrics.parser.** { *; }
+-keep class com.tan.gratify.lyrics.models.** { *; }
+-keep class com.gratify.lyrics.parser.** { *; }
 
 -keep class com.google.re2j.** { *; }
 -dontwarn com.google.re2j.Matcher
@@ -225,3 +227,4 @@
 -dontwarn io.sentry.instrumentation.file.SentryFileOutputStream$Factory
 -dontwarn io.sentry.okhttp.SentryOkHttpEventListener
 -dontwarn io.sentry.okhttp.SentryOkHttpInterceptor
+-dontwarn kotlinx.datetime.**

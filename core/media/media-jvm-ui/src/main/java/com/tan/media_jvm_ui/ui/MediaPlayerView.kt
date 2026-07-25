@@ -40,8 +40,8 @@ import coil3.request.crossfade
 import com.tan.domain.data.model.metadata.Lyrics
 import com.tan.domain.data.model.streams.TimeLine
 import com.tan.domain.mediaservice.handler.MediaPlayerHandler
-import com.gratifymusic.media_jvm.VlcPlayerAdapter
-import com.gratifymusic.media_jvm.VlcVideoSurfacePanel
+import com.gratify.media_jvm.VlcPlayerAdapter
+import com.gratify.media_jvm.VlcVideoSurfacePanel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.swing.Swing

@@ -2,14 +2,25 @@ package com.tan.kotlinytmusicscraper.utils
 
 import com.tan.kotlinytmusicscraper.models.response.AudioData
 import com.tan.logger.Logger
+import kotlinx.datetime.Clock
 import kotlinx.serialization.json.Json
-import java.security.MessageDigest
-import java.time.Instant
+import okio.Buffer
 import kotlin.io.encoding.Base64
 
-fun ByteArray.toHex(): String = joinToString(separator = "") { eachByte -> "%02x".format(eachByte) }
+private val HEX_CHARS = "0123456789abcdef".toCharArray()
 
-fun sha1(str: String): String = MessageDigest.getInstance("SHA-1").digest(str.toByteArray()).toHex()
+fun ByteArray.toHex(): String {
+    val result = StringBuilder(size * 2)
+    for (b in this) {
+        val i = b.toInt()
+        result.append(HEX_CHARS[(i shr 4) and 0x0f])
+        result.append(HEX_CHARS[i and 0x0f])
+    }
+    return result.toString()
+}
+
+fun sha1(str: String): String = Buffer().writeUtf8(str).sha1().hex()
+
 
 fun parseCookieString(cookie: String): Map<String, String> =
     cookie
@@ -42,7 +53,7 @@ fun generateNetscapeCookies(
     path: String = "/",
     secure: Boolean = false,
     httpOnly: Boolean = false,
-    expirationTimeSeconds: Long = Instant.now().epochSecond + 86400 * 365,
+    expirationTimeSeconds: Long = Clock.System.now().epochSeconds + 86400 * 365,
 ): String {
     val header =
         "# Netscape HTTP Cookie File\n" +

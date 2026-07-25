@@ -15,6 +15,6 @@ actual fun getDatabaseBuilder(
 }
 
 actual fun getDatabasePath(): String {
-    val dbFile = File(getHomeFolderPath(listOf(".gratifymusic", "db")), DB_NAME)
+    val dbFile = File(getHomeFolderPath(listOf(".gratify", "db")), DB_NAME)
     return dbFile.absolutePath
 }

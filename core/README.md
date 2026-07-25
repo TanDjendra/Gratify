@@ -1,2 +1,2 @@
 # core
-GratifyMusic app's core modules
+Gratify app's core modules

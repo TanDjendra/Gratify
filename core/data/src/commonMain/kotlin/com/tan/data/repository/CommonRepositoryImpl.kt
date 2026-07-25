@@ -15,6 +15,7 @@ import com.tan.spotify.Spotify
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
@@ -27,8 +28,8 @@ import okio.IOException
 import okio.Path.Companion.toPath
 import okio.buffer
 import okio.use
-import org.gratifymusic.aiservice.AIHost
-import org.gratifymusic.aiservice.AiClient
+import com.tan.gratify.aiservice.AIHost
+import com.tan.gratify.aiservice.AiClient
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
@@ -279,6 +280,10 @@ internal class CommonRepositoryImpl(
     // Database
     override fun closeDatabase() {
         database.close()
+    }
+
+    override suspend fun clearDatabase() {
+        localDataSource.clearUserData()
     }
 
     override fun getDatabasePath() =

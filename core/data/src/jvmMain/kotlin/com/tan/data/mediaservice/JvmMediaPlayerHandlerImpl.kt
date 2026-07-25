@@ -88,14 +88,17 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
 import kotlinx.serialization.json.Json
 import org.koin.mp.KoinPlatform.getKoin
-import org.simpmusic.nowplayingcenter.NPYC
-import org.simpmusic.nowplayingcenter.domain.NowPlayingListener
-import org.simpmusic.nowplayingcenter.domain.Platform
+import com.tan.gratify.nowplayingcenter.NPYC
+import com.tan.gratify.nowplayingcenter.domain.NowPlayingListener
+import com.tan.gratify.nowplayingcenter.domain.Platform
 import kotlin.math.pow
 
 private val TAG = "JvmMediaPlayerHandler"
+private val THUMB_SIZE_REGEX_JVM = Regex("([wh])120")
+private val SHUFFLE_OFFSET_REGEX_JVM = Regex("(?<=SHUFFLE)\\d+(?=_)")
 
 class JvmMediaPlayerHandlerImpl(
     private val dataStoreManager: DataStoreManager,
@@ -127,8 +130,8 @@ class JvmMediaPlayerHandlerImpl(
             Platform.MacOs
         } else {
             Platform.Linux(
-                "GratifyMusic",
-                "com.tan.gratifymusic",
+                "SimpMusic",
+                "com.tan.simpmusic",
             )
         }
     }
@@ -232,6 +235,9 @@ class JvmMediaPlayerHandlerImpl(
 
     private var jobWatchtime: Job? = null
 
+    @Volatile
+    private var cachedEndlessQueue: Boolean = false
+
     private var getDataOfNowPlayingTrackStateJob: Job? = null
 
     private val json =
@@ -265,6 +271,7 @@ class JvmMediaPlayerHandlerImpl(
         getSkipSegmentsJob = Job()
         getFormatJob = Job()
         jobWatchtime = Job()
+        cachedEndlessQueue = runBlocking { dataStoreManager.endlessQueue.first() == TRUE }
         skipSilent = runBlocking { dataStoreManager.skipSilent.first() == TRUE }
         normalizeVolume =
             runBlocking { dataStoreManager.normalizeVolume.first() == TRUE }
@@ -406,15 +413,22 @@ class JvmMediaPlayerHandlerImpl(
                 }
             val discordRPCEnabledJob =
                 launch {
-                    dataStoreManager.richPresenceEnabled
-                        .distinctUntilChanged()
-                        .collectLatest {
-                            if (it == TRUE && discordRPC == null) {
+                    // Run Rich Presence only when enabled AND logged in (non-blank token); a blank-token
+                    // DiscordRPC loops reconnect forever (issue #2157). Combining both flows also tears
+                    // the RPC down as soon as the token is cleared on logout.
+                    combine(
+                        dataStoreManager.richPresenceEnabled,
+                        dataStoreManager.discordToken,
+                    ) { enabled, token ->
+                        enabled == TRUE && token.isNotBlank()
+                    }.distinctUntilChanged()
+                        .collectLatest { shouldRun ->
+                            if (shouldRun && discordRPC == null) {
                                 discordRPC = DiscordRPC(dataStoreManager.discordToken.first())
                                 nowPlayingState.value.songEntity?.let { song ->
                                     updateDiscordRpc(song)
                                 }
-                            } else if (it == FALSE) {
+                            } else if (!shouldRun) {
                                 if (discordRPC?.isRpcRunning() == true) {
                                     discordRPC?.closeRPC()
                                 }
@@ -422,11 +436,18 @@ class JvmMediaPlayerHandlerImpl(
                             }
                         }
                 }
+            val endlessQueueJob =
+                launch {
+                    dataStoreManager.endlessQueue.collectLatest {
+                        cachedEndlessQueue = it == TRUE
+                    }
+                }
             controlStateJob.join()
             skipSegmentsJob.join()
             playbackJob.join()
             playbackSpeedPitchJob.join()
             discordRPCEnabledJob.join()
+            endlessQueueJob.join()
         }
     }
 
@@ -460,7 +481,7 @@ class JvmMediaPlayerHandlerImpl(
                                 ?: songEntity.thumbnails
                                 ?: "http://i.ytimg.com/vi/${songEntity.videoId}/maxresdefault.jpg"
                         if (thumbUrl.contains("w120")) {
-                            thumbUrl = Regex("([wh])120").replace(thumbUrl, "$1544")
+                            thumbUrl = THUMB_SIZE_REGEX_JVM.replace(thumbUrl, "$1544")
                         }
                         if (songEntity.thumbnails != thumbUrl) {
                             songRepository.updateThumbnailsSongEntity(thumbUrl, songEntity.videoId).singleOrNull()?.let {
@@ -1122,8 +1143,7 @@ class JvmMediaPlayerHandlerImpl(
                         }
                     Logger.w("Check loadMore", longId.toString())
                     if (continuation.startsWith("SHUFFLE")) {
-                        val regex = Regex("(?<=SHUFFLE)\\d+(?=_)")
-                        var offset = regex.find(continuation)?.value?.toInt() ?: return@launch
+                        var offset = SHUFFLE_OFFSET_REGEX_JVM.find(continuation)?.value?.toInt() ?: return@launch
                         val posString = continuation.removePrefix("SHUFFLE${offset}_")
                         val listPosition = fromStringToListInt(posString) ?: return@launch
                         val theLastLoad = 50 * (offset + 1) >= listPosition.size
@@ -1480,12 +1500,13 @@ class JvmMediaPlayerHandlerImpl(
         }
         val catalogMetadata: ArrayList<Track> = arrayListOf()
         for (i in 0 until listTrack.size) {
+            yield()
             val track = listTrack[i]
             var thumbUrl =
                 track.thumbnails?.lastOrNull()?.url
                     ?: "http://i.ytimg.com/vi/${track.videoId}/maxresdefault.jpg"
             if (thumbUrl.contains("w120")) {
-                thumbUrl = Regex("([wh])120").replace(thumbUrl, "$1544")
+                thumbUrl = THUMB_SIZE_REGEX_JVM.replace(thumbUrl, "$1544")
             }
             val artistName: String = track.artists.toListName().connectArtists()
             val isSong =
@@ -1619,13 +1640,14 @@ class JvmMediaPlayerHandlerImpl(
             Logger.w("SimpleMediaServiceHandler", "Catalog size: ${tempQueue.size}")
             Logger.w("SimpleMediaServiceHandler", "Skip index: $index")
             for (i in list.indices) {
+                yield()
                 val track = list[i]
                 if (track == current) continue
                 var thumbUrl =
                     track.thumbnails?.lastOrNull()?.url
                         ?: "http://i.ytimg.com/vi/${track.videoId}/maxresdefault.jpg"
                 if (thumbUrl.contains("w120")) {
-                    thumbUrl = Regex("([wh])120").replace(thumbUrl, "$1544")
+                    thumbUrl = THUMB_SIZE_REGEX_JVM.replace(thumbUrl, "$1544")
                 }
                 val isSong =
                     (
@@ -1842,7 +1864,7 @@ class JvmMediaPlayerHandlerImpl(
             track.thumbnails?.lastOrNull()?.url
                 ?: "http://i.ytimg.com/vi/${track.videoId}/maxresdefault.jpg"
         if (thumbUrl.contains("w120")) {
-            thumbUrl = Regex("([wh])120").replace(thumbUrl, "$1544")
+            thumbUrl = THUMB_SIZE_REGEX_JVM.replace(thumbUrl, "$1544")
         }
         val artistName: String = track.artists.toListName().connectArtists()
         val isSong =
@@ -2305,7 +2327,7 @@ class JvmMediaPlayerHandlerImpl(
             }
         }
         queueData.value.data.listTracks.let { list ->
-            if ((list.size > 3 || runBlocking { dataStoreManager.endlessQueue.first() == TRUE }) &&
+            if ((list.size > 3 || cachedEndlessQueue) &&
                 list.size - player.currentMediaItemIndex < 3 &&
                 list.size - player.currentMediaItemIndex >= 0 &&
                 queueData.value.queueState == QueueData.StateSource.STATE_INITIALIZED

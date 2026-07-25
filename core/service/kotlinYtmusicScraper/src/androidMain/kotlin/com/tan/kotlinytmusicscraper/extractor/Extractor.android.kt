@@ -26,6 +26,14 @@ actual class Extractor {
         BraveNewPipe.init(braveNewPipeDownloader)
     }
 
+    actual fun setProxy(proxy: Any?) {
+        val javaProxy = proxy as? java.net.Proxy
+        newPipeDownloader = NewPipeDownloaderImpl(javaProxy)
+        braveNewPipeDownloader = BraveNewPipeDownloaderImpl(javaProxy)
+        NewPipe.init(newPipeDownloader)
+        BraveNewPipe.init(braveNewPipeDownloader)
+    }
+
     actual fun logIn(cookie: String?) {
         ServiceList.YouTube.tokens = cookie ?: ""
     }
@@ -84,11 +92,11 @@ actual class Extractor {
                 "-map",
                 "1:a:0",
                 "-shortest",
-                "$filePath-GratifyMusic.mp4",
+                "$filePath-Gratify.mp4",
             ).joinToString(" ")
 
-        if (FileSystem.SYSTEM.exists("$filePath-GratifyMusic.mp4".toPath())) {
-            FileSystem.SYSTEM.delete("$filePath-GratifyMusic.mp4".toPath())
+        if (FileSystem.SYSTEM.exists("$filePath-Gratify.mp4".toPath())) {
+            FileSystem.SYSTEM.delete("$filePath-Gratify.mp4".toPath())
         }
 
         val session =
@@ -147,8 +155,8 @@ actual class Extractor {
             if (FileSystem.SYSTEM.exists("$filePath.mp3".toPath())) {
                 FileSystem.SYSTEM.delete("$filePath.mp3".toPath())
             }
-            if (FileSystem.SYSTEM.exists("$filePath-gratifymusic.mp3".toPath())) {
-                FileSystem.SYSTEM.delete("$filePath-gratifymusic.mp3".toPath())
+            if (FileSystem.SYSTEM.exists("$filePath-gratify.mp3".toPath())) {
+                FileSystem.SYSTEM.delete("$filePath-gratify.mp3".toPath())
             }
         } catch (e: IOException) {
             e.printStackTrace()
@@ -204,7 +212,7 @@ actual class Extractor {
                 "-metadata",
                 "album=\"${track.album?.name ?: track.title}\"",
                 "-disposition:v:0 attached_pic",
-                "$filePath-gratifymusic.mp3",
+                "$filePath-gratify.mp3",
             ).joinToString(" ")
         val sessionInject =
             FFmpegKit.execute(
@@ -227,7 +235,7 @@ actual class Extractor {
             try {
                 FileSystem.SYSTEM.delete("$filePath.jpg".toPath())
                 FileSystem.SYSTEM.delete("$filePath.webm".toPath())
-                FileSystem.SYSTEM.delete("$filePath-gratifymusic.mp3".toPath())
+                FileSystem.SYSTEM.delete("$filePath-gratify.mp3".toPath())
             } catch (e: IOException) {
                 e.printStackTrace()
             }
@@ -238,7 +246,7 @@ actual class Extractor {
             try {
                 FileSystem.SYSTEM.delete("$filePath.jpg".toPath())
                 FileSystem.SYSTEM.delete("$filePath.webm".toPath())
-                FileSystem.SYSTEM.delete("$filePath-gratifymusic.mp3".toPath())
+                FileSystem.SYSTEM.delete("$filePath-gratify.mp3".toPath())
             } catch (e: IOException) {
                 e.printStackTrace()
             }

@@ -13,7 +13,7 @@ kotlin {
     // which platforms this KMP module supports.
     // See: https://kotlinlang.org/docs/multiplatform-discover-project.html#targets
     android {
-        namespace = "org.gratifymusic.aiservice"
+        namespace = "com.tan.gratify.aiservice"
         compileSdk = 37
         minSdk = 26
     }
@@ -54,7 +54,7 @@ kotlin {
                 // Add KMP dependencies here
                 implementation(projects.domain)
                 implementation(libs.ktor.client.core)
-                implementation(libs.gemini.kotlin)
+                implementation(libs.kotlinx.serialization.json)
             }
         }
 

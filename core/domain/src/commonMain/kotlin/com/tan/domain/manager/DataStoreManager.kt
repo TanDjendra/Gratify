@@ -352,13 +352,15 @@ interface DataStoreManager {
 
     suspend fun setAutoBackupLastTime(time: Long)
 
+    suspend fun clearPerUserData()
+
     enum class ProxyType {
         PROXY_TYPE_HTTP,
         PROXY_TYPE_SOCKS,
     }
 
     companion object Values {
-        const val GRATIFYMUSIC = "gratifymusic"
+        const val GRATIFYMUSIC = "gratify"
         const val YOUTUBE = "youtube"
         const val LRCLIB = "lrclib"
         const val BETTER_LYRICS = "better_lyrics"

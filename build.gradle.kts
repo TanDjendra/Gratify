@@ -51,6 +51,10 @@ subprojects {
     configurations.all {
         resolutionStrategy {
             force("com.github.TeamNewPipe:nanojson:c7a6c1c08d16b6d5ecded34758e6415e07be2166")
+            
+            // Supabase 3.0.3 relies on Clock$System which was completely removed in kotlinx-datetime 0.7.1
+            // Force 0.6.1 globally to prevent transitive dependencies (like Keight) from breaking Supabase.
+            force("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
         }
     }
 

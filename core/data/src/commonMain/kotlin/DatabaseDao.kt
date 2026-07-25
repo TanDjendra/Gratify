@@ -448,11 +448,15 @@ interface DatabaseDao {
     ): List<PlaylistEntity>
 
     // Local Playlist
-    @Query("SELECT * FROM local_playlist ORDER BY inLibrary DESC LIMIT :limit OFFSET :offset")
+    @Query("SELECT * FROM local_playlist WHERE (owner_email = :ownerEmail OR (:ownerEmail = '' AND owner_email IS NULL)) ORDER BY inLibrary DESC LIMIT :limit OFFSET :offset")
     suspend fun getAllLocalPlaylists(
+        ownerEmail: String,
         limit: Int,
         offset: Int,
     ): List<LocalPlaylistEntity>
+
+    @Query("SELECT * FROM local_playlist WHERE (owner_email = :ownerEmail OR (:ownerEmail = '' AND owner_email IS NULL)) ORDER BY inLibrary DESC")
+    fun getAllLocalPlaylistsFlow(ownerEmail: String): Flow<List<LocalPlaylistEntity>>
 
     @Query("SELECT * FROM local_playlist WHERE downloadState = 1 OR downloadState = 2 LIMIT :limit OFFSET :offset")
     suspend fun getAllDownloadingLocalPlaylists(
@@ -464,10 +468,22 @@ interface DatabaseDao {
     suspend fun getLocalPlaylist(id: Long): LocalPlaylistEntity?
 
     @Insert(onConflict = OnConflictStrategy.Companion.IGNORE)
-    suspend fun insertLocalPlaylist(localPlaylist: LocalPlaylistEntity)
+    suspend fun insertLocalPlaylist(localPlaylist: LocalPlaylistEntity): Long
+
+    @Query("SELECT * FROM local_playlist WHERE source_shared_playlist_id = :sharedPlaylistId LIMIT 1")
+    suspend fun getLocalPlaylistBySourceSharedId(sharedPlaylistId: String): LocalPlaylistEntity?
+
+    @Query("UPDATE local_playlist SET source_availability = :availability WHERE source_shared_playlist_id = :sharedPlaylistId")
+    suspend fun updateSourceAvailability(sharedPlaylistId: String, availability: Int)
 
     @Query("DELETE FROM local_playlist WHERE id = :id")
     suspend fun deleteLocalPlaylist(id: Long)
+
+    @Query("DELETE FROM local_playlist")
+    suspend fun deleteAllLocalPlaylists()
+
+    @Query("DELETE FROM pair_song_local_playlist")
+    suspend fun deleteAllPairSongLocalPlaylists()
 
     @Query("UPDATE local_playlist SET title = :title WHERE id = :id")
     suspend fun updateLocalPlaylistTitle(
@@ -705,6 +721,9 @@ interface DatabaseDao {
 
     @Query("SELECT * FROM googleaccountentity WHERE isUsed = 1")
     suspend fun getUsedGoogleAccount(): GoogleAccountEntity?
+
+    @Query("SELECT * FROM googleaccountentity WHERE isUsed = 1")
+    fun getUsedGoogleAccountFlow(): Flow<GoogleAccountEntity?>
 
     @Query("UPDATE googleaccountentity SET isUsed = :isUsed WHERE email = :email")
     suspend fun updateGoogleAccountUsed(
@@ -944,4 +963,24 @@ interface DatabaseDao {
         startTimestamp: LocalDateTime,
         endTimestamp: LocalDateTime,
     ): Long
+
+    @Query("UPDATE song SET liked = 0, favoriteAt = NULL WHERE liked = 1")
+    suspend fun resetAllLikedSongs()
+
+    @Query("UPDATE artist SET followed = 0, followedAt = NULL WHERE followed = 1")
+    suspend fun resetAllFollowedArtists()
+
+    @Query("UPDATE album SET liked = 0, favoriteAt = NULL WHERE liked = 1")
+    suspend fun resetAllLikedAlbums()
+
+    // Statistik dengar bersifat per-user. Tanpa ini, "Most played" dan total waktu dengar
+    // milik akun lama masih terlihat oleh akun yang baru login di perangkat yang sama.
+    @Query("UPDATE song SET totalPlayTime = 0 WHERE totalPlayTime > 0")
+    suspend fun resetAllTotalPlayTime()
+
+    @Query("DELETE FROM playback_event")
+    suspend fun deleteAllPlaybackEvents()
+
+    @Query("DELETE FROM event_artist")
+    suspend fun deleteAllEventArtists()
 }

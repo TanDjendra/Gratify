@@ -29,7 +29,7 @@ internal fun parseSearchSong(result: SearchResult): ArrayList<SongsResult> {
                         )
                     },
                 category = "Song",
-                duration = if (song.duration != null) "%02d:%02d".format(song.duration!! / 60, song.duration!! % 60) else "",
+                duration = if (song.duration != null) "${(song.duration!! / 60).toString().padStart(2, '0')}:${(song.duration!! % 60).toString().padStart(2, '0')}" else "",
                 durationSeconds = song.duration ?: 0,
                 feedbackTokens = null,
                 isExplicit = song.explicit,

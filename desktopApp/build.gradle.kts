@@ -8,7 +8,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-// desktopApp — JVM application module for GratifyMusic Desktop.
+// desktopApp — JVM application module for Gratify Desktop.
 //
 // Per JetBrains 2026 KMP guidance (AGP 9 + new default structure), the
 // platform-app entry points live in dedicated modules separate from the
@@ -121,7 +121,7 @@ dependencies {
     windowsAmd64(libs.compose.windows.x64)
 }
 
-// Append GratifyMusic-specific keys to Conveyor's generated config file and
+// Append Gratify-specific keys to Conveyor's generated config file and
 // — crucially — replace the auto-detected `app.inputs` classpath with
 // ProGuard's shrunk jar directory so the packaged AppImage carries
 // obfuscated + size-reduced bytecode instead of raw Gradle output.
@@ -132,9 +132,9 @@ tasks.named<hydraulic.conveyor.gradle.WriteConveyorConfigTask>("writeConveyorCon
     doLast {
         destination.get().asFile.appendText(
             """
-            |app.fsname = gratifymusic
-            |app.display-name = GratifyMusic
-            |app.rdns-name = com.tan.gratifymusic
+            |app.fsname = gratify
+            |app.display-name = Gratify
+            |app.rdns-name = com.tan.gratify
             |
             |// Override the Gradle-detected classpath with the ProGuard'd
             |// jar directory. Conveyor expands a directory entry to every
@@ -156,7 +156,7 @@ tasks.named<hydraulic.conveyor.gradle.WriteConveyorConfigTask>("writeConveyorCon
 
 compose.desktop {
     application {
-        mainClass = "com.tan.gratifymusic.MainKt"
+        mainClass = "com.tan.gratify.MainKt"
         jvmArgs += "--add-opens=java.base/java.nio=ALL-UNNAMED"
 
         nativeDistributions {
@@ -176,7 +176,7 @@ compose.desktop {
             }
             targetFormats(*listTarget.toTypedArray())
             modules("jdk.unsupported")
-            packageName = "GratifyMusic"
+            packageName = "Gratify"
             macOS {
                 val formatedDate =
                     Instant.now().let {
@@ -204,10 +204,10 @@ compose.desktop {
                             <key>CFBundleTypeRole</key>
                             <string>Viewer</string>
                             <key>CFBundleURLName</key>
-                            <string>com.tan.gratifymusic.deeplink</string>
+                            <string>com.tan.gratify.deeplink</string>
                             <key>CFBundleURLSchemes</key>
                             <array>
-                                <string>gratifymusic</string>
+                                <string>gratify</string>
                             </array>
                         </dict>
                     </array>
@@ -315,7 +315,7 @@ tasks.register("packageConveyorAppImage") {
     )
 
     doLast {
-        val appName = "GratifyMusic"
+        val appName = "Gratify"
         val conveyorOutput = rootDir.resolve("output")
         if (!conveyorOutput.exists()) {
             throw GradleException(
@@ -360,25 +360,25 @@ tasks.register("packageConveyorAppImage") {
 
         // Ensure top-level PNG icon expected by appimagetool exists.
         val iconSrc = rootDir.resolve("composeApp/icon/circle_app_icon.png")
-        val iconDst = appDir.resolve("gratifymusic.png")
+        val iconDst = appDir.resolve("gratify.png")
         if (!iconDst.exists() && iconSrc.exists()) {
             FileUtils.copyFile(iconSrc, iconDst)
         }
 
         val versionName = libs.versions.version.name.get()
-        val desktopFile = appDir.resolve("gratifymusic.desktop")
+        val desktopFile = appDir.resolve("gratify.desktop")
         desktopFile.writeText(
             """[Desktop Entry]
             |Type=Application
             |Version=1.0
-            |Name=GratifyMusic
-            |Comment=GratifyMusic v$versionName - FOSS YouTube Music Client
-            |Exec=bin/gratifymusic %u
-            |Icon=gratifymusic
+            |Name=Gratify
+            |Comment=Gratify v$versionName - FOSS YouTube Music Client
+            |Exec=bin/gratify %u
+            |Icon=gratify
             |Terminal=false
             |Categories=Audio;AudioVideo;
-            |StartupWMClass=com-tan-gratifymusic-MainKt
-            |MimeType=x-scheme-handler/gratifymusic;
+            |StartupWMClass=com-tan-gratify-MainKt
+            |MimeType=x-scheme-handler/gratify;
             |
             """.trimMargin(),
         )
@@ -392,9 +392,9 @@ tasks.register("packageConveyorAppImage") {
             |
             |# Install icon into XDG dirs so GNOME/KDE pick it up the first time.
             |ICON_DIR="${'$'}HOME/.local/share/icons/hicolor/256x256/apps"
-            |if [ ! -f "${'$'}ICON_DIR/gratifymusic.png" ] || [ "${'$'}HERE/gratifymusic.png" -nt "${'$'}ICON_DIR/gratifymusic.png" ]; then
+            |if [ ! -f "${'$'}ICON_DIR/gratify.png" ] || [ "${'$'}HERE/gratify.png" -nt "${'$'}ICON_DIR/gratify.png" ]; then
             |    mkdir -p "${'$'}ICON_DIR"
-            |    cp "${'$'}HERE/gratifymusic.png" "${'$'}ICON_DIR/gratifymusic.png"
+            |    cp "${'$'}HERE/gratify.png" "${'$'}ICON_DIR/gratify.png"
             |    gtk-update-icon-cache -f -t "${'$'}HOME/.local/share/icons/hicolor" 2>/dev/null || true
             |fi
             |
@@ -402,18 +402,18 @@ tasks.register("packageConveyorAppImage") {
             |DESKTOP_DIR="${'$'}HOME/.local/share/applications"
             |mkdir -p "${'$'}DESKTOP_DIR"
             |APPIMAGE_PATH="${'$'}{APPIMAGE:-${'$'}SELF}"
-            |sed "s|Exec=bin/gratifymusic|Exec=${'$'}APPIMAGE_PATH|" "${'$'}HERE/gratifymusic.desktop" > "${'$'}DESKTOP_DIR/com-tan-gratifymusic-MainKt.desktop"
+            |sed "s|Exec=bin/gratify|Exec=${'$'}APPIMAGE_PATH|" "${'$'}HERE/gratify.desktop" > "${'$'}DESKTOP_DIR/com-tan-gratify-MainKt.desktop"
             |update-desktop-database "${'$'}DESKTOP_DIR" 2>/dev/null || true
             |
             |cd "${'$'}HERE"
-            |exec bin/gratifymusic "${'$'}@"
+            |exec bin/gratify "${'$'}@"
             |
             """.trimMargin(),
         )
         appRun.setExecutable(true, false)
 
-        // Conveyor's launcher lives at output/bin/gratifymusic (lowercase).
-        val appExecutable = appDir.resolve("bin/gratifymusic")
+        // Conveyor's launcher lives at output/bin/gratify (lowercase).
+        val appExecutable = appDir.resolve("bin/gratify")
         if (appExecutable.exists() && !appExecutable.canExecute()) {
             appExecutable.setExecutable(true)
         }
@@ -441,7 +441,7 @@ tasks.register("packageConveyorAppImage") {
 // Single command for users: `./gradlew :desktopApp:buildLinuxAppImage --no-configuration-cache`
 tasks.register("buildLinuxAppImage") {
     group = "distribution"
-    description = "Full GratifyMusic Desktop Linux AppImage build pipeline (vlcSetup → conveyor → AppImage)."
+    description = "Full Gratify Desktop Linux AppImage build pipeline (vlcSetup → conveyor → AppImage)."
     dependsOn(conveyorMakeLinuxApp)
     finalizedBy("packageConveyorAppImage")
 }
@@ -481,13 +481,13 @@ val conveyorMakeMacZipAarch64 = tasks.register<Exec>("conveyorMakeMacZipAarch64"
 
 tasks.register("buildMacZipAmd64") {
     group = "distribution"
-    description = "Full GratifyMusic Desktop macOS Intel .zip pipeline (vlcSetup → conveyor)."
+    description = "Full Gratify Desktop macOS Intel .zip pipeline (vlcSetup → conveyor)."
     dependsOn(conveyorMakeMacZipAmd64)
 }
 
 tasks.register("buildMacZipAarch64") {
     group = "distribution"
-    description = "Full GratifyMusic Desktop macOS Apple Silicon .zip pipeline (vlcSetup → conveyor)."
+    description = "Full Gratify Desktop macOS Apple Silicon .zip pipeline (vlcSetup → conveyor)."
     dependsOn(conveyorMakeMacZipAarch64)
 }
 
@@ -511,7 +511,7 @@ val conveyorMakeWindowsMsix = tasks.register<Exec>("conveyorMakeWindowsMsix") {
 
 tasks.register("buildWindowsMsix") {
     group = "distribution"
-    description = "Full GratifyMusic Desktop Windows .msix pipeline (vlcSetup → conveyor)."
+    description = "Full Gratify Desktop Windows .msix pipeline (vlcSetup → conveyor)."
     dependsOn(conveyorMakeWindowsMsix)
 }
 

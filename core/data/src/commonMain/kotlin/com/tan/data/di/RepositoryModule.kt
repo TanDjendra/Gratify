@@ -16,6 +16,8 @@ import com.tan.data.repository.SearchRepositoryImpl
 import com.tan.data.repository.SongRepositoryImpl
 import com.tan.data.repository.StreamRepositoryImpl
 import com.tan.data.repository.UpdateRepositoryImpl
+import com.tan.data.repository.SharedPlaylistRepositoryImpl
+import com.tan.data.repository.UserDataSyncRepositoryImpl
 import com.tan.domain.repository.AccountRepository
 import com.tan.domain.repository.AlbumRepository
 import com.tan.domain.repository.AnalyticsRepository
@@ -30,6 +32,10 @@ import com.tan.domain.repository.SearchRepository
 import com.tan.domain.repository.SongRepository
 import com.tan.domain.repository.StreamRepository
 import com.tan.domain.repository.UpdateRepository
+import com.tan.domain.repository.SharedPlaylistRepository
+import com.tan.domain.repository.UserDataSyncRepository
+import com.tan.domain.repository.UserRepository
+import com.tan.data.repository.UserRepositoryImpl
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
@@ -91,5 +97,21 @@ val repositoryModule =
 
         single<AnalyticsRepository>(createdAtStart = true) {
             AnalyticsRepositoryImpl(get())
+        }
+        
+        single<SharedPlaylistRepository>(createdAtStart = true) {
+            SharedPlaylistRepositoryImpl(get())
+        }
+        
+        single<UserRepository>(createdAtStart = true) {
+            UserRepositoryImpl(get())
+        }
+
+        single<com.tan.domain.repository.SocialRepository>(createdAtStart = true) {
+            com.tan.data.repository.SocialRepositoryImpl(get(), get())
+        }
+
+        single<UserDataSyncRepository>(createdAtStart = true) {
+            UserDataSyncRepositoryImpl(get(), get(), get())
         }
     }

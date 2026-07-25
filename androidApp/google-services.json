@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:205110987717:android:153b7e7238ed280bafd9ac",
         "android_client_info": {
-          "package_name": "com.tan.gratifymusic"
+          "package_name": "com.tan.gratify"
         }
       },
       "oauth_client": [],
@@ -28,7 +28,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:205110987717:android:38a13d9414ee2d5fafd9ac",
         "android_client_info": {
-          "package_name": "com.tan.gratifymusic.dev"
+          "package_name": "com.tan.gratify.dev"
         }
       },
       "oauth_client": [],

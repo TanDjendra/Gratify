@@ -1,10 +1,10 @@
 @echo off
-REM GratifyMusic offline installer for Windows.
+REM Gratify offline installer for Windows.
 REM Double-click this file. UAC will prompt for admin (needed for cert + sideload).
 REM
 REM Bundle requirement (same folder as this .bat):
-REM   - gratifymusic.crt
-REM   - gratifymusic-<version>.msix     (any .msix matching gratifymusic-*.msix)
+REM   - gratify.crt
+REM   - gratify-<version>.msix     (any .msix matching gratify-*.msix)
 REM
 REM Only x64 MSIX is shipped — Windows 11 ARM64 hosts run it under Prism
 REM emulation. ARM64 native build is blocked upstream by a missing
@@ -22,18 +22,18 @@ if %errorlevel% neq 0 (
 )
 
 echo.
-echo === GratifyMusic offline installer ===
+echo === Gratify offline installer ===
 echo.
 
 REM --- 2. Install cert to Trusted People (idempotent via certutil) -----------
-if not exist "%~dp0gratifymusic.crt" (
-    echo [ERROR] gratifymusic.crt not found next to install.bat
+if not exist "%~dp0gratify.crt" (
+    echo [ERROR] gratify.crt not found next to install.bat
     pause
     exit /b 1
 )
 
-echo [1/3] Importing gratifymusic.crt to LocalMachine\TrustedPeople ...
-certutil -addstore -f "TrustedPeople" "%~dp0gratifymusic.crt"
+echo [1/3] Importing gratify.crt to LocalMachine\TrustedPeople ...
+certutil -addstore -f "TrustedPeople" "%~dp0gratify.crt"
 if %errorlevel% neq 0 (
     echo [ERROR] Certificate import failed.
     pause
@@ -42,10 +42,10 @@ if %errorlevel% neq 0 (
 
 REM --- 3. Find the bundled MSIX ----------------------------------------------
 set "MSIX="
-for %%f in ("%~dp0gratifymusic-*.msix") do set "MSIX=%%f"
+for %%f in ("%~dp0gratify-*.msix") do set "MSIX=%%f"
 
 if not defined MSIX (
-    echo [ERROR] No gratifymusic-*.msix found in this folder.
+    echo [ERROR] No gratify-*.msix found in this folder.
     pause
     exit /b 1
 )
@@ -57,7 +57,7 @@ REM data) even when the version is identical, so no manual uninstall is needed.
 REM If that still fails (e.g. signing publisher changed), fall back to removing
 REM the old package and doing a clean install.
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-    "try { Add-AppxPackage -Path '%MSIX%' -ForceApplicationShutdown -ForceUpdateFromAnyVersion -ErrorAction Stop; exit 0 } catch { Write-Host 'In-place update failed; removing existing GratifyMusic and reinstalling...'; Get-AppxPackage -Name 'Simpmusic' | Remove-AppxPackage -ErrorAction SilentlyContinue; try { Add-AppxPackage -Path '%MSIX%' -ForceApplicationShutdown -ErrorAction Stop; exit 0 } catch { Write-Host $_; exit 1 } }"
+    "try { Add-AppxPackage -Path '%MSIX%' -ForceApplicationShutdown -ForceUpdateFromAnyVersion -ErrorAction Stop; exit 0 } catch { Write-Host 'In-place update failed; removing existing Gratify and reinstalling...'; Get-AppxPackage -Name 'GratifyMusic' | Remove-AppxPackage -ErrorAction SilentlyContinue; Get-AppxPackage -Name 'gratify' | Remove-AppxPackage -ErrorAction SilentlyContinue; try { Add-AppxPackage -Path '%MSIX%' -ForceApplicationShutdown -ErrorAction Stop; exit 0 } catch { Write-Host $_; exit 1 } }"
 
 if %errorlevel% neq 0 (
     echo.
@@ -71,12 +71,12 @@ if %errorlevel% neq 0 (
 
 REM --- 4. Launch app ---------------------------------------------------------
 echo.
-echo [3/3] Launching GratifyMusic ...
-start "" "shell:appsFolder\Simpmusic_ejp2bhxmz1qq6!Simpmusic"
+echo [3/3] Launching Gratify ...
+start "" "shell:appsFolder\gratify_ejp2bhxmz1qq6!gratify"
 
 echo.
-echo GratifyMusic installed successfully.
-echo To uninstall: Settings -^> Apps -^> Installed apps -^> GratifyMusic -^> Uninstall
+echo Gratify installed successfully.
+echo To uninstall: Settings -^> Apps -^> Installed apps -^> Gratify -^> Uninstall
 echo.
 pause
 endlocal

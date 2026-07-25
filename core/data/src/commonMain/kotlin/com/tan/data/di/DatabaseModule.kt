@@ -16,9 +16,10 @@ import com.tan.kotlinytmusicscraper.YouTube
 import com.tan.spotify.Spotify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.IO
 import org.koin.dsl.module
-import org.gratifymusic.aiservice.AiClient
-import org.gratifymusic.lyrics.GratifyMusicLyricsClient
+import com.tan.gratify.aiservice.AiClient
+import com.tan.gratify.lyrics.GratifyLyricsClient
 import kotlin.time.ExperimentalTime
 
 @OptIn(ExperimentalTime::class)
@@ -42,7 +43,7 @@ val databaseModule =
         }
         // LocalDataSource
         single(createdAtStart = true) {
-            LocalDataSource(get<DatabaseDao>())
+            LocalDataSource(get<DatabaseDao>(), get<DataStoreManager>())
         }
         // AnalyticsDatasource
         single(createdAtStart = true) {
@@ -71,6 +72,7 @@ val databaseModule =
         }
 
         single(createdAtStart = true) {
-            GratifyMusicLyricsClient()
+            GratifyLyricsClient()
         }
+
     }

@@ -1,5 +1,5 @@
 - Update Spotify logic
-- Update new lyrics provider - GratifyMusic Lyrics
+- Update new lyrics provider - Gratify Lyrics
 - Improve login flow
 - New crossfade (BETA)
 - Scroll down to close Now Playing

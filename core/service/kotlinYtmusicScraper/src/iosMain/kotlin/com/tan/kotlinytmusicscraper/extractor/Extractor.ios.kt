@@ -9,6 +9,9 @@ actual class Extractor {
 
     actual fun logIn(cookie: String?) {}
 
+    actual fun setProxy(proxy: Any?) {}
+
+
     actual fun newPipePlayer(videoId: String): List<Pair<Int, String>> = emptyList()
 
     actual fun mergeAudioVideoDownload(filePath: String): DownloadProgress = DownloadProgress.failed("Not supported on iOS")

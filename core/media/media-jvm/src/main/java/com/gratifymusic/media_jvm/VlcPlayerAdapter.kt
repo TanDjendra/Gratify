@@ -1,4 +1,4 @@
-package com.gratifymusic.media_jvm
+package com.gratify.media_jvm
 
 import com.tan.common.MERGING_DATA_TYPE
 import com.tan.domain.data.player.GenericMediaItem
@@ -11,7 +11,7 @@ import com.tan.domain.mediaservice.player.MediaPlayerInterface
 import com.tan.domain.mediaservice.player.MediaPlayerListener
 import com.tan.domain.repository.StreamRepository
 import com.tan.logger.Logger
-import com.gratifymusic.media_jvm.download.getDownloadPath
+import com.gratify.media_jvm.download.getDownloadPath
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

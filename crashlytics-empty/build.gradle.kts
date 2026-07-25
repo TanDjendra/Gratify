@@ -11,7 +11,7 @@ kotlin {
 }
 
 android {
-    namespace = "org.gratifymusic.crashlytics"
+    namespace = "com.tan.gratify.crashlytics"
     compileSdk = 37
 
     defaultConfig {

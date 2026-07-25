@@ -6,6 +6,8 @@ import com.tan.kotlinytmusicscraper.models.response.DownloadProgress
 expect class Extractor() {
     fun init()
 
+    fun setProxy(proxy: Any?)
+
     fun logIn(cookie: String?)
 
     fun mergeAudioVideoDownload(filePath: String): DownloadProgress

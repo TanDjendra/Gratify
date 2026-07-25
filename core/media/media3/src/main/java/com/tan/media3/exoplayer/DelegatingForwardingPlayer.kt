@@ -252,9 +252,14 @@ internal class DelegatingForwardingPlayer(
         if (nav.hasNextMediaItem()) {
             builder.add(Player.COMMAND_SEEK_TO_NEXT)
             builder.add(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
+        } else {
+            builder.remove(Player.COMMAND_SEEK_TO_NEXT)
+            builder.remove(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
         }
         if (nav.hasPreviousMediaItem()) {
             builder.add(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
+        } else {
+            builder.remove(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
         }
 
         return builder.build()
@@ -407,6 +412,21 @@ internal class DelegatingForwardingPlayer(
                 listener.onAvailableCommandsChanged(commands)
             } catch (e: Exception) {
                 Logger.w(TAG, "Error notifying listener about media item change: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Manually notify all tracked listeners that available commands (SEEK_TO_NEXT, SEEK_TO_PREVIOUS) changed.
+     * Called whenever playlist navigation state changes.
+     */
+    fun notifyAvailableCommandsChanged() {
+        val commands = getAvailableCommands()
+        trackedListeners.forEach { listener ->
+            try {
+                listener.onAvailableCommandsChanged(commands)
+            } catch (e: Exception) {
+                Logger.w(TAG, "Error notifying listener about available commands change: ${e.message}")
             }
         }
     }

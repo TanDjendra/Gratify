@@ -17,11 +17,11 @@ plugins {
 android {
     val abis = arrayOf("armeabi-v7a", "arm64-v8a", "x86_64")
 
-    namespace = "com.tan.gratifymusic"
+    namespace = "com.tan.gratify"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.tan.gratifymusic"
+        applicationId = "com.tan.gratify"
         minSdk = 26
         targetSdk = 36
         versionCode =
@@ -143,6 +143,15 @@ android {
 }
 
 dependencies {
+    constraints {
+        implementation("org.jetbrains.kotlinx:kotlinx-datetime") {
+            version {
+                strictly("0.6.1")
+            }
+            because("Supabase 3.0.3 requires Clock.System which was removed in 0.7.1")
+        }
+    }
+
     coreLibraryDesugaring(libs.desugaring)
     val debugImplementation = "debugImplementation"
     debugImplementation(libs.ui.tooling)
@@ -169,8 +178,15 @@ dependencies {
 
     implementation(projects.crashlyticsEmpty)
 
+    // Supabase
+    implementation(platform(libs.supabase.bom))
+    implementation(libs.supabase.auth)
+    implementation(libs.kotlinx.datetime)
+
     // Firebase Messaging
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
 }
-
+
+
+

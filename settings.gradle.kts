@@ -53,7 +53,7 @@ val mediaDir =
         File(rootDir, "./core/media")
     }
 
-rootProject.name = "GratifyMusic"
+rootProject.name = "Gratify"
 include(
     ":androidApp",
     ":composeApp",
@@ -72,6 +72,8 @@ include(
     ":media3-ui",
     ":crashlytics-empty",
     ":kizzy",
+    ":jmtc",
+    ":nowplayingcenter",
 )
 
 // core modules
@@ -92,5 +94,9 @@ project(":media-jvm").projectDir = File(mediaDir, "media-jvm")
 project(":media-jvm-ui").projectDir = File(mediaDir, "media-jvm-ui")
 project(":media3").projectDir = File(mediaDir, "media3")
 project(":media3-ui").projectDir = File(mediaDir, "media3-ui")
+
+// library modules
+project(":jmtc").projectDir = File(rootDir, "core/libraries/jmtc")
+project(":nowplayingcenter").projectDir = File(rootDir, "core/libraries/nowplayingcenter")
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")

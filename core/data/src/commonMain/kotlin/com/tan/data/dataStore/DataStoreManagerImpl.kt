@@ -26,6 +26,7 @@ import com.tan.domain.manager.DataStoreManager.Values.TRUE
 import com.tan.logger.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -1393,6 +1394,32 @@ internal class DataStoreManagerImpl(
             settingsDataStore.edit { settings ->
                 settings[AUTO_BACKUP_LAST_TIME] = time
             }
+        }
+    }
+
+    override suspend fun clearPerUserData() {
+        withContext(Dispatchers.IO) {
+            settingsDataStore.edit { settings ->
+                val userKeys = listOf(
+                    "AccountName", "AccountThumbUrl", "AppProfileName",
+                    "AppProfileEmail", "AppProfileImage", "AccountEmail",
+                    "pinned_playlist_ids",
+                    "privacy_show_followers", "privacy_show_playlist",
+                    "privacy_show_recent_artists",
+                )
+                userKeys.forEach { key ->
+                    settings[stringPreferencesKey(key)] = ""
+                }
+            }
+            // Also clear per-user cached follower/following counts
+            settingsDataStore.edit { settings ->
+                val keysToRemove = settings.asMap().keys.filter { key ->
+                    key.name.startsWith("FollowersCount_") || key.name.startsWith("FollowingCount_")
+                }
+                keysToRemove.forEach { key -> settings.remove(key) }
+            }
+            setDiscordToken("")
+            setSpdc("")
         }
     }
 

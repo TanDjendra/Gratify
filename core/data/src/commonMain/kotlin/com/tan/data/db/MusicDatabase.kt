@@ -2,8 +2,10 @@ package com.tan.data.db
 
 import DatabaseDao
 import androidx.room.AutoMigration
+import androidx.room.ConstructedBy
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.RoomDatabaseConstructor
 import androidx.room.TypeConverters
 import com.tan.domain.data.entities.AlbumEntity
 import com.tan.domain.data.entities.ArtistEntity
@@ -27,6 +29,7 @@ import com.tan.domain.data.entities.YourYouTubePlaylistList
 import com.tan.domain.data.entities.analytics.EventArtistEntity
 import com.tan.domain.data.entities.analytics.PlaybackEventEntity
 
+@ConstructedBy(MusicDatabaseConstructor::class)
 @Database(
     entities = [
         NewFormatEntity::class, SongInfoEntity::class, SearchHistory::class, SongEntity::class, ArtistEntity::class,
@@ -35,7 +38,7 @@ import com.tan.domain.data.entities.analytics.PlaybackEventEntity
         NotificationEntity::class, TranslatedLyricsEntity::class, PodcastsEntity::class, EpisodeEntity::class,
         YourYouTubePlaylistList::class, PlaybackEventEntity::class, EventArtistEntity::class
     ],
-    version = 22,
+    version = 25,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 2, to = 3), AutoMigration(
@@ -70,11 +73,21 @@ import com.tan.domain.data.entities.analytics.PlaybackEventEntity
         AutoMigration(21, 22),
         AutoMigration(20, 22),
         AutoMigration(19, 22),
+        AutoMigration(22, 23),
+        AutoMigration(21, 23),
+        AutoMigration(20, 23),
+        AutoMigration(23, 24),
+        AutoMigration(24, 25),
     ],
 )
 @TypeConverters(Converters::class)
 abstract class MusicDatabase : RoomDatabase() {
     abstract fun getDatabaseDao(): DatabaseDao
+}
+
+@Suppress("NO_ACTUAL_FOR_EXPECT")
+expect object MusicDatabaseConstructor : RoomDatabaseConstructor<MusicDatabase> {
+    override fun initialize(): MusicDatabase
 }
 
 expect fun getDatabaseBuilder(converters: Converters): RoomDatabase.Builder<MusicDatabase>

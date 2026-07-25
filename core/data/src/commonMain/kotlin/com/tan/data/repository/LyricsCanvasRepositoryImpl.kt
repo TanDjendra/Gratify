@@ -10,7 +10,7 @@ import com.tan.domain.data.entities.TranslatedLyricsEntity
 import com.tan.domain.data.model.browse.album.Track
 import com.tan.domain.data.model.canvas.CanvasResult
 import com.tan.domain.data.model.metadata.Lyrics
-import com.tan.domain.data.model.metadata.GratifyMusicLyrics
+import com.tan.domain.data.model.metadata.GratifyLyrics
 import com.tan.domain.extension.now
 import com.tan.domain.manager.DataStoreManager
 import com.tan.domain.repository.LyricsCanvasRepository
@@ -26,17 +26,18 @@ import com.tan.logger.Logger
 import com.tan.spotify.Spotify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import org.gratifymusic.aiservice.AiClient
-import org.gratifymusic.lyrics.GratifyMusicLyricsClient
-import org.gratifymusic.lyrics.models.request.LyricsBody
-import org.gratifymusic.lyrics.models.request.TranslatedLyricsBody
-import org.gratifymusic.lyrics.parser.parseTtmlLyrics
+import com.tan.gratify.aiservice.AiClient
+import com.tan.gratify.lyrics.GratifyLyricsClient
+import com.tan.gratify.lyrics.models.request.LyricsBody
+import com.tan.gratify.lyrics.models.request.TranslatedLyricsBody
+import com.tan.gratify.lyrics.parser.parseTtmlLyrics
 import kotlin.math.abs
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
@@ -45,7 +46,7 @@ internal class LyricsCanvasRepositoryImpl(
     private val localDataSource: LocalDataSource,
     private val youTube: YouTube,
     private val spotify: Spotify,
-    private val gratifyMusicLyrics: GratifyMusicLyricsClient,
+    private val gratifyMusicLyrics: GratifyLyricsClient,
     private val aiClient: AiClient,
 ) : LyricsCanvasRepository {
     override fun getSavedLyrics(videoId: String): Flow<LyricsEntity?> = flow { emit(localDataSource.getSavedLyrics(videoId)) }.flowOn(Dispatchers.IO)
@@ -464,13 +465,24 @@ internal class LyricsCanvasRepositoryImpl(
             }
         }.flowOn(Dispatchers.IO)
 
-    // GratifyMusic Lyrics
-    private val gratifyMusicLyricsTag = "GratifyMusicLyricsRepository"
+    // Gratify Lyrics
+    private val gratifyMusicLyricsTag = "GratifyLyricsRepository"
 
-    override fun getGratifyMusicLyrics(videoId: String): Flow<Resource<Lyrics>> =
+    override fun getGratifyLyrics(videoId: String): Flow<Resource<Lyrics>> =
         flow {
+            val song = localDataSource.getSong(videoId)
+            val trackName = song?.title
+            val artistName = song?.artistName?.firstOrNull()
+            val albumName = song?.albumName
+            val durationSeconds = song?.durationSeconds
             gratifyMusicLyrics
-                .getLyrics(videoId)
+                .getLyrics(
+                    videoId = videoId,
+                    track = trackName,
+                    artist = artistName,
+                    album = albumName,
+                    duration = durationSeconds,
+                )
                 .onSuccess { lyrics ->
                     Logger.d(gratifyMusicLyricsTag, "Lyrics found: $lyrics")
                     val result = lyrics.firstOrNull()
@@ -482,7 +494,7 @@ internal class LyricsCanvasRepositoryImpl(
                     val appLyrics =
                         result.toLyrics()?.copy(
                             gratifyMusicLyrics =
-                                GratifyMusicLyrics(
+                                GratifyLyrics(
                                     id = result.id,
                                     vote = result.vote,
                                 ),
@@ -503,7 +515,7 @@ internal class LyricsCanvasRepositoryImpl(
                 }
         }.flowOn(Dispatchers.IO)
 
-    override fun getGratifyMusicTranslatedLyrics(
+    override fun getGratifyTranslatedLyrics(
         videoId: String,
         language: String,
     ): Flow<Resource<Lyrics>> =
@@ -518,7 +530,7 @@ internal class LyricsCanvasRepositoryImpl(
                                 .toLyrics()
                                 .copy(
                                     gratifyMusicLyrics =
-                                        GratifyMusicLyrics(
+                                        GratifyLyrics(
                                             id = lyrics.id,
                                             vote = lyrics.vote,
                                         ),
@@ -531,7 +543,7 @@ internal class LyricsCanvasRepositoryImpl(
                 }
         }.flowOn(Dispatchers.IO)
 
-    override fun voteGratifyMusicLyrics(
+    override fun voteGratifyLyrics(
         lyricsId: String,
         upvote: Boolean,
     ): Flow<Resource<String>> =
@@ -547,7 +559,7 @@ internal class LyricsCanvasRepositoryImpl(
                 }
         }.flowOn(Dispatchers.IO)
 
-    override fun voteGratifyMusicTranslatedLyrics(
+    override fun voteGratifyTranslatedLyrics(
         translatedLyricsId: String,
         upvote: Boolean,
     ): Flow<Resource<String>> =
@@ -563,7 +575,7 @@ internal class LyricsCanvasRepositoryImpl(
                 }
         }.flowOn(Dispatchers.IO)
 
-    override fun insertGratifyMusicLyrics(
+    override fun insertGratifyLyrics(
         dataStoreManager: DataStoreManager,
         track: Track,
         duration: Int,
@@ -615,7 +627,7 @@ internal class LyricsCanvasRepositoryImpl(
                 }
         }.flowOn(Dispatchers.IO)
 
-    override fun insertGratifyMusicTranslatedLyrics(
+    override fun insertGratifyTranslatedLyrics(
         dataStoreManager: DataStoreManager,
         track: Track,
         translatedLyrics: Lyrics,

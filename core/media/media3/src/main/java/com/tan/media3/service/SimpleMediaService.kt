@@ -117,6 +117,9 @@ internal class SimpleMediaService :
                 )
         }
 
+        Logger.d("PLAYER_DEBUG", "Player instance (hashCode): ${player.hashCode()}")
+        Logger.d("PLAYER_DEBUG", "MediaSession instance (hashCode): ${mediaSession?.hashCode()}")
+
         simpleMediaServiceHandler.onUpdateNotification = { list ->
             val commandButtonList = list.map { it.toCommandButton(this) }
             mediaSession?.setMediaButtonPreferences(
@@ -126,7 +129,10 @@ internal class SimpleMediaService :
 
         val sessionToken = SessionToken(this, ComponentName(this, SimpleMediaService::class.java))
         val controllerFuture = MediaController.Builder(this, sessionToken).buildAsync()
-        controllerFuture.addListener({ controllerFuture.get() }, MoreExecutors.directExecutor())
+        controllerFuture.addListener({ 
+            val controller = controllerFuture.get()
+            Logger.d("PLAYER_DEBUG", "MediaController recreated: hash=${controller.hashCode()}")
+        }, MoreExecutors.directExecutor())
 
         if (runBlocking { dataStoreManager.keepServiceAlive.first() == DataStoreManager.TRUE }) {
             val keepServiceNotificationManager = getSystemService<NotificationManager>()

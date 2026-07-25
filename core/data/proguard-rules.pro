@@ -132,9 +132,9 @@
 -keep class com.tan.kotlinytmusicscraper.pages.** { *; }
 -keep class com.tan.kotlinytmusicscraper.utils.** { *; }
 
--keep class org.gratifymusic.lyrics.parser.** { *; }
--keep class org.gratifymusic.lyrics.models.** { *; }
--keep class com.gratifymusic.lyrics.parser.** { *; }
+-keep class com.tan.gratify.lyrics.parser.** { *; }
+-keep class com.tan.gratify.lyrics.models.** { *; }
+-keep class com.gratify.lyrics.parser.** { *; }
 
 -dontwarn com.tan.kotlinytmusicscraper.YouTube$SearchFilter$Companion
 -dontwarn com.tan.kotlinytmusicscraper.YouTube$SearchFilter
@@ -159,12 +159,12 @@
 -dontwarn com.tan.spotify.model.response.spotify.search.SpotifySearchResponse$Data$Search
 -dontwarn com.tan.spotify.model.response.spotify.search.SpotifySearchResponse$Data
 -dontwarn com.tan.spotify.model.response.spotify.search.SpotifySearchResponse
--dontwarn org.gratifymusic.aiservice.AIHost
--dontwarn org.gratifymusic.aiservice.AiClient
--dontwarn org.gratifymusic.lyrics.GratifyMusicLyricsClient
--dontwarn org.gratifymusic.lyrics.domain.Lyrics$LyricsX$Line
--dontwarn org.gratifymusic.lyrics.domain.Lyrics$LyricsX
--dontwarn org.gratifymusic.lyrics.domain.Lyrics
+-dontwarn com.tan.gratify.aiservice.AIHost
+-dontwarn com.tan.gratify.aiservice.AiClient
+-dontwarn com.tan.gratify.lyrics.GratifyLyricsClient
+-dontwarn com.tan.gratify.lyrics.domain.Lyrics$LyricsX$Line
+-dontwarn com.tan.gratify.lyrics.domain.Lyrics$LyricsX
+-dontwarn com.tan.gratify.lyrics.domain.Lyrics
 
 -keep class org.apache.commons.io.** { *; }
 

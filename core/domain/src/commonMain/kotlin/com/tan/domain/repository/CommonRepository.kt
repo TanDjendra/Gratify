@@ -12,6 +12,8 @@ interface CommonRepository {
     // Database
     fun closeDatabase()
 
+    suspend fun clearDatabase()
+
     fun getDatabasePath(): String?
 
     suspend fun databaseDaoCheckpoint()

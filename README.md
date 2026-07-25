@@ -1,22 +1,22 @@
-<div align="center"> <img src="https://raw.githubusercontent.com/tan/GratifyMusic/main/fastlane/metadata/android/en-US/images/featureGraphic.png"> <h1>GratifyMusic</h1>  
+<div align="center"> <img src="https://raw.githubusercontent.com/tan/Gratify/main/fastlane/metadata/android/en-US/images/featureGraphic.png"> <h1>Gratify</h1>  
 A FOSS YouTube Music client for Android and Desktop with many features from<br>Spotify, SponsorBlock, ReturnYouTubeDislike using Compose Multiplatform to develop.
 <br> 
 <br>
-<a href="https://github.com/tan/GratifyMusic/releases"><img src="https://img.shields.io/github/v/release/tan/GratifyMusic"></a> <a href="https://github.com/tan/GratifyMusic/releases"><img src="https://img.shields.io/github/downloads/tan/GratifyMusic/total"></a> <br> <br> <a href="https://trendshift.io/repositories/13482" target="_blank"><img src="https://trendshift.io/api/badge/repositories/13482" alt="tan%2FGratifyMusic | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+<a href="https://github.com/tan/Gratify/releases"><img src="https://img.shields.io/github/v/release/tan/Gratify"></a> <a href="https://github.com/tan/Gratify/releases"><img src="https://img.shields.io/github/downloads/tan/Gratify/total"></a> <br> <br> <a href="https://trendshift.io/repositories/13482" target="_blank"><img src="https://trendshift.io/api/badge/repositories/13482" alt="tan%2FGratify | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 <br>
 <br>
-<a href="https://www.producthunt.com/products/gratifymusic/reviews?utm_source=badge-product_rating&utm_medium=badge&utm_source=badge-gratifymusic" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/product_rating.svg?product_id=903836&theme=dark" alt="GratifyMusic - A&#0032;FOSS&#0032;YouTube&#0032;Music&#0032;client&#0032;for&#0032;Android&#0032;with&#0032;many&#0032;features | Product Hunt" style="width: 242px; height: 108px;" width="242" height="108" /></a>
+<a href="https://www.producthunt.com/products/gratify/reviews?utm_source=badge-product_rating&utm_medium=badge&utm_source=badge-gratify" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/product_rating.svg?product_id=903836&theme=dark" alt="Gratify - A&#0032;FOSS&#0032;YouTube&#0032;Music&#0032;client&#0032;for&#0032;Android&#0032;with&#0032;many&#0032;features | Product Hunt" style="width: 242px; height: 108px;" width="242" height="108" /></a>
 <br> 
 <h4>Download</h4>  
-<a href="https://apt.izzysoft.de/packages/com.tan.gratifymusic/"><img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" width="200"></a> 
-<a href="https://f-droid.org/en/packages/com.tan.gratifymusic/"><img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" width="200"></a> 
-<a href="https://www.openapk.net/gratifymusic/com.tan.gratifymusic/"><img src="https://www.openapk.net/images/openapk-badge.png" width="200"></a> 
-<a href="https://github.com/tan/GratifyMusic/releases"><img src="https://raw.githubusercontent.com/NeoApplications/Neo-Backup/034b226cea5c1b30eb4f6a6f313e4dadcbb0ece4/badge_github.png" width="200"></a> 
+<a href="https://apt.izzysoft.de/packages/com.tan.gratify/"><img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" width="200"></a> 
+<a href="https://f-droid.org/en/packages/com.tan.gratify/"><img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" width="200"></a> 
+<a href="https://www.openapk.net/gratify/com.tan.gratify/"><img src="https://www.openapk.net/images/openapk-badge.png" width="200"></a> 
+<a href="https://github.com/tan/Gratify/releases"><img src="https://raw.githubusercontent.com/NeoApplications/Neo-Backup/034b226cea5c1b30eb4f6a6f313e4dadcbb0ece4/badge_github.png" width="200"></a> 
 <h4>Nightly Build</h4>  
-<a href="https://gratifymusic.org/nightly-download"><img src="https://github.com/tan/GratifyMusic/actions/workflows/android.yml/badge.svg"></a><br/> <a href="https://gratifymusic.org/nightly-download"><img src="https://raw.githubusercontent.com/NeoApplications/Neo-Backup/034b226cea5c1b30eb4f6a6f313e4dadcbb0ece4/badge_github.png" width="200"></a> 
+<a href="https://gratify.org/nightly-download"><img src="https://github.com/tan/Gratify/actions/workflows/android.yml/badge.svg"></a><br/> <a href="https://gratify.org/nightly-download"><img src="https://raw.githubusercontent.com/NeoApplications/Neo-Backup/034b226cea5c1b30eb4f6a6f313e4dadcbb0ece4/badge_github.png" width="200"></a> 
 </div>  
 
-> GratifyMusic is available on Desktop now!
+> Gratify is available on Desktop now!
   
 ## Features ✨️    
 - Play music from YouTube Music or YouTube for free, without ads and in the background
@@ -25,14 +25,14 @@ A FOSS YouTube Music client for Android and Desktop with many features from<br>S
 - Search everything on YouTube    
 - Analyze your playing data, create custom playlists, and sync with YouTube Music...    
 - Spotify Canvas supported    
-- Power your experience with GratifyMusic Chart (https://chart.gratifymusic.org/)
+- Power your experience with Gratify Chart (https://chart.gratify.org/)
 - Play 1080p video option with subtitle    
 - AI song suggestions    
 - Customize your playlist, synced with YouTube Music
 - Notifications from followed artists    
 - Caching and offline playback support    
 - Crossfade with DJ-style like Apple Music (NEW)
-- Synced lyrics from GratifyMusic Lyrics, LRCLIB, Spotify (require login) and YouTube Transcript - AI lyrics translation (BETA) (*)  
+- Synced lyrics from Gratify Lyrics, LRCLIB, Spotify (require login) and YouTube Transcript - AI lyrics translation (BETA) (*)  
 - Personalize data (\**) and multi-YouTube-account support    
 - Local "scrobble" like Last.fm (NEW)
 - Supports SponsorBlock and Return YouTube Dislike
@@ -51,23 +51,23 @@ A FOSS YouTube Music client for Android and Desktop with many features from<br>S
     
 ## Screenshots    
  <p align="center">          
- <img src="https://github.com/tan/GratifyMusic/blob/main/asset/screenshot/01.png?raw=true" width="200" />          
-  <img src="https://github.com/tan/GratifyMusic/blob/main/asset/screenshot/02.png?raw=true" width="200" />          
-   <img src="https://github.com/tan/GratifyMusic/blob/main/asset/screenshot/03.png?raw=true" width="200" />          
-   <img src="https://github.com/tan/GratifyMusic/blob/main/asset/screenshot/04.png?raw=true" width="200" /> </p> <p align="center">          
- <img src="https://github.com/tan/GratifyMusic/blob/main/asset/screenshot/05.png?raw=true" width="200" />          
- <img src="https://github.com/tan/GratifyMusic/blob/main/asset/screenshot/17.png?raw=true" width="200" />  
-   <img src="https://github.com/tan/GratifyMusic/blob/main/asset/screenshot/07.png?raw=true" width="200" />          
-   <img src="https://github.com/tan/GratifyMusic/blob/main/asset/screenshot/08.png?raw=true" width="200" /> </p> <p align="center">          
- <img src="https://github.com/tan/GratifyMusic/blob/main/asset/screenshot/09.png?raw=true" width="200" />          
-  <img src="https://github.com/tan/GratifyMusic/blob/main/asset/screenshot/10.png?raw=true" width="200" />         
-  <img src="https://github.com/tan/GratifyMusic/blob/main/asset/screenshot/11.png?raw=true" width="200" /> 
-     <img src="https://github.com/tan/GratifyMusic/blob/main/asset/screenshot/12.png?raw=true" width="200" /> </p> <p align="center">    
- <img src="https://github.com/tan/GratifyMusic/blob/main/asset/screenshot/13.png?raw=true" width="200" />          
-  <img src="https://github.com/tan/GratifyMusic/blob/main/asset/screenshot/14.png?raw=true" width="200" />         
-  <img src="https://github.com/tan/GratifyMusic/blob/main/asset/screenshot/15.png?raw=true" width="200" /> 
-     <img src="https://github.com/tan/GratifyMusic/blob/main/asset/screenshot/16.png?raw=true" width="200" /> </p> <p align="center">  
-   <img src="https://github.com/tan/GratifyMusic/blob/main/asset/screenshot/06.png?raw=true" width="800" />  
+ <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/01.png?raw=true" width="200" />          
+  <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/02.png?raw=true" width="200" />          
+   <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/03.png?raw=true" width="200" />          
+   <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/04.png?raw=true" width="200" /> </p> <p align="center">          
+ <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/05.png?raw=true" width="200" />          
+ <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/17.png?raw=true" width="200" />  
+   <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/07.png?raw=true" width="200" />          
+   <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/08.png?raw=true" width="200" /> </p> <p align="center">          
+ <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/09.png?raw=true" width="200" />          
+  <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/10.png?raw=true" width="200" />         
+  <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/11.png?raw=true" width="200" /> 
+     <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/12.png?raw=true" width="200" /> </p> <p align="center">    
+ <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/13.png?raw=true" width="200" />          
+  <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/14.png?raw=true" width="200" />         
+  <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/15.png?raw=true" width="200" /> 
+     <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/16.png?raw=true" width="200" /> </p> <p align="center">  
+   <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/06.png?raw=true" width="800" />  
 </p>
 
  #### More [screenshots](https://photos.app.goo.gl/AbieoXG5ctDrpwzp7) here.
@@ -79,14 +79,14 @@ A FOSS YouTube Music client for Android and Desktop with many features from<br>S
 - Special thanks to [SmartTube](https://github.com/yuliskov/SmartTube). This repo help me to extract the streaming URL of YouTube Music.    
 - My app is using [SponsorBlock](https://sponsor.ajay.app/) to skip sponsor in YouTube videos.    
 - ReturnYouTubeDislike for getting information on votes 
-- Main lyrics data from GratifyMusic Lyrics
+- Main lyrics data from Gratify Lyrics
 - Alternative lyrics data from LRCLIB. More information [LRCLIB](https://lrclib.net/)    
  
  ## Privacy    
- GratifyMusic doesn't have any tracker or third-party server for collecting user data in FOSS version. If YouTube      
-logged-in users enable "Send back to Google" feature, GratifyMusic only uses YouTube Music Tracking API to send listening history and listening record of video to Google for better recommendations and      
+ Gratify doesn't have any tracker or third-party server for collecting user data in FOSS version. If YouTube      
+logged-in users enable "Send back to Google" feature, Gratify only uses YouTube Music Tracking API to send listening history and listening record of video to Google for better recommendations and      
 supporting artist or YouTube Creator (For API reference,      
-see [this](https://github.com/tan/GratifyMusic/blob/main/core/service/kotlinYtmusicScraper/src/commonMain/kotlin/com/tan/kotlinytmusicscraper/Ytmusic.kt)).
+see [this](https://github.com/tan/Gratify/blob/main/core/service/kotlinYtmusicScraper/src/commonMain/kotlin/com/tan/kotlinytmusicscraper/Ytmusic.kt)).
 
 We collect crash data in the Full version to improve the app.
    
@@ -101,7 +101,7 @@ I use [Sentry](http://sentry.io) crashlytics to catch all crashes in the Full ve
 - For macOS: Download the file with extension `.dmg`.
 - For Linux: Download the file with extension `.AppImage` (all Linux distributions)
 
-### Log in guide: https://www.gratifymusic.org/blogs/en/how-to-log-in-on-desktop-app
+### Log in guide: https://www.gratify.org/blogs/en/how-to-log-in-on-desktop-app
 #### Discord login guide: https://gist.github.com/MarvNC/e601f3603df22f36ebd3102c501116c6
 
 ### Some limitations on Desktop app:
@@ -111,46 +111,46 @@ I use [Sentry](http://sentry.io) crashlytics to catch all crashes in the Full ve
 Please report issues on our Discord server if you find any bugs.
  
 ## Translation    
-[![Crowdin](https://badges.crowdin.net/gratifymusic/localized.svg)](https://crowdin.com/project/gratifymusic)
+[![Crowdin](https://badges.crowdin.net/gratify/localized.svg)](https://crowdin.com/project/gratify)
 <br/>
-You can help me translate this app into your language by using Crowdin [GratifyMusic on Crowdin](https://crowdin.com/project/gratifymusic)    
+You can help me translate this app into your language by using Crowdin [Gratify on Crowdin](https://crowdin.com/project/gratify)    
  #### Special thanks to all translators on Crowdin ❤️    
  ## FAQ    
  #### 1. Wrong Lyrics?    
  Lyrics are provided by LRCLIB and other sources. Sometimes lyrics may not match perfectly with the YouTube `videoId` parameter. So I need to use some "String Matcher" and "Duration" to search lyrics. So sometimes, some songs or videos get the wrong lyrics.    
     
-#### 2. Why the name or brand is "GratifyMusic"?    
- Simply, because I love the name. It's a combination of 'Tan' and 'Music'. But GratifyMusic is not a simple app, it's all you need for a powerful music streaming app.    
+#### 2. Why the name or brand is "Gratify"?    
+ Simply, because I love the name. It's a combination of 'Tan' and 'Music'. But Gratify is not a simple app, it's all you need for a powerful music streaming app.    
   
 #### More FAQ, join [my Discord channel](https://discord.com/channels/1136988323819298856/1349800418745778196)  
 
 ## Legal Disclaimer & Terms of Use
 
 ### 1. 100% Free, Open-Source & Strictly Non-Commercial
-GratifyMusic is a fully open-source project (FOSS) created purely for educational purposes and personal use. **We do not sell this application, nor do we monetize it in any way.** There are no advertisements, no premium features, no subscriptions, and no hidden fees within the app. This project has absolutely no commercial value or financial intent. 
+Gratify is a fully open-source project (FOSS) created purely for educational purposes and personal use. **We do not sell this application, nor do we monetize it in any way.** There are no advertisements, no premium features, no subscriptions, and no hidden fees within the app. This project has absolutely no commercial value or financial intent. 
 
 ### 2. A Custom Browser with Content Filtering
-GratifyMusic acts strictly as a specialized, third-party web browser and client. It simply parses the publicly available website content and APIs of YouTube and YouTube Music, rendering them in a custom user interface. The ad-free experience it provides is fundamentally no different from using a standard web browser (like Chrome, Firefox, or Brave) equipped with a common ad-blocking extension (such as uBlock Origin).
+Gratify acts strictly as a specialized, third-party web browser and client. It simply parses the publicly available website content and APIs of YouTube and YouTube Music, rendering them in a custom user interface. The ad-free experience it provides is fundamentally no different from using a standard web browser (like Chrome, Firefox, or Brave) equipped with a common ad-blocking extension (such as uBlock Origin).
 
 ### 3. Support Content Creators
-We deeply respect the hard work of artists, musicians, and content creators. **We strongly encourage all users to subscribe to [YouTube Premium](https://www.youtube.com/premium).** Purchasing a Premium subscription is the best way to financially support the creators you listen to and ensure the continued growth of the platform. GratifyMusic is built as a proof-of-concept for developers and enthusiasts, not to harm creators' revenues.
+We deeply respect the hard work of artists, musicians, and content creators. **We strongly encourage all users to subscribe to [YouTube Premium](https://www.youtube.com/premium).** Purchasing a Premium subscription is the best way to financially support the creators you listen to and ensure the continued growth of the platform. Gratify is built as a proof-of-concept for developers and enthusiasts, not to harm creators' revenues.
 
 ### 4. No Hosting of Copyrighted Material
 We do not host, upload, distribute, or store any audio, video, or copyrighted media files on our own servers. All content accessed through this application is stored entirely on Google's/YouTube's servers and remains the property of their respective copyright owners. The app merely acts as a conduit to stream publicly accessible links.
 
 ### 5. User Responsibility & Legal Contact
-The software is provided "AS IS", without warranty of any kind. The developers of GratifyMusic do not encourage or condone piracy. Users are solely responsible for ensuring their usage of this app complies with their local copyright laws and the Terms of Service of the platforms they access. 
+The software is provided "AS IS", without warranty of any kind. The developers of Gratify do not encourage or condone piracy. Users are solely responsible for ensuring their usage of this app complies with their local copyright laws and the Terms of Service of the platforms they access. 
 
 Because we do not host any media files, we cannot process DMCA takedown requests for audio or video content. However, if you represent a copyright holder or have legal concerns regarding the open-source code itself, please open a GitHub Issue.
 
   ## Contribute
 We're looking for more contributors, all contributions are welcome!
-See our [CODE OF CONDUCT](https://github.com/tan/GratifyMusic/blob/main/CODE_OF_CONDUCT.md)
+See our [CODE OF CONDUCT](https://github.com/tan/Gratify/blob/main/CODE_OF_CONDUCT.md)
 
 Thanks for all my contributors:
 
-<a href="https://github.com/tan/GratifyMusic/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=tan/GratifyMusic" />
+<a href="https://github.com/tan/Gratify/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=tan/Gratify" />
 </a>
 
  ## Showcase
@@ -158,13 +158,13 @@ This project is following clean architecture and MVVM pattern (in UI, app module
 
  ### Dependencies graph
   <p float="left">        
-  <img src="https://github.com/tan/GratifyMusic/blob/main/asset/dependencies_graph.svg?raw=true" width="800"> 
+  <img src="https://github.com/tan/Gratify/blob/main/asset/dependencies_graph.svg?raw=true" width="800"> 
   </p>
 
  ## Support & Donations 
  #### Special thanks to all supporter ❤️    
  <div align="left"> 
- <a href="https://gratifymusic.org/"><img alt="Visit the website" height="50" src="https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/documentation/website_vector.svg"></a> &nbsp;        
+ <a href="https://gratify.org/"><img alt="Visit the website" height="50" src="https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/documentation/website_vector.svg"></a> &nbsp;        
 <a href="https://discord.gg/Rq5tWVM9Hg"><img alt="Discord Server" height="50" src="https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/social/discord-plural_vector.svg"></a> &nbsp;        
 <br> <a href="https://www.buymeacoffee.com/tan"><img alt="Buy me a Coffee" height="50" src="https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/donate/buymeacoffee-singular_vector.svg"></a> &nbsp;        
 <a href="https://liberapay.com/tan/"><img alt="liberapay" height="50"        
@@ -173,7 +173,7 @@ src="https://raw.githubusercontent.com/liberapay/liberapay.com/master/www/assets
     
 
 
-## GratifyMusic is sponsored by:
+## Gratify is sponsored by:
 <br />
 <a href="https://vercel.com/oss">
   <img alt="Vercel OSS Program" src="https://vercel.com/oss/program-badge.svg" />
@@ -188,7 +188,7 @@ src="https://raw.githubusercontent.com/liberapay/liberapay.com/master/www/assets
 </a>
 <br>
 <a href="https://sentry.io">
-<img src="https://github.com/tan/GratifyMusic/blob/dev/asset/sentry.svg?raw=true" width="300"/>
+<img src="https://github.com/tan/Gratify/blob/dev/asset/sentry.svg?raw=true" width="300"/>
 </a>
 <br>
 <br>
@@ -205,6 +205,6 @@ Check out the Vercel open-source program:
 This project is tested with BrowserStack
 - Checkout BrowserStack now: https://www.browserstack.com/
 
-*This project is a part of GratifyMusic.org Open-source project by me [Tan](https://github.com/tan)*
+*This project is a part of Gratify.org Open-source project by me [Tan](https://github.com/tan)*
 
 <!-- GitAds-Verify: 9788276LHF131ESPL12SWLJ8LACOJE89 -->

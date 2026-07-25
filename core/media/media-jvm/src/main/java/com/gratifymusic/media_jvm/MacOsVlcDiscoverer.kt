@@ -1,4 +1,4 @@
-package com.gratifymusic.media_jvm
+package com.gratify.media_jvm
 
 import com.tan.logger.Logger
 import com.sun.jna.NativeLibrary

@@ -44,14 +44,14 @@ import com.tan.kotlinytmusicscraper.models.response.NextResponse
 import com.tan.kotlinytmusicscraper.models.response.PipedResponse
 import com.tan.kotlinytmusicscraper.models.response.PlayerResponse
 import com.tan.kotlinytmusicscraper.models.response.SearchResponse
-import com.tan.kotlinytmusicscraper.models.response.GratifyMusicChartResponse
+import com.tan.kotlinytmusicscraper.models.response.GratifyChartResponse
 import com.tan.kotlinytmusicscraper.models.response.TidalSearchResponse
 import com.tan.kotlinytmusicscraper.models.response.TidalOAuthResponse
 import com.tan.kotlinytmusicscraper.models.response.RemoteConfig
 import com.tan.kotlinytmusicscraper.models.response.toLikeStatus
 import com.tan.kotlinytmusicscraper.models.response.toListAccountInfo
-import com.tan.kotlinytmusicscraper.models.gratifymusic.FdroidResponse
-import com.tan.kotlinytmusicscraper.models.gratifymusic.GithubResponse
+import com.tan.kotlinytmusicscraper.models.gratify.FdroidResponse
+import com.tan.kotlinytmusicscraper.models.gratify.GithubResponse
 import com.tan.kotlinytmusicscraper.models.sponsorblock.SkipSegments
 import com.tan.kotlinytmusicscraper.models.youtube.GhostResponse
 import com.tan.kotlinytmusicscraper.models.youtube.Transcript
@@ -111,17 +111,17 @@ import kotlin.jvm.JvmInline
 import kotlin.math.abs
 import kotlin.math.round
 import kotlin.random.Random
-import kotlin.time.Clock
+import kotlinx.datetime.Clock
 import kotlin.time.ExperimentalTime
-import kotlin.time.Instant
+import kotlinx.datetime.Instant
 
 private const val TAG = "YouTubeScraper"
 
 /**
  * Special thanks to [z-huang/InnerTune](https://github.com/z-huang/InnerTune)
- * This library is from [z-huang/InnerTune] and I just modified it to comply with GratifyMusic
+ * This library is from [z-huang/InnerTune] and I just modified it to comply with Gratify
  *
- * Here is the object that can create all request to YouTube Music and Spotify in GratifyMusic
+ * Here is the object that can create all request to YouTube Music and Spotify in Gratify
  * Using YouTube Internal API
  * @author tan
  */
@@ -828,7 +828,7 @@ class YouTube {
 
     /**
      * Execute a custom POST request to YouTube Music
-     * In GratifyMusic, I use this function to parsing Home, Playlist, Album data instead using [album], [playlist], [artist] function
+     * In Gratify, I use this function to parsing Home, Playlist, Album data instead using [album], [playlist], [artist] function
      * @param browseId the browseId (such as "FEmusic_home", "VL$playlistId", etc.)
      * @param params the params
      * @param continuation the continuation token
@@ -1889,9 +1889,9 @@ class YouTube {
             ytMusic.removeFromLiked(mediaId).status.value
         }
 
-    suspend fun getGratifyMusicChart() =
+    suspend fun getGratifyChart() =
         runCatching {
-            ytMusic.getGratifyMusicChart().body<GratifyMusicChartResponse>()
+            ytMusic.getGratifyChart().body<GratifyChartResponse>()
         }
 
     /**

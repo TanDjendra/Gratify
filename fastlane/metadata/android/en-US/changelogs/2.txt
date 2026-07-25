@@ -1,6 +1,6 @@
 Fixes:
 
-- Fixed tan/GratifyMusic#4
+- Fixed tan/Gratify#4
 - Fixed bugs
 - Migrate Gradle to Kotlin KTS
 
@@ -8,9 +8,9 @@ New Feature:
 
 - Remove Thumbnail Cache
 - Move or remove Queue Track
-- Backup and restore data (tan/GratifyMusic#2)
+- Backup and restore data (tan/Gratify#2)
 - Add swipe to remove miniplayer
-- Add GratifyMusic to YouTube, YouTube Music's share menu (tan/GratifyMusic#9)
+- Add Gratify to YouTube, YouTube Music's share menu (tan/Gratify#9)
 - Open YouTube link by default
 - Add static shortcuts
 - Auto save lyrics for offline playback

@@ -10,8 +10,11 @@ import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import com.tan.common.MERGING_DATA_TYPE
 import com.tan.domain.manager.DataStoreManager
 import com.tan.logger.Logger
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 @UnstableApi
@@ -19,6 +22,34 @@ internal class MergingMediaSourceFactory(
     private val defaultMediaSourceFactory: DefaultMediaSourceFactory,
     private val dataStoreManager: DataStoreManager,
 ) : MediaSource.Factory {
+
+    // Cached preference value — updated reactively via observePreference().
+    // createMediaSource() is called from ExoPlayer's internal playback thread;
+    // the previous runBlocking(Dispatchers.IO) blocked that thread and could
+    // contribute to deadlocks when Dispatchers.IO is contended.
+    @Volatile
+    private var cachedWatchVideo: Boolean = false
+
+    init {
+        // Seed the cache synchronously so the first createMediaSource call has a value.
+        // This runs once during DI init on Main, which is acceptable.
+        cachedWatchVideo = runBlocking(Dispatchers.IO) {
+            dataStoreManager.watchVideoInsteadOfPlayingAudio.first()
+        } == DataStoreManager.Values.TRUE
+    }
+
+    /**
+     * Start observing the preference reactively. Call once after construction
+     * (from the service scope) to keep cachedWatchVideo up to date without blocking.
+     */
+    fun observePreference(scope: CoroutineScope) {
+        scope.launch(Dispatchers.IO) {
+            dataStoreManager.watchVideoInsteadOfPlayingAudio.collectLatest { value ->
+                cachedWatchVideo = (value == DataStoreManager.Values.TRUE)
+            }
+        }
+    }
+
     override fun setDrmSessionManagerProvider(drmSessionManagerProvider: DrmSessionManagerProvider): MediaSource.Factory {
         defaultMediaSourceFactory.setDrmSessionManagerProvider(drmSessionManagerProvider)
         return this
@@ -33,7 +64,7 @@ internal class MergingMediaSourceFactory(
 
     override fun createMediaSource(mediaItem: MediaItem): MediaSource {
         Logger.w("Merging Media Source", mediaItem.mediaMetadata.description.toString())
-        val getVideo = runBlocking(Dispatchers.IO) { dataStoreManager.watchVideoInsteadOfPlayingAudio.first() } == DataStoreManager.Values.TRUE
+        val getVideo = cachedWatchVideo
         Logger.w("Merging Media Source", getVideo.toString())
         if (mediaItem.mediaMetadata.description == MERGING_DATA_TYPE.VIDEO && getVideo) {
             val videoItem =
@@ -49,7 +80,5 @@ internal class MergingMediaSourceFactory(
         } else {
             return defaultMediaSourceFactory.createMediaSource(mediaItem)
         }
-
-//        val default = defaultMediaSourceFactory.createMediaSource(mediaItem.buildUpon().setMediaId("AUDIO-${mediaItem.mediaId}").build())
     }
 }

@@ -1,4 +1,4 @@
-package com.tan.kotlinytmusicscraper.models.gratifymusic
+package com.tan.kotlinytmusicscraper.models.gratify
 
 import kotlinx.serialization.Serializable
 

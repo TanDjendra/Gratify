@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
 data class CreatePlaylistBody(
     val context: Context,
     val title: String,
-    val description: String? = "Created by GratifyMusic",
+    val description: String? = "Created by Gratify",
     val privacyStatus: String = PrivacyStatus.PRIVATE,
     val videoIds: List<String>? = null,
 ) {

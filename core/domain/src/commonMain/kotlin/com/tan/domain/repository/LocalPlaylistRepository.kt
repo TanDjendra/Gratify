@@ -90,6 +90,8 @@ interface LocalPlaylistRepository {
 
     suspend fun getListTrackVideoId(id: Long): List<String>
 
+    suspend fun insertLocalPlaylistAndGetId(localPlaylist: LocalPlaylistEntity): Long
+
     fun insertLocalPlaylist(
         localPlaylist: LocalPlaylistEntity,
         successMessage: String,
@@ -160,6 +162,11 @@ interface LocalPlaylistRepository {
         errorMessage: String,
     ): Flow<LocalResource<String>>
 
+    suspend fun addTracksToLocalPlaylist(
+        id: Long,
+        songs: List<SongEntity>,
+    )
+
     fun removeTrackFromLocalPlaylist(
         id: Long,
         song: SongEntity,
@@ -178,4 +185,16 @@ interface LocalPlaylistRepository {
         youtubePlaylistId: String,
         videoId: String,
     ): Flow<LocalResource<String>>
+
+    suspend fun saveSharedPlaylistToLibrary(
+        sharedPlaylistId: String,
+        title: String,
+        thumbnail: String?,
+        tracks: List<Track>,
+        creatorName: String? = null,
+    ): Long
+
+    suspend fun updateSourceAvailability(sharedPlaylistId: String, availability: Int)
+
+    suspend fun getLocalPlaylistBySourceSharedId(sharedPlaylistId: String): LocalPlaylistEntity?
 }

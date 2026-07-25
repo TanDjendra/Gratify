@@ -21,6 +21,14 @@ actual class Extractor {
         BraveNewPipe.init(braveNewPipeDownloader)
     }
 
+    actual fun setProxy(proxy: Any?) {
+        val javaProxy = proxy as? java.net.Proxy
+        newPipeDownloader = NewPipeDownloaderImpl(javaProxy)
+        braveNewPipeDownloader = BraveNewPipeDownloaderImpl(javaProxy)
+        NewPipe.init(newPipeDownloader)
+        BraveNewPipe.init(braveNewPipeDownloader)
+    }
+
     actual fun logIn(cookie: String?) {
         ServiceList.YouTube.tokens = cookie ?: ""
     }

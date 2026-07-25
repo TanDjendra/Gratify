@@ -41,7 +41,7 @@
     </queries>
 
     <application
-        android:name=".GratifyMusicApplication"
+        android:name=".GratifyApplication"
         android:allowBackup="true"
         android:appCategory="audio"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -127,7 +127,7 @@
                 <data android:scheme="vnd.youtube.launch" />
             </intent-filter>
 
-            <!-- GratifyMusic deep link filter (https) -->
+            <!-- Gratify deep link filter (https) -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
 
@@ -135,18 +135,26 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data android:scheme="https" />
-                <data android:host="gratifymusic.org" />
+                <data android:host="gratify.org" />
                 <data android:pathPrefix="/app/" />
             </intent-filter>
 
-            <!-- GratifyMusic deep link filter (custom scheme) -->
+            <!-- Supabase Google OAuth callback -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="com.tan.gratify" android:host="login-callback" />
+            </intent-filter>
+
+            <!-- Gratify deep link filter (custom scheme) -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
-                <data android:scheme="gratifymusic" />
+                <data android:scheme="gratify" />
             </intent-filter>
 
             <!-- Share filter -->

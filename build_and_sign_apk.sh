@@ -6,7 +6,7 @@ set -e
 # Default variables
 BUILD_TYPE="release"
 BUILD_VARIANT="full"
-KEYSTORE_PATH="./gratifymusic.jks"
+KEYSTORE_PATH="./gratify.jks"
 # Read passwords from environment variables or use default (for backward compatibility)
 KEYSTORE_PASSWORD="${KEYSTORE_PASSWORD}"
 KEY_ALIAS="${KEY_ALIAS}"
@@ -131,7 +131,7 @@ for APK_PATH in $APK_PATHS; do
   RELEASE_NAME=$(basename "${APK_PATH/-unsigned/}")
   RELEASE_NAME="${RELEASE_NAME/app-/}"
   RELEASE_NAME="${RELEASE_NAME/androidApp-/}"
-  SIGNED_APK_PATH="$SIGNED_APK_OUTPUT_DIR/GratifyMusic-$BUILD_VARIANT-$(basename "$RELEASE_NAME")"
+  SIGNED_APK_PATH="$SIGNED_APK_OUTPUT_DIR/Gratify-$BUILD_VARIANT-$(basename "$RELEASE_NAME")"
 
   echo "[Step 4] Aligning the APK: $APK_PATH..."
   if [ ! -f "$ZIPALIGN" ]; then

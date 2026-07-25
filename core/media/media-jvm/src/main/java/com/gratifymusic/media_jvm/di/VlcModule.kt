@@ -1,11 +1,11 @@
-package com.gratifymusic.media_jvm.di
+package com.gratify.media_jvm.di
 
 import com.tan.common.Config.SERVICE_SCOPE
 import com.tan.domain.mediaservice.handler.DownloadHandler
 import com.tan.domain.mediaservice.player.MediaPlayerInterface
 import com.tan.domain.repository.CacheRepository
-import com.gratifymusic.media_jvm.VlcPlayerAdapter
-import com.gratifymusic.media_jvm.download.DownloadUtils
+import com.gratify.media_jvm.VlcPlayerAdapter
+import com.gratify.media_jvm.download.DownloadUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher

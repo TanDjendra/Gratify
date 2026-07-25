@@ -35,7 +35,7 @@ plugins {
 compose.resources {
     generateResClass = always
     publicResClass = true
-    packageOfResClass = "gratifymusic.composeapp.generated.resources"
+    packageOfResClass = "gratify.composeapp.generated.resources"
 }
 
 kotlin {
@@ -46,7 +46,7 @@ kotlin {
         freeCompilerArgs.add("-Xexpect-actual-classes")
     }
     android {
-        namespace = "com.tan.gratifymusic.composeapp"
+        namespace = "com.tan.gratify.composeapp"
         compileSdk = 37
         minSdk = 26
         withJava()
@@ -93,6 +93,9 @@ kotlin {
 
             api(projects.media3)
             api(projects.media3Ui)
+
+            implementation(libs.zxing.core)
+            implementation(libs.play.services.code.scanner)
         }
         commonMain.dependencies {
             implementation(libs.runtime)
@@ -164,6 +167,16 @@ kotlin {
             // Liquid glass
             implementation(libs.liquid.glass)
             implementation(libs.liquid.glass.shape)
+
+            // Supabase
+            implementation(project.dependencies.platform(libs.supabase.bom))
+            implementation(libs.supabase.auth)
+            implementation(libs.supabase.postgrest)
+            implementation(libs.supabase.storage)
+            implementation(libs.multiplatform.settings)
+
+            // Fix for Supabase OAuth Deep Link Crash (NoClassDefFoundError for Clock$System)
+            implementation(libs.kotlinx.datetime)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -178,6 +191,7 @@ kotlin {
 
             implementation(libs.native.tray)
             implementation(projects.mediaJvmUi)
+            implementation(libs.zxing.core)
         }
     }
 }
@@ -314,7 +328,7 @@ val vlcSetupLinuxCi by tasks.registering {
             into(outputDir)
             // Ship the full VLC plugin set (matches the v1.2.1 release).
             // A curated subset based on upstream vlc-setup defaults turned
-            // out to be insufficient for GratifyMusic — YT Music streaming
+            // out to be insufficient for Gratify — YT Music streaming
             // depends on HTTP/HTTPS access + MP4/WebM demuxers that the
             // upstream music-app preset doesn't cover. `**/` is needed
             // because include() evaluates against the original jar paths
@@ -527,7 +541,7 @@ val vlcSetupAll by tasks.registering {
 }
 
 buildkonfig {
-    packageName = "com.tan.gratifymusic"
+    packageName = "com.tan.gratify"
     exposeObjectWithName = "BuildKonfig"
     defaultConfigs {
         val versionName =
@@ -541,6 +555,13 @@ buildkonfig {
         buildConfigField(INT, "versionCode", "$versionCode")
 
         buildConfigField(STRING, "sentryDsn", "")
+
+        val localProps = Properties().apply {
+            val file = rootProject.file("local.properties")
+            if (file.exists()) load(file.inputStream())
+        }
+        buildConfigField(STRING, "SUPABASE_URL", localProps.getProperty("SUPABASE_URL", ""))
+        buildConfigField(STRING, "SUPABASE_KEY", localProps.getProperty("SUPABASE_KEY", ""))
     }
 }
 
@@ -570,4 +591,6 @@ afterEvaluate {
             dependsOn("generateBuildKonfig")
         }
 }
+
+
 

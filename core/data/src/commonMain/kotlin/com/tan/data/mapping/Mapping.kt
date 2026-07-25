@@ -29,11 +29,11 @@ import com.tan.kotlinytmusicscraper.models.youtube.Transcript
 import com.tan.kotlinytmusicscraper.models.youtube.YouTubeInitialPage
 import com.tan.spotify.model.response.spotify.CanvasResponse
 import com.tan.spotify.model.response.spotify.SpotifyLyricsResponse
-import org.gratifymusic.lyrics.models.response.LyricsResponse
-import org.gratifymusic.lyrics.models.response.TranslatedLyricsResponse
-import org.gratifymusic.lyrics.parser.parseRichSyncLyrics
-import org.gratifymusic.lyrics.parser.parseSyncedLyrics
-import org.gratifymusic.lyrics.parser.parseUnsyncedLyrics
+import com.tan.gratify.lyrics.models.response.LyricsResponse
+import com.tan.gratify.lyrics.models.response.TranslatedLyricsResponse
+import com.tan.gratify.lyrics.parser.parseRichSyncLyrics
+import com.tan.gratify.lyrics.parser.parseSyncedLyrics
+import com.tan.gratify.lyrics.parser.parseUnsyncedLyrics
 import kotlin.jvm.JvmName
 
 internal fun SongItem.toTrack(): Track =
@@ -106,7 +106,7 @@ internal fun Track.toSongItemForDownload(): SongItem =
         explicit = this.isExplicit,
     )
 
-internal fun org.gratifymusic.lyrics.domain.Lyrics.toLyrics(): Lyrics {
+internal fun com.tan.gratify.lyrics.domain.Lyrics.toLyrics(): Lyrics {
     val lines: ArrayList<Line> = arrayListOf()
     if (this.lyrics != null) {
         this.lyrics?.lines?.forEach {
@@ -133,13 +133,13 @@ internal fun org.gratifymusic.lyrics.domain.Lyrics.toLyrics(): Lyrics {
     }
 }
 
-internal fun Lyrics.toLibraryLyrics(): org.gratifymusic.lyrics.domain.Lyrics =
-    org.gratifymusic.lyrics.domain.Lyrics(
+internal fun Lyrics.toLibraryLyrics(): com.tan.gratify.lyrics.domain.Lyrics =
+    com.tan.gratify.lyrics.domain.Lyrics(
         lyrics =
-            org.gratifymusic.lyrics.domain.Lyrics.LyricsX(
+            com.tan.gratify.lyrics.domain.Lyrics.LyricsX(
                 lines =
                     this.lines?.map {
-                        org.gratifymusic.lyrics.domain.Lyrics.LyricsX.Line(
+                        com.tan.gratify.lyrics.domain.Lyrics.LyricsX.Line(
                             endTimeMs = it.endTimeMs,
                             startTimeMs = it.startTimeMs,
                             syllables = listOf(),
@@ -278,7 +278,7 @@ internal fun AlbumItem.toAlbumsResult(): AlbumsResult =
         year = this.year?.toString() ?: "",
     )
 
-// GratifyMusic Lyrics Extension
+// Gratify Lyrics Extension
 internal fun LyricsResponse.toLyrics(): Lyrics? =
     (
         richSyncLyrics?.takeIf { it.isNotEmpty() }?.let {

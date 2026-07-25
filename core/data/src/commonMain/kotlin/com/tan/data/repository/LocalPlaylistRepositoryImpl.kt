@@ -41,6 +41,7 @@ import com.tan.kotlinytmusicscraper.parser.getPlaylistContinuation
 import com.tan.logger.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -62,13 +63,7 @@ internal class LocalPlaylistRepositoryImpl(
         }
 
     override fun getAllLocalPlaylists(): Flow<List<LocalPlaylistEntity>> =
-        flow {
-            val list =
-                getFullDataFromDB { limit, offset ->
-                    localDataSource.getAllLocalPlaylists(limit, offset)
-                }
-            emit(list)
-        }.flowOn(Dispatchers.IO)
+        localDataSource.getAllLocalPlaylistsFlow().flowOn(Dispatchers.IO)
 
     override suspend fun updateLocalPlaylistTracks(
         tracks: List<String>,
@@ -182,6 +177,9 @@ internal class LocalPlaylistRepositoryImpl(
         ) {
             localDataSource.insertLocalPlaylist(localPlaylist)
         }
+
+    override suspend fun insertLocalPlaylistAndGetId(localPlaylist: LocalPlaylistEntity): Long =
+        localDataSource.insertLocalPlaylist(localPlaylist)
 
     override fun deleteLocalPlaylist(
         id: Long,
@@ -506,17 +504,13 @@ internal class LocalPlaylistRepositoryImpl(
                     position = nextPosition,
                     inPlaylist = now(),
                 )
-            runBlocking {
-                localDataSource.insertPairSongLocalPlaylist(nextPair)
-                localDataSource.updateLocalPlaylistTracks(
-                    localPlaylist.tracks?.plus(song.videoId) ?: mutableListOf(song.videoId),
-                    id,
-                )
-            }
-            // Emit success message
+            localDataSource.insertPairSongLocalPlaylist(nextPair)
+            localDataSource.updateLocalPlaylistTracks(
+                localPlaylist.tracks?.plus(song.videoId) ?: mutableListOf(song.videoId),
+                id,
+            )
             emit(LocalResource.Success(successMessage))
 
-            // Add to YouTube playlist
             val ytId = localPlaylist.youtubePlaylistId
             if (ytId != null) {
                 youTube
@@ -541,6 +535,51 @@ internal class LocalPlaylistRepositoryImpl(
                     }
             }
         }.flowOn(Dispatchers.IO)
+
+    override suspend fun addTracksToLocalPlaylist(
+        id: Long,
+        songs: List<SongEntity>,
+    ) {
+        val localPlaylist = localDataSource.getLocalPlaylist(id) ?: return
+        val currentTracks = localPlaylist.tracks?.toMutableList() ?: mutableListOf()
+        var position = currentTracks.size
+
+        for (song in songs) {
+            val checkSong = localDataSource.getSong(song.videoId)
+            if (checkSong == null) {
+                localDataSource.insertSong(song)
+            }
+            val pair = PairSongLocalPlaylist(
+                playlistId = id,
+                songId = song.videoId,
+                position = position,
+                inPlaylist = now(),
+            )
+            localDataSource.insertPairSongLocalPlaylist(pair)
+            currentTracks.add(song.videoId)
+            position++
+        }
+        localDataSource.updateLocalPlaylistTracks(currentTracks, id)
+
+        val ytId = localPlaylist.youtubePlaylistId
+        if (ytId != null) {
+            for (song in songs) {
+                youTube
+                    .addPlaylistItem(ytId, song.videoId)
+                    .onSuccess {
+                        val data = it.playlistEditResults
+                        for (d in data) {
+                            localDataSource.insertSetVideoId(
+                                SetVideoIdEntity(
+                                    d.playlistEditVideoAddedResultData.videoId,
+                                    d.playlistEditVideoAddedResultData.setVideoId,
+                                ),
+                            )
+                        }
+                    }
+            }
+        }
+    }
 
     override fun removeTrackFromLocalPlaylist(
         id: Long,
@@ -919,4 +958,48 @@ internal class LocalPlaylistRepositoryImpl(
 
             emit(LocalResource.Success("Position updated"))
         }.flowOn(Dispatchers.IO)
+
+    override suspend fun saveSharedPlaylistToLibrary(
+        sharedPlaylistId: String,
+        title: String,
+        thumbnail: String?,
+        tracks: List<Track>,
+        creatorName: String?,
+    ): Long {
+        val existing = localDataSource.getLocalPlaylistBySourceSharedId(sharedPlaylistId)
+        if (existing != null) {
+            return existing.id
+        }
+        val localPlaylistEntity =
+            LocalPlaylistEntity(
+                title = title,
+                thumbnail = thumbnail,
+                tracks = tracks.toListVideoId(),
+                downloadState = DownloadState.STATE_NOT_DOWNLOADED,
+                syncState = LocalPlaylistEntity.YouTubeSyncState.NotSynced,
+                sourceSharedPlaylistId = sharedPlaylistId,
+                creatorName = creatorName,
+            )
+        val id = localDataSource.insertLocalPlaylist(localPlaylistEntity)
+        tracks.forEachIndexed { i, track ->
+            localDataSource.insertSong(track.toSongEntity())
+            localDataSource.insertPairSongLocalPlaylist(
+                PairSongLocalPlaylist(
+                    playlistId = id,
+                    songId = track.videoId,
+                    position = i,
+                    inPlaylist = now(),
+                ),
+            )
+        }
+        return id
+    }
+
+    override suspend fun updateSourceAvailability(sharedPlaylistId: String, availability: Int) {
+        localDataSource.updateSourceAvailability(sharedPlaylistId, availability)
+    }
+
+    override suspend fun getLocalPlaylistBySourceSharedId(sharedPlaylistId: String): LocalPlaylistEntity? {
+        return localDataSource.getLocalPlaylistBySourceSharedId(sharedPlaylistId)
+    }
 }

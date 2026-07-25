@@ -2,6 +2,8 @@ package com.tan.media3.exoplayer
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -51,7 +53,7 @@ private const val TAG = "CrossfadeExoPlayerAdapter"
 /**
  * ExoPlayer implementation of [MediaPlayerInterface] with crossfade support.
  *
- * Architecture mirrors [com.gratifymusic.media_jvm.GstreamerPlayerAdapter]:
+ * Architecture mirrors [com.simpmusic.media_jvm.GstreamerPlayerAdapter]:
  * - Internal playlist management (not ExoPlayer's playlist)
  * - Multi-player instance model: each track gets its own ExoPlayer
  * - Precaching system for smooth transitions
@@ -161,6 +163,92 @@ internal class CrossfadeExoPlayerAdapter(
     // Swapped between players during crossfade.
     private var activePlayerListener: Player.Listener? = null
 
+    // ========== Audio Focus (manual, session-scoped) — #2155 ==========
+    // The multi-player swap model means audio focus must NOT be tied to any single
+    // ExoPlayer: releasing the outgoing player would abandon focus, and the incoming
+    // player (built with handleAudioFocus=false) never re-requests it — the root cause
+    // of "music stops between tracks" (see androidx/media#2100). Instead we hold one
+    // app-level AudioFocusRequest at the adapter level so focus survives every swap.
+
+    private val duckVolumeFactor = 0.2f
+
+    private val audioManager: AudioManager? by lazy {
+        context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+    }
+
+    @Volatile
+    private var hasAudioFocus = false
+
+    /** True when focus was lost transiently so playback should auto-resume on regain. */
+    @Volatile
+    private var resumeOnFocusGain = false
+
+    private val audioFocusListener =
+        AudioManager.OnAudioFocusChangeListener { focusChange ->
+            when (focusChange) {
+                AudioManager.AUDIOFOCUS_GAIN -> {
+                    // Don't fight the crossfade ramp; while crossfading it owns the volume.
+                    if (!isCrossfading) currentPlayer?.volume = internalVolume
+                    if (resumeOnFocusGain) {
+                        resumeOnFocusGain = false
+                        play()
+                    }
+                }
+
+                AudioManager.AUDIOFOCUS_LOSS -> {
+                    // Permanent loss (another app took over): pause and stop tracking focus.
+                    resumeOnFocusGain = false
+                    hasAudioFocus = false
+                    pause()
+                }
+
+                AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                    // Temporary loss (e.g. an incoming call): pause and remember to resume.
+                    resumeOnFocusGain = internalState == InternalState.PLAYING
+                    pause()
+                }
+
+                AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+                    // Lower the volume instead of pausing (e.g. a navigation prompt).
+                    // Skip during crossfade — the ramp owns volume and would override this.
+                    if (!isCrossfading) currentPlayer?.volume = internalVolume * duckVolumeFactor
+                }
+            }
+        }
+
+    private val audioFocusRequest: AudioFocusRequest by lazy {
+        AudioFocusRequest
+            .Builder(AudioManager.AUDIOFOCUS_GAIN)
+            .setAudioAttributes(
+                android.media.AudioAttributes
+                    .Builder()
+                    .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .build(),
+            ).setOnAudioFocusChangeListener(audioFocusListener)
+            .setWillPauseWhenDucked(false)
+            .build()
+    }
+
+    /** Request app-level audio focus once; idempotent while focus is held. */
+    private fun requestAudioFocusInternal(): Boolean {
+        val am = audioManager ?: return true
+        if (hasAudioFocus) return true
+        val granted = am.requestAudioFocus(audioFocusRequest) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+        hasAudioFocus = granted
+        Logger.d(TAG, "requestAudioFocus -> granted=$granted")
+        return granted
+    }
+
+    private fun abandonAudioFocusInternal() {
+        val am = audioManager ?: return
+        if (!hasAudioFocus) return
+        am.abandonAudioFocusRequest(audioFocusRequest)
+        hasAudioFocus = false
+        resumeOnFocusGain = false
+        Logger.d(TAG, "abandonAudioFocus")
+    }
+
     // ========== Precaching System ==========
 
     private data class PrecachedPlayer(
@@ -241,7 +329,7 @@ internal class CrossfadeExoPlayerAdapter(
     // ========== ForwardingPlayer for MediaSession ==========
 
     // Create an initial idle ExoPlayer for MediaSession to hold
-    private val initialPlayerWithFilter = createExoPlayerInstance(handleAudioFocus = true)
+    private val initialPlayerWithFilter = createExoPlayerInstance()
 
     /**
      * Stable [Player] reference for MediaSession.
@@ -288,9 +376,10 @@ internal class CrossfadeExoPlayerAdapter(
      * Each player gets its own filter instance so the fade-out player can have
      * an independent low-pass filter while the fade-in player has a high-pass filter.
      *
-     * @param handleAudioFocus true for the current playing player, false for precached/secondary
+     * Audio focus is NOT handled per-player: it is managed once at the adapter level
+     * (see the Audio Focus section) so it survives every player swap (#2155).
      */
-    private fun createExoPlayerInstance(handleAudioFocus: Boolean = false): PlayerWithFilter {
+    private fun createExoPlayerInstance(): PlayerWithFilter {
         val crossfadeFilter = CrossfadeFilterAudioProcessor()
 
         val perPlayerRenderers =
@@ -322,7 +411,7 @@ internal class CrossfadeExoPlayerAdapter(
         val player =
             ExoPlayer
                 .Builder(context)
-                .setAudioAttributes(audioAttributes, handleAudioFocus)
+                .setAudioAttributes(audioAttributes, false)
                 .setLoadControl(
                     DefaultLoadControl
                         .Builder()
@@ -333,7 +422,7 @@ internal class CrossfadeExoPlayerAdapter(
                             0,
                         ).build(),
                 ).setWakeMode(C.WAKE_MODE_NETWORK)
-                .setHandleAudioBecomingNoisy(handleAudioFocus)
+                .setHandleAudioBecomingNoisy(true)
                 .setSeekForwardIncrementMs(5000)
                 .setSeekBackIncrementMs(5000)
                 .setMediaSourceFactory(mediaSourceFactory)
@@ -351,6 +440,7 @@ internal class CrossfadeExoPlayerAdapter(
             when (internalState) {
                 InternalState.READY, InternalState.ENDED, InternalState.PAUSED -> {
                     currentPlayer?.let { player ->
+                        requestAudioFocusInternal()
                         player.play()
                         transitionToState(InternalState.PLAYING)
                         internalPlayWhenReady = true
@@ -378,38 +468,13 @@ internal class CrossfadeExoPlayerAdapter(
         Logger.d(TAG, "pause() called (state: $internalState, playWhenReady: $internalPlayWhenReady)")
         coroutineScope.launch {
             forwardingPlayer.suppressPlaybackEnded = false
-            // Cancel any ongoing crossfade
+            // Cancel any ongoing crossfade by committing the incoming track (A+1) as current.
+            // Direction 1: pausing during a crossfade stays on A+1 (the track the UI already
+            // shows) and freezes it in place via the when(internalState) block below — it does
+            // NOT jump back to A.
             if (isCrossfading) {
-                Logger.d(TAG, "Pause: Cancelling crossfade")
-                crossfadeJob?.cancel()
-                crossfadeJob = null
-                currentPlayerFilter?.enabled = false
-                secondaryPlayerFilter?.enabled = false
-                setCrossfading(false)
-                // Remove listener from secondaryPlayer BEFORE release to prevent STATE_ENDED
-                // from triggering handleTrackEndInternal() and skipping to A+2
-                cleanupPlayerListenerInternal()
-                stopPositionUpdates()
-                // Swap delegate back to currentPlayer (was pointing to secondaryPlayer)
-                currentPlayer?.let { forwardingPlayer.swapDelegate(it) }
-                setupPlayerListenerInternal(currentPlayer!!)
-                // Revert index: we're staying on the track currentPlayer was playing (A)
-                if (crossfadeFromIndex >= 0) {
-                    localCurrentMediaItemIndex = crossfadeFromIndex
-                    playlist.getOrNull(crossfadeFromIndex)?.let { mediaItem ->
-                        listeners.forEach {
-                            it.onMediaItemTransition(
-                                mediaItem,
-                                PlayerConstants.MEDIA_ITEM_TRANSITION_REASON_SEEK,
-                            )
-                        }
-                    }
-                    forwardingPlayer.notifyMediaItemChanged()
-                    crossfadeFromIndex = -1
-                }
-                secondaryPlayer?.release()
-                secondaryPlayer = null
-                secondaryPlayerFilter = null
+                Logger.d(TAG, "Pause: committing incoming (A+1) and pausing in place")
+                commitIncomingAsCurrentInternal()
             }
 
             when (internalState) {
@@ -440,6 +505,7 @@ internal class CrossfadeExoPlayerAdapter(
                 player.stop()
                 transitionToState(InternalState.IDLE)
                 stopPositionUpdates()
+                abandonAudioFocusInternal()
                 notifyEqualizerIntent(false)
             }
         }
@@ -498,116 +564,69 @@ internal class CrossfadeExoPlayerAdapter(
     }
 
     override fun seekToNext() {
-        if (hasNextMediaItem()) {
-            // During crossfade A→A+1: user pressing "next" means go to the track we're fading in (A+1).
-            // localCurrentMediaItemIndex was already updated to A+1 in triggerCrossfadeTransition,
-            // so getNextMediaItemIndex() would return A+2. We must seek to localCurrentMediaItemIndex instead.
-            if (isCrossfading) {
-                Logger.d(TAG, "seekToNext: Cancelling crossfade, seeking to track we're fading in (index $localCurrentMediaItemIndex)")
-                coroutineScope.launch {
-                    crossfadeJob?.cancel()
-                    crossfadeJob = null
-                    currentPlayerFilter?.enabled = false
-                    secondaryPlayerFilter?.enabled = false
-                    secondaryPlayer?.release()
-                    secondaryPlayer = null
-                    secondaryPlayerFilter = null
-                    setCrossfading(false)
-                }
-                seekTo(localCurrentMediaItemIndex, 0)
-                return
+        coroutineScope.launch {
+            // During crossfade A→A+1, "next" commits A+1 as current (Direction 1: the UI already
+            // shows A+1) and then advances to A+2. Outside crossfade it advances normally.
+            val wasCrossfading = isCrossfading
+            if (wasCrossfading) {
+                Logger.d(TAG, "seekToNext: committing incoming (A+1), then advancing to A+2")
+                commitIncomingAsCurrentInternal()
             }
-
-            val nextIndex = getNextMediaItemIndex()
-            seekTo(nextIndex, 0)
+            if (hasNextMediaItem()) {
+                seekTo(getNextMediaItemIndex(), 0)
+            } else if (wasCrossfading) {
+                // A+1 was the last track — stay on it (already promoted), just refresh metadata.
+                forwardingPlayer.notifyMediaItemChanged()
+            }
         }
     }
 
     override fun seekToPrevious() {
-        // Cancel any ongoing crossfade first
-        if (isCrossfading) {
-            Logger.d(TAG, "seekToPrevious: Cancelling crossfade")
-            coroutineScope.launch {
-                crossfadeJob?.cancel()
-                crossfadeJob = null
-                currentPlayerFilter?.enabled = false
-                secondaryPlayerFilter?.enabled = false
-                secondaryPlayer?.release()
-                secondaryPlayer = null
-                secondaryPlayerFilter = null
-                setCrossfading(false)
-                if (crossfadeFromIndex >= 0) {
-                    localCurrentMediaItemIndex = crossfadeFromIndex
-                    playlist.getOrNull(crossfadeFromIndex)?.let { mediaItem ->
-                        listeners.forEach {
-                            it.onMediaItemTransition(
-                                mediaItem,
-                                PlayerConstants.MEDIA_ITEM_TRANSITION_REASON_SEEK,
-                            )
-                        }
-                    }
-                    forwardingPlayer.notifyMediaItemChanged()
-                    crossfadeFromIndex = -1
-                }
+        coroutineScope.launch {
+            // During a crossfade, commit the incoming track (A+1) as current FIRST, so the
+            // 3-second rule below evaluates against A+1's position/index (Direction 1).
+            if (isCrossfading) {
+                Logger.d(TAG, "seekToPrevious: committing incoming (A+1) first")
+                commitIncomingAsCurrentInternal()
             }
-        }
 
-        // Standard music player behavior:
-        // - Position > 3s  → seek to start of current track
-        // - Position <= 3s → go to previous track
-        val positionThresholdMs = 3000L
-        if (cachedPosition > positionThresholdMs) {
-            Logger.d(TAG, "seekToPrevious: pos=${cachedPosition}ms > ${positionThresholdMs}ms — seeking to start")
-            currentPlayer?.seekTo(0)
-            cachedPosition = 0
-        } else if (hasPreviousMediaItem()) {
-            Logger.d(TAG, "seekToPrevious: pos=${cachedPosition}ms <= ${positionThresholdMs}ms — going to previous track")
-            val prevIndex = getPreviousMediaItemIndex()
-            seekTo(prevIndex, 0)
-        } else {
-            Logger.d(TAG, "seekToPrevious: No previous item, seeking to start")
-            currentPlayer?.seekTo(0)
-            cachedPosition = 0
+            // Standard music player behavior:
+            // - Position > 3s  → seek to start of current track
+            // - Position <= 3s → go to previous track
+            val positionThresholdMs = 3000L
+            if (cachedPosition > positionThresholdMs) {
+                Logger.d(TAG, "seekToPrevious: pos=${cachedPosition}ms > ${positionThresholdMs}ms — seeking to start")
+                currentPlayer?.seekTo(0)
+                cachedPosition = 0
+            } else if (hasPreviousMediaItem()) {
+                Logger.d(TAG, "seekToPrevious: pos=${cachedPosition}ms <= ${positionThresholdMs}ms — going to previous track")
+                val prevIndex = getPreviousMediaItemIndex()
+                seekTo(prevIndex, 0)
+            } else {
+                Logger.d(TAG, "seekToPrevious: No previous item, seeking to start")
+                currentPlayer?.seekTo(0)
+                cachedPosition = 0
+            }
         }
     }
 
     override fun seekToPreviousMediaItem() {
-        // Cancel any ongoing crossfade first (mirror seekToPrevious()).
-        if (isCrossfading) {
-            Logger.d(TAG, "seekToPreviousMediaItem: Cancelling crossfade")
-            coroutineScope.launch {
-                crossfadeJob?.cancel()
-                crossfadeJob = null
-                currentPlayerFilter?.enabled = false
-                secondaryPlayerFilter?.enabled = false
-                secondaryPlayer?.release()
-                secondaryPlayer = null
-                secondaryPlayerFilter = null
-                setCrossfading(false)
-                if (crossfadeFromIndex >= 0) {
-                    localCurrentMediaItemIndex = crossfadeFromIndex
-                    playlist.getOrNull(crossfadeFromIndex)?.let { mediaItem ->
-                        listeners.forEach {
-                            it.onMediaItemTransition(
-                                mediaItem,
-                                PlayerConstants.MEDIA_ITEM_TRANSITION_REASON_SEEK,
-                            )
-                        }
-                    }
-                    forwardingPlayer.notifyMediaItemChanged()
-                    crossfadeFromIndex = -1
-                }
+        coroutineScope.launch {
+            // Mirror seekToPrevious(): commit the incoming track (A+1) as current first.
+            if (isCrossfading) {
+                Logger.d(TAG, "seekToPreviousMediaItem: committing incoming (A+1) first")
+                commitIncomingAsCurrentInternal()
             }
-        }
 
-        // Always advance to the previous track regardless of `cachedPosition` —
-        // skips the 3-second "seek to start" rule used by seekToPrevious().
-        if (hasPreviousMediaItem()) {
-            val prevIndex = getPreviousMediaItemIndex()
-            Logger.d(TAG, "seekToPreviousMediaItem: jumping to previous index=$prevIndex")
-            seekTo(prevIndex, 0)
-        } else {
-            Logger.d(TAG, "seekToPreviousMediaItem: No previous item — no-op")
+            // Always advance to the previous track regardless of `cachedPosition` —
+            // skips the 3-second "seek to start" rule used by seekToPrevious().
+            if (hasPreviousMediaItem()) {
+                val prevIndex = getPreviousMediaItemIndex()
+                Logger.d(TAG, "seekToPreviousMediaItem: jumping to previous index=$prevIndex")
+                seekTo(prevIndex, 0)
+            } else {
+                Logger.d(TAG, "seekToPreviousMediaItem: No previous item — no-op")
+            }
         }
     }
 
@@ -1057,6 +1076,7 @@ internal class CrossfadeExoPlayerAdapter(
         currentPlayerFilter = null
         isCrossfading = false
 
+        abandonAudioFocusInternal()
         coroutineScope.cancel()
         cleanupCurrentPlayerInternal()
         clearAllPrecacheInternal()
@@ -1199,7 +1219,7 @@ internal class CrossfadeExoPlayerAdapter(
                         playerFilter = cachedPlayerEntry.filter
                     } else {
                         Logger.d(TAG, "Creating new player for $videoId")
-                        val pwf = createExoPlayerInstance(handleAudioFocus = false)
+                        val pwf = createExoPlayerInstance()
                         player = pwf.player
                         playerFilter = pwf.filter
                         player.setMediaItem(mediaItem.toMedia3MediaItem())
@@ -1246,9 +1266,8 @@ internal class CrossfadeExoPlayerAdapter(
                         }
                     }
 
-                    // Enable audio focus and headphone-disconnect handling on the current player
-                    player.setAudioAttributes(audioAttributes, true)
-                    player.setHandleAudioBecomingNoisy(true)
+                    // Audio focus is held at the adapter level (see Audio Focus section),
+                    // not per-player, so it survives this swap (#2155).
 
                     // Apply settings
                     player.volume = internalVolume
@@ -1263,6 +1282,7 @@ internal class CrossfadeExoPlayerAdapter(
 
                     // Auto-play if requested
                     if (shouldPlay) {
+                        requestAudioFocusInternal()
                         player.play()
                         transitionToState(InternalState.PLAYING)
                     } else {
@@ -1376,7 +1396,10 @@ internal class CrossfadeExoPlayerAdapter(
                     // ERROR_CODE_IO_NETWORK_CONNECTION_FAILED (2001) = connection refused
                     val isRetryableSourceError =
                         error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED ||
-                            error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS
+                            error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ||
+                            error.errorCode == PlaybackException.ERROR_CODE_TIMEOUT ||
+                            error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ||
+                            error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED
 
                     val currentVideoId = playlist.getOrNull(localCurrentMediaItemIndex)?.mediaId
                     if (isRetryableSourceError && currentVideoId != null) {
@@ -1504,6 +1527,47 @@ internal class CrossfadeExoPlayerAdapter(
         currentPlayer = null
     }
 
+    /**
+     * Abort an in-progress crossfade by committing the INCOMING track (A+1) as the new
+     * current player — the mid-fade counterpart of [finalizeCrossfade]. Invoked when the
+     * user interacts during a crossfade (next/prev/pause). Direction: "crossfade means we
+     * have moved to A+1", so we keep A+1 and drop A.
+     *
+     * Mirrors [finalizeCrossfade]'s player swap: release the outgoing player (A), promote
+     * the secondary player (A+1) to current. The active listener and the ForwardingPlayer
+     * delegate are intentionally NOT touched — both already point at A+1 (set in
+     * [triggerCrossfadeTransition]); touching them would lose the listener / detach
+     * MediaSession. [localCurrentMediaItemIndex] already equals A+1, so it is kept.
+     *
+     * Does NOT change [internalState], restart position updates, or seek — the caller
+     * decides what to do next (pause in place, advance to A+2, go to previous, ...).
+     */
+    private fun commitIncomingAsCurrentInternal() {
+        crossfadeJob?.cancel()
+        crossfadeJob = null
+        stopPositionUpdates()
+
+        // Release the outgoing player (A). Do NOT remove listeners — the active listener
+        // is on the incoming player (A+1), which we are keeping (same as finalizeCrossfade).
+        currentPlayer?.let { cleanupPlayerInternal(it) }
+
+        // Promote incoming (A+1) to current.
+        currentPlayer = secondaryPlayer
+        currentPlayerFilter = secondaryPlayerFilter
+        secondaryPlayer = null
+        secondaryPlayerFilter = null
+
+        // The incoming player was fading in: reduced volume + DJ filter on (and the
+        // outgoing one carried any tempo/pitch match). Restore normal playback on A+1.
+        currentPlayerFilter?.enabled = false
+        currentPlayer?.volume = internalVolume
+        currentPlayer?.playbackParameters = PlaybackParameters(internalPlaybackSpeed, internalPlaybackPitch)
+        currentPlayer?.skipSilenceEnabled = internalSkipSilence
+
+        setCrossfading(false)
+        crossfadeFromIndex = -1
+    }
+
     // ========== Internal: Track End ==========
 
     /**
@@ -1572,7 +1636,7 @@ internal class CrossfadeExoPlayerAdapter(
                     nextPlayer = cachedPlayerEntry.player
                     nextFilter = cachedPlayerEntry.filter
                 } else {
-                    val pwf = createExoPlayerInstance(handleAudioFocus = false)
+                    val pwf = createExoPlayerInstance()
                     nextPlayer = pwf.player
                     nextFilter = pwf.filter
                     nextPlayer.setMediaItem(nextMediaItem.toMedia3MediaItem())
@@ -1596,6 +1660,7 @@ internal class CrossfadeExoPlayerAdapter(
                 forwardingPlayer.swapDelegate(nextPlayer)
 
                 // 2. Now play - MediaSession's listener is attached and receives state change events
+                requestAudioFocusInternal()
                 nextPlayer.play()
 
                 forwardingPlayer.suppressPlaybackEnded = false
@@ -2306,9 +2371,8 @@ internal class CrossfadeExoPlayerAdapter(
         secondaryPlayerFilter = null
         // localCurrentMediaItemIndex already updated in triggerCrossfadeTransition()
 
-        // Enable audio focus and headphone-disconnect handling on new current player
-        nextPlayer.setAudioAttributes(audioAttributes, true)
-        nextPlayer.setHandleAudioBecomingNoisy(true)
+        // Audio focus is held at the adapter level (see Audio Focus section),
+        // not per-player, so it survives this crossfade swap (#2155).
 
         // Ensure correct volume and playback parameters
         currentPlayer?.volume = internalVolume
@@ -2455,7 +2519,7 @@ internal class CrossfadeExoPlayerAdapter(
                         val mediaItem = playlist.getOrNull(idx) ?: continue
 
                         try {
-                            val pwf = createExoPlayerInstance(handleAudioFocus = false)
+                            val pwf = createExoPlayerInstance()
                             pwf.player.setMediaItem(mediaItem.toMedia3MediaItem())
                             pwf.player.prepare()
                             precachedPlayers[mediaItem.mediaId] = PrecachedPlayer(pwf.player, mediaItem, pwf.filter)

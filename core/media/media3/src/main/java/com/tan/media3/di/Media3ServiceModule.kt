@@ -128,7 +128,9 @@ private val mediaServiceModule =
             provideSimpleCache(
                 context = androidContext(),
                 cacheName = "spotifyCanvas",
-                cacheSize = -1,
+                // Canvas = video loop kosmetik. Batasi 256MB (LRU) biar nggak numpuk
+                // tanpa batas di storage HP. Aman dievict; bukan file penting.
+                cacheSize = 256,
                 databaseProvider = get<DatabaseProvider>(),
             )
         }
@@ -158,7 +160,7 @@ private val mediaServiceModule =
                 get(),
                 get(named(SERVICE_SCOPE)),
                 get(),
-            )
+            ).also { it.observePreference(get(named(SERVICE_SCOPE))) }
         }
 
         single<DefaultRenderersFactory>(createdAtStart = true) {
@@ -264,8 +266,14 @@ private fun provideResolvingDataSourceFactory(
         }
         var dataSpecReturn: DataSpec = dataSpec
         var resolved = false
-        runBlocking(coroutineScope.coroutineContext + Dispatchers.IO) {
-            if (mediaId.contains(MERGING_DATA_TYPE.VIDEO)) {
+        try {
+            // Run on IO dispatcher. Do NOT use SupervisorJob() here — that would
+            // make this block uncancellable, causing ExoPlayer.release() to block
+            // the Main thread waiting for the loader thread to finish.
+            // Instead, let the block be cancellable and rely on the outer
+            // catch(Throwable) to convert any CancellationException to IOException.
+            runBlocking(Dispatchers.IO) {
+                if (mediaId.contains(MERGING_DATA_TYPE.VIDEO)) {
                 val id = mediaId.removePrefix(MERGING_DATA_TYPE.VIDEO)
                 streamRepository.getNewFormat(id).lastOrNull()?.let {
                     val videoUrl = it.videoUrl
@@ -323,6 +331,15 @@ private fun provideResolvingDataSourceFactory(
                         resolved = true
                     }
             }
+            }
+        } catch (e: Throwable) {
+            // CRITICAL: Catch Throwable (not just Exception) to intercept
+            // CancellationException, InterruptedException, and any Ktor/OkHttp
+            // errors that could escape runBlocking and corrupt ExoPlayer's
+            // loader thread. ExoPlayer requires IOException for graceful
+            // track-skip behavior.
+            Logger.e("Stream", "Resolution exception for $mediaId: ${e::class.simpleName} - ${e.message}")
+            throw java.io.IOException("Failed to resolve URI for $mediaId", e)
         }
         if (!resolved) {
             Logger.e("Stream", "Failed to resolve stream URL for $mediaId")

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# wrap-mac-dmg.sh — wrap a Conveyor-built GratifyMusic.app into a polished .dmg.
+# wrap-mac-dmg.sh — wrap a Conveyor-built Gratify.app into a polished .dmg.
 #
 # Why this script exists:
 #  • Conveyor 22.0 ships Mac apps as a plain `.zip`. On macOS 15 Sequoia,
@@ -10,7 +10,7 @@
 #    instead of `0181`), so the app opens with the normal first-launch
 #    dialog instead of being blocked outright.
 #  • This script reproduces that user experience by wrapping Conveyor's
-#    extracted `.app` in a DMG with the GratifyMusic background, drag-to-
+#    extracted `.app` in a DMG with the Gratify background, drag-to-
 #    Applications symlink, custom volume icon, and 192 px icons positioned
 #    at the arrow endpoints in the background.
 #
@@ -24,10 +24,10 @@
 #
 # Usage:
 #   scripts/wrap-mac-dmg.sh \
-#       <input-app>         e.g. /tmp/GratifyMusic.app
+#       <input-app>         e.g. /tmp/Gratify.app
 #       <background-png>    e.g. composeApp/icon/dmg-bg-1400x800.png
 #       <volume-icns>       e.g. composeApp/icon/circle_app_icon.icns
-#       <output-dmg>        e.g. dist/GratifyMusic-1.2.1-mac-aarch64.dmg
+#       <output-dmg>        e.g. dist/Gratify-1.2.1-mac-aarch64.dmg
 #
 # Requires (macOS host):  create-dmg, hdiutil, SetFile (xcode-select),
 #                         osascript, chflags.
@@ -57,17 +57,17 @@ SETFILE="$(xcrun -find SetFile 2>/dev/null || echo /usr/bin/SetFile)"
 
 # Build staging dir so the source .app is not modified in place and
 # Finder's icon-extension-hidden flag survives create-dmg's mount cycle.
-STAGING="$(mktemp -d -t gratifymusic-dmg-staging)"
+STAGING="$(mktemp -d -t gratify-dmg-staging)"
 trap 'rm -rf "$STAGING"' EXIT
 cp -R "$INPUT_APP" "$STAGING/"
 
 mkdir -p "$(dirname "$OUT_DMG")"
-TMP_DMG="$(mktemp -u "$(dirname "$OUT_DMG")/.gratifymusic-final-XXXX").dmg"
-RW_DMG="$(mktemp -u "$(dirname "$OUT_DMG")/.gratifymusic-rw-XXXX").dmg"
+TMP_DMG="$(mktemp -u "$(dirname "$OUT_DMG")/.gratify-final-XXXX").dmg"
+RW_DMG="$(mktemp -u "$(dirname "$OUT_DMG")/.gratify-rw-XXXX").dmg"
 
 echo "[wrap-mac-dmg] create-dmg → $TMP_DMG"
 create-dmg \
-  --volname "GratifyMusic" \
+  --volname "Gratify" \
   --window-pos 200 120 \
   --window-size 1400 800 \
   --icon-size 192 \
@@ -82,12 +82,12 @@ hdiutil convert "$TMP_DMG" -format UDRW -o "$RW_DMG" >/dev/null
 rm -f "$TMP_DMG"
 
 echo "[wrap-mac-dmg] mount + apply volume icon"
-# Every arch mounts a volume named "GratifyMusic". The previous arch's volume may not be
+# Every arch mounts a volume named "Gratify". The previous arch's volume may not be
 # fully released yet, so a plain `hdiutil attach` on the same name fails with EBUSY (16)
-# or silently remounts as "/Volumes/GratifyMusic 1". Detach any stale volume first, attach
+# or silently remounts as "/Volumes/Gratify 1". Detach any stale volume first, attach
 # with a retry, and use the REAL mount point hdiutil reports instead of a hardcoded path.
 detach_stale_volumes() {
-  for v in /Volumes/GratifyMusic /Volumes/GratifyMusic\ *; do
+  for v in /Volumes/Gratify /Volumes/Gratify\ *; do
     [[ -e "$v" ]] && hdiutil detach -force "$v" >/dev/null 2>&1 || true
   done
 }

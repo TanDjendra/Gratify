@@ -120,9 +120,9 @@
 
 -dontwarn org.slf4j.impl.StaticLoggerBinder
 -dontwarn kotlinx.serialization.internal.ClassValueReferences
--keep class com.tan.gratifymusic.data.model.** { *; }
--keep class com.tan.gratifymusic.extension.AllExtKt { *; }
--keep class com.tan.gratifymusic.extension.AllExtKt$* { *; }
+-keep class com.tan.gratify.data.model.** { *; }
+-keep class com.tan.gratify.extension.AllExtKt { *; }
+-keep class com.tan.gratify.extension.AllExtKt$* { *; }
 -keep class com.tan.kotlinytmusicscraper.extension.MapExtKt$* { *; }
 
 ## Removes all Logs as they cause perfomance issues in prod
@@ -274,11 +274,11 @@
 
 -keep class com.tan.kotlinytmusicscraper.** { *; }
 
--keep class org.gratifymusic.lyrics.parser.** { *; }
--keep class org.gratifymusic.lyrics.models.** { *; }
--keep class org.simpmusic.nowplayingcenter.** { *; }
+-keep class com.tan.gratify.lyrics.parser.** { *; }
+-keep class com.tan.gratify.lyrics.models.** { *; }
+-keep class com.tan.gratify.nowplayingcenter.** { *; }
 -keep class io.github.selemba1000.** { *; }
--keep class com.gratifymusic.lyrics.parser.** { *; }
+-keep class com.gratify.lyrics.parser.** { *; }
 
 # dbus-java (used by JMTC/NPYC for Linux MPRIS)
 -keep class org.freedesktop.dbus.** { *; }

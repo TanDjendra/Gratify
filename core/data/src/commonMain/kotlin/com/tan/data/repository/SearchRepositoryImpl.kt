@@ -20,6 +20,7 @@ import com.tan.domain.utils.Resource
 import com.tan.kotlinytmusicscraper.YouTube
 import com.tan.logger.Logger
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
@@ -55,6 +56,8 @@ internal class SearchRepositoryImpl(
                         parseSearchSong(result).let { list ->
                             listSongs.addAll(list)
                         }
+                        emit(Resource.Success<ArrayList<SongsResult>>(ArrayList(listSongs)))
+
                         var count = 0
                         while (count < 2 && countinueParam != null) {
                             youTube
@@ -63,6 +66,7 @@ internal class SearchRepositoryImpl(
                                     parseSearchSong(values).let { list ->
                                         listSongs.addAll(list)
                                     }
+                                    emit(Resource.Success<ArrayList<SongsResult>>(ArrayList(listSongs)))
                                     count++
                                     countinueParam = values.continuation
                                 }.onFailure {
@@ -71,8 +75,6 @@ internal class SearchRepositoryImpl(
                                     count++
                                 }
                         }
-
-                        emit(Resource.Success<ArrayList<SongsResult>>(listSongs))
                     }.onFailure { e ->
                         Logger.d("Search", "Error: ${e.message}")
                         emit(Resource.Error<ArrayList<SongsResult>>(e.message.toString()))

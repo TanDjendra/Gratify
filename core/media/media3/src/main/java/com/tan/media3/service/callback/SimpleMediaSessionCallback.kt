@@ -81,6 +81,10 @@ internal class SimpleMediaSessionCallback(
     private val searchTempList = mutableListOf<Track>()
     private val listHomeItem = mutableListOf<HomeItem>()
 
+    private fun logPlayerDebug(method: String) {
+        android.util.Log.d("PLAYER_DEBUG", "[SimpleMediaSessionCallback][$method] thread=${Thread.currentThread().name} time=${System.currentTimeMillis()}")
+    }
+
     override fun onConnect(
         session: MediaSession,
         controller: MediaSession.ControllerInfo,
@@ -472,6 +476,7 @@ internal class SimpleMediaSessionCallback(
         startPositionMs: Long,
     ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> =
         scope.future {
+            logPlayerDebug("onSetMediaItems: items=${mediaItems.map { it.mediaId }}")
             // Play from Android Auto
             val defaultResult =
                 MediaSession.MediaItemsWithStartPosition(emptyList(), startIndex, startPositionMs)

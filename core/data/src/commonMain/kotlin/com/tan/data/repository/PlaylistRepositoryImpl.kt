@@ -36,6 +36,7 @@ import com.tan.kotlinytmusicscraper.parser.getPlaylistShuffleEndpoint
 import com.tan.logger.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
@@ -772,7 +773,7 @@ internal class PlaylistRepositoryImpl(
     override fun getChartPlaylist(): Flow<Resource<List<ChartItem>>> =
         flow {
             youTube
-                .getGratifyMusicChart()
+                .getGratifyChart()
                 .onSuccess { response ->
                     val data = response.data?.filterNotNull() ?: emptyList()
                     val result =

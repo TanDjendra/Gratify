@@ -1,4 +1,4 @@
-# GratifyMusic Contributor Covenant Code of Conduct
+# Gratify Contributor Covenant Code of Conduct
 
 ## Our Pledge
 
