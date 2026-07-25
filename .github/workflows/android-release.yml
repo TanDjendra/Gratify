@@ -116,6 +116,30 @@ jobs:
       run:
         shell: bash
     steps:
+      # `make site` packages mac.amd64 + mac.aarch64 + windows.amd64 in one go,
+      # each bundling a full JVM plus the VLC natives. On a stock runner that
+      # runs the disk down to ~48 MB and dies with "No space left on device".
+      #
+      # The Android SDK and the Java toolcache are deliberately left alone:
+      # Gradle configures the android modules even for a desktop-only task, and
+      # setup-java below resolves against the toolcache.
+      - name: Free up disk space
+        run: |
+          echo "Before:"; df -h /
+          sudo rm -rf \
+            /usr/share/dotnet \
+            /usr/share/swift \
+            /usr/local/share/powershell \
+            /usr/local/lib/node_modules \
+            /opt/ghc \
+            /opt/hostedtoolcache/CodeQL \
+            /opt/hostedtoolcache/Ruby \
+            /opt/hostedtoolcache/go \
+            /opt/hostedtoolcache/PyPy || true
+          sudo docker image prune -af || true
+          sudo apt-get clean
+          echo "After:"; df -h /
+
       - uses: actions/checkout@v6
         with:
           submodules: 'recursive'
@@ -185,6 +209,15 @@ jobs:
       - name: Wrap Linux app tree → AppImage
         run: ./gradlew :desktopApp:packageConveyorAppImage --no-configuration-cache
 
+      # The unpacked Linux tree under output/ has served its purpose - the
+      # AppImage now lives in desktopApp/build/appimage/. `make site` wipes
+      # output/ anyway, but only once it starts, and the three JVM bundles it
+      # is about to unpack need that room first.
+      - name: Reclaim space before the Mac + Windows build
+        run: |
+          rm -rf output
+          echo "Free space going into make site:"; df -h /
+
       # `make site` builds every machine that has non-empty targets +
       # `.appinstaller`, `.exe` wrapper, and the download.html landing
       # page. Conveyor wipes output/ at the start, so it does NOT clobber
@@ -206,7 +239,9 @@ jobs:
           signing_key: ${{ secrets.CONVEYOR_SIGNING_KEY }}
 
       - name: Stage AppImage into output/ for upload
-        run: cp desktopApp/build/appimage/conveyor/GratifyMusic-*.AppImage output/
+        run: |
+          mkdir -p output
+          cp desktopApp/build/appimage/conveyor/GratifyMusic-*.AppImage output/
 
       - name: Show built artifacts
         run: ls -lh output/
