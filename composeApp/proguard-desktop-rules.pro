@@ -129,8 +129,8 @@
 # Neither code path is reachable here: the app declares no DatePicker anywhere,
 # and keight's JS Date support is a transitive extra we never call. Android
 # already ships with the same mismatch.
--dontwarn androidx.compose.material3.internal.KotlinxDatetimeCalendarModel
--dontwarn androidx.compose.material3.internal.KotlinxDatetimeCalendarModelKt
+# Trailing ** so the nested classes are covered too (KotlinxDatetimeCalendarModelKt$WhenMappings).
+-dontwarn androidx.compose.material3.internal.KotlinxDatetimeCalendarModel**
 -dontwarn io.github.alexzhirkevich.keight.js.**
 
 -keep class com.tan.gratify.data.model.** { *; }
