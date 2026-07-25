@@ -120,6 +120,19 @@
 
 -dontwarn org.slf4j.impl.StaticLoggerBinder
 -dontwarn kotlinx.serialization.internal.ClassValueReferences
+
+# kotlinx-datetime is pinned to `strictly = "0.6.1"` in libs.versions.toml, but
+# these two were compiled against 0.7.x, where Instant moved to kotlin.time and
+# LocalDateTime gained getDay(). ProGuard cannot resolve those members and
+# refuses to continue.
+#
+# Neither code path is reachable here: the app declares no DatePicker anywhere,
+# and keight's JS Date support is a transitive extra we never call. Android
+# already ships with the same mismatch.
+-dontwarn androidx.compose.material3.internal.KotlinxDatetimeCalendarModel
+-dontwarn androidx.compose.material3.internal.KotlinxDatetimeCalendarModelKt
+-dontwarn io.github.alexzhirkevich.keight.js.**
+
 -keep class com.tan.gratify.data.model.** { *; }
 -keep class com.tan.gratify.extension.AllExtKt { *; }
 -keep class com.tan.gratify.extension.AllExtKt$* { *; }
