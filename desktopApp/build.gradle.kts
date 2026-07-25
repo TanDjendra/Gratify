@@ -73,7 +73,17 @@ kotlin {
             dependencies {
                 // Shared KMP library — pulls App.kt, expect/actual impls,
                 // view-models, MiniPlayer state object, etc.
-                implementation(project(":composeApp"))
+                // material3 1.12.0-alpha01 pulls kotlinx-datetime 0.7.1, but Supabase 3.0.3 needs
+                // Clock$System, which 0.7.1 removed - hence force("...:0.6.1") in the root build.
+                // That force only reaches named configurations, so the detached configuration
+                // Conveyor resolves for writeConveyorConfig saw both constraints and gave up.
+                // Cut kotlinx-datetime out of this subtree and put 0.6.1 back explicitly. The only
+                // consumer we lose is KotlinxDatetimeCalendarModel, which backs DatePicker - and
+                // this app declares no DatePicker anywhere.
+                implementation(project(":composeApp")) {
+                    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-datetime")
+                }
+                implementation(libs.kotlinx.datetime)
 
                 // Compose Desktop runtime for the current OS.
                 implementation(compose.desktop.currentOs)

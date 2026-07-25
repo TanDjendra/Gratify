@@ -59,3 +59,6 @@ temp_search_screen.kt
 test_import.kt
 test.gradle
 test_supabase.ps1
+
+# Gradle build output in any module
+build/
