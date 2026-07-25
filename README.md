@@ -1,8 +1,8 @@
-<div align="center"> <img src="https://raw.githubusercontent.com/tan/Gratify/main/fastlane/metadata/android/en-US/images/featureGraphic.png"> <h1>Gratify</h1>  
+<div align="center"> <img src="https://raw.githubusercontent.com/TanDjendra/Gratify/main/fastlane/metadata/android/en-US/images/featureGraphic.png"> <h1>Gratify</h1>  
 A FOSS YouTube Music client for Android and Desktop with many features from<br>Spotify, SponsorBlock, ReturnYouTubeDislike using Compose Multiplatform to develop.
 <br> 
 <br>
-<a href="https://github.com/tan/Gratify/releases"><img src="https://img.shields.io/github/v/release/tan/Gratify"></a> <a href="https://github.com/tan/Gratify/releases"><img src="https://img.shields.io/github/downloads/tan/Gratify/total"></a> <br> <br> <a href="https://trendshift.io/repositories/13482" target="_blank"><img src="https://trendshift.io/api/badge/repositories/13482" alt="tan%2FGratify | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+<a href="https://github.com/TanDjendra/Gratify/releases"><img src="https://img.shields.io/github/v/release/TanDjendra/Gratify"></a> <a href="https://github.com/TanDjendra/Gratify/releases"><img src="https://img.shields.io/github/downloads/TanDjendra/Gratify/total"></a> <br> <br> <a href="https://trendshift.io/repositories/13482" target="_blank"><img src="https://trendshift.io/api/badge/repositories/13482" alt="tan%2FGratify | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 <br>
 <br>
 <a href="https://www.producthunt.com/products/gratify/reviews?utm_source=badge-product_rating&utm_medium=badge&utm_source=badge-gratify" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/product_rating.svg?product_id=903836&theme=dark" alt="Gratify - A&#0032;FOSS&#0032;YouTube&#0032;Music&#0032;client&#0032;for&#0032;Android&#0032;with&#0032;many&#0032;features | Product Hunt" style="width: 242px; height: 108px;" width="242" height="108" /></a>
@@ -11,9 +11,9 @@ A FOSS YouTube Music client for Android and Desktop with many features from<br>S
 <a href="https://apt.izzysoft.de/packages/com.tan.gratify/"><img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" width="200"></a> 
 <a href="https://f-droid.org/en/packages/com.tan.gratify/"><img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" width="200"></a> 
 <a href="https://www.openapk.net/gratify/com.tan.gratify/"><img src="https://www.openapk.net/images/openapk-badge.png" width="200"></a> 
-<a href="https://github.com/tan/Gratify/releases"><img src="https://raw.githubusercontent.com/NeoApplications/Neo-Backup/034b226cea5c1b30eb4f6a6f313e4dadcbb0ece4/badge_github.png" width="200"></a> 
+<a href="https://github.com/TanDjendra/Gratify/releases"><img src="https://raw.githubusercontent.com/NeoApplications/Neo-Backup/034b226cea5c1b30eb4f6a6f313e4dadcbb0ece4/badge_github.png" width="200"></a> 
 <h4>Nightly Build</h4>  
-<a href="https://gratify.org/nightly-download"><img src="https://github.com/tan/Gratify/actions/workflows/android.yml/badge.svg"></a><br/> <a href="https://gratify.org/nightly-download"><img src="https://raw.githubusercontent.com/NeoApplications/Neo-Backup/034b226cea5c1b30eb4f6a6f313e4dadcbb0ece4/badge_github.png" width="200"></a> 
+<a href="https://gratify.org/nightly-download"><img src="https://github.com/TanDjendra/Gratify/actions/workflows/android.yml/badge.svg"></a><br/> <a href="https://gratify.org/nightly-download"><img src="https://raw.githubusercontent.com/NeoApplications/Neo-Backup/034b226cea5c1b30eb4f6a6f313e4dadcbb0ece4/badge_github.png" width="200"></a> 
 </div>  
 
 > Gratify is available on Desktop now!
@@ -51,23 +51,23 @@ A FOSS YouTube Music client for Android and Desktop with many features from<br>S
     
 ## Screenshots    
  <p align="center">          
- <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/01.png?raw=true" width="200" />          
-  <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/02.png?raw=true" width="200" />          
-   <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/03.png?raw=true" width="200" />          
-   <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/04.png?raw=true" width="200" /> </p> <p align="center">          
- <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/05.png?raw=true" width="200" />          
- <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/17.png?raw=true" width="200" />  
-   <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/07.png?raw=true" width="200" />          
-   <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/08.png?raw=true" width="200" /> </p> <p align="center">          
- <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/09.png?raw=true" width="200" />          
-  <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/10.png?raw=true" width="200" />         
-  <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/11.png?raw=true" width="200" /> 
-     <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/12.png?raw=true" width="200" /> </p> <p align="center">    
- <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/13.png?raw=true" width="200" />          
-  <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/14.png?raw=true" width="200" />         
-  <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/15.png?raw=true" width="200" /> 
-     <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/16.png?raw=true" width="200" /> </p> <p align="center">  
-   <img src="https://github.com/tan/Gratify/blob/main/asset/screenshot/06.png?raw=true" width="800" />  
+ <img src="https://github.com/TanDjendra/Gratify/blob/main/asset/screenshot/01.png?raw=true" width="200" />          
+  <img src="https://github.com/TanDjendra/Gratify/blob/main/asset/screenshot/02.png?raw=true" width="200" />          
+   <img src="https://github.com/TanDjendra/Gratify/blob/main/asset/screenshot/03.png?raw=true" width="200" />          
+   <img src="https://github.com/TanDjendra/Gratify/blob/main/asset/screenshot/04.png?raw=true" width="200" /> </p> <p align="center">          
+ <img src="https://github.com/TanDjendra/Gratify/blob/main/asset/screenshot/05.png?raw=true" width="200" />          
+ <img src="https://github.com/TanDjendra/Gratify/blob/main/asset/screenshot/17.png?raw=true" width="200" />  
+   <img src="https://github.com/TanDjendra/Gratify/blob/main/asset/screenshot/07.png?raw=true" width="200" />          
+   <img src="https://github.com/TanDjendra/Gratify/blob/main/asset/screenshot/08.png?raw=true" width="200" /> </p> <p align="center">          
+ <img src="https://github.com/TanDjendra/Gratify/blob/main/asset/screenshot/09.png?raw=true" width="200" />          
+  <img src="https://github.com/TanDjendra/Gratify/blob/main/asset/screenshot/10.png?raw=true" width="200" />         
+  <img src="https://github.com/TanDjendra/Gratify/blob/main/asset/screenshot/11.png?raw=true" width="200" /> 
+     <img src="https://github.com/TanDjendra/Gratify/blob/main/asset/screenshot/12.png?raw=true" width="200" /> </p> <p align="center">    
+ <img src="https://github.com/TanDjendra/Gratify/blob/main/asset/screenshot/13.png?raw=true" width="200" />          
+  <img src="https://github.com/TanDjendra/Gratify/blob/main/asset/screenshot/14.png?raw=true" width="200" />         
+  <img src="https://github.com/TanDjendra/Gratify/blob/main/asset/screenshot/15.png?raw=true" width="200" /> 
+     <img src="https://github.com/TanDjendra/Gratify/blob/main/asset/screenshot/16.png?raw=true" width="200" /> </p> <p align="center">  
+   <img src="https://github.com/TanDjendra/Gratify/blob/main/asset/screenshot/06.png?raw=true" width="800" />  
 </p>
 
  #### More [screenshots](https://photos.app.goo.gl/AbieoXG5ctDrpwzp7) here.
@@ -86,7 +86,7 @@ A FOSS YouTube Music client for Android and Desktop with many features from<br>S
  Gratify doesn't have any tracker or third-party server for collecting user data in FOSS version. If YouTube      
 logged-in users enable "Send back to Google" feature, Gratify only uses YouTube Music Tracking API to send listening history and listening record of video to Google for better recommendations and      
 supporting artist or YouTube Creator (For API reference,      
-see [this](https://github.com/tan/Gratify/blob/main/core/service/kotlinYtmusicScraper/src/commonMain/kotlin/com/tan/kotlinytmusicscraper/Ytmusic.kt)).
+see [this](https://github.com/TanDjendra/Gratify/blob/main/core/service/kotlinYtmusicScraper/src/commonMain/kotlin/com/tan/kotlinytmusicscraper/Ytmusic.kt)).
 
 We collect crash data in the Full version to improve the app.
    
@@ -145,11 +145,11 @@ Because we do not host any media files, we cannot process DMCA takedown requests
 
   ## Contribute
 We're looking for more contributors, all contributions are welcome!
-See our [CODE OF CONDUCT](https://github.com/tan/Gratify/blob/main/CODE_OF_CONDUCT.md)
+See our [CODE OF CONDUCT](https://github.com/TanDjendra/Gratify/blob/main/CODE_OF_CONDUCT.md)
 
 Thanks for all my contributors:
 
-<a href="https://github.com/tan/Gratify/graphs/contributors">
+<a href="https://github.com/TanDjendra/Gratify/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=tan/Gratify" />
 </a>
 
@@ -158,7 +158,7 @@ This project is following clean architecture and MVVM pattern (in UI, app module
 
  ### Dependencies graph
   <p float="left">        
-  <img src="https://github.com/tan/Gratify/blob/main/asset/dependencies_graph.svg?raw=true" width="800"> 
+  <img src="https://github.com/TanDjendra/Gratify/blob/main/asset/dependencies_graph.svg?raw=true" width="800"> 
   </p>
 
  ## Support & Donations 
@@ -188,7 +188,7 @@ src="https://raw.githubusercontent.com/liberapay/liberapay.com/master/www/assets
 </a>
 <br>
 <a href="https://sentry.io">
-<img src="https://github.com/tan/Gratify/blob/dev/asset/sentry.svg?raw=true" width="300"/>
+<img src="https://github.com/TanDjendra/Gratify/blob/dev/asset/sentry.svg?raw=true" width="300"/>
 </a>
 <br>
 <br>

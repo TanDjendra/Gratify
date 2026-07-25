@@ -35,7 +35,7 @@ class DiscordRPC(
             buttons =
                 listOf(
                     "Listen on Gratify" to "https://gratify.org/app/watch?v=${song.videoId}",
-                    "Visit Gratify" to "https://github.com/tan/Gratify",
+                    "Visit Gratify" to "https://github.com/TanDjendra/Gratify",
                 ),
             type = Type.LISTENING,
             since = currentTime,

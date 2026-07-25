@@ -1,0 +1,10 @@
+- Sign in with email, Google, or Apple, with OTP verification and password recovery
+- Your liked songs, followed artists, saved albums, play history, queue, settings and playlists now sync to the cloud
+- New profile screen with avatar upload and follower counts
+- Follow other users, browse their profiles, and see what they are listening to in Friends Activity
+- Search for people alongside songs, albums, artists and podcasts
+- Share your profile as a QR code, or scan someone else's to follow them
+- Publish a playlist with Share to Public, or pull it back with Hide from Public
+- New screen for adding many songs to a playlist at once
+- Desktop: native media controls via Windows SMTC and Linux MPRIS
+- Login with Discord and Spotify has been removed
