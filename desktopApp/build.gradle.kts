@@ -152,7 +152,7 @@ tasks.named<hydraulic.conveyor.gradle.WriteConveyorConfigTask>("writeConveyorCon
             |// the resulting AppImage by replacing 221 raw jars with the
             |// shrunk equivalents from compose.desktop's proguard task.
             |app.inputs = [
-            |    "${proguardJarsDir.get().asFile.absolutePath}"
+            |    "${proguardJarsDir.get().asFile.absolutePath.replace("\\", "/")}"
             |]
             """.trimMargin() + "\n",
         )
