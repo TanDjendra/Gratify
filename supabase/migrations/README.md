@@ -28,10 +28,13 @@ sebelum perubahan jika kontrak berbeda.
 Uji setelah penerapan: dua akun nyata, privasi dari anon/akun lain, sinkronisasi
 dua perangkat termasuk offline, kegagalan simpan playlist, pemulihan password,
 serta hapus akun uji. Auth/PostgREST dua akun dan SQL/RLS aktif telah diuji;
-13 akun asli dipertahankan. Storage/avatar ditemukan gagal unggah pemilik
-karena tidak ada policy pada storage.objects. Migrasi 008 disiapkan untuk
-hak avatar milik sendiri (nama auth UID + .jpg) dengan batas 5 MB JPEG/PNG/WebP;
-penerapan melalui dashboard menunggu konfirmasi pemberian akses.
+13 akun asli dipertahankan. Migrasi 008 telah diterapkan pada 2 Oktober 2026
+untuk hak avatar milik sendiri (nama auth UID + .jpg), dengan batas 5 MB
+JPEG/PNG/WebP. Enam pemeriksaan Storage API lulus: upload, upsert, batas
+path/MIME/ukuran, isolasi pemilik, anon ditolak, dan penghapusan origin.
+URL publik yang sebelumnya diminta dapat masih dilayani dari cache setelah
+objek origin dihapus. Bukti: avatar-storage-deployment.json dan
+live-storage-verification.json dalam artifacts/launch-audit.
 Pengiriman email pemulihan dan UAT dua perangkat belum dibuktikan.
 
 Migrasi 007 memberi setiap playlist identitas tetap. Judul dan ID numerik lokal

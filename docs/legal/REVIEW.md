@@ -16,6 +16,8 @@ Kontak dukungan: supportgratify@gmail.com.
 - Dasar pemrosesan tiap fitur, jadwal retensi dan backup yang benar.
 - Waktu respons permintaan data, proses insiden dan pengaduan.
 - Tanggal berlaku dan persetujuan akhir terhadap isi Terms/Privacy.
-- URL resmi untuk kedua dokumen. Belum ada URL yang diberikan atau diterbitkan. Alamat contoh bukan URL resmi.
+- Persetujuan isi dokumen agar halaman yang telah diterbitkan dapat dinyatakan resmi. Halaman saat ini tetap berstatus DRAF:
+  - Terms: https://tandjendra.github.io/Gratify/terms/
+  - Privacy: https://tandjendra.github.io/Gratify/privacy/
 
-Dokumen tetap berstatus DRAF. Daftar ini tidak menyatakan kepatuhan hukum atau persetujuan pemilik. Salinan resource aplikasi harus identik dengan dokumen yang disetujui sebelum rilis. Label draf dan URL aplikasi baru boleh diperbarui setelah peninjauan dan publikasi selesai.
+Dokumen tetap berstatus DRAF. Daftar ini tidak menyatakan kepatuhan hukum atau persetujuan pemilik. Salinan resource aplikasi harus identik dengan dokumen yang disetujui sebelum rilis. Label draf hanya boleh dihapus setelah peninjauan dan persetujuan isi selesai. URL web untuk versi draf boleh dibuka dari pembaca dokumen lokal aplikasi.

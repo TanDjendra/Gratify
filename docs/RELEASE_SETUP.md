@@ -14,20 +14,20 @@ Pelaksana memverifikasi sertifikat dan nama host server (`verify-full`). Bila pr
 
 [Panduan resmi koneksi Supabase](https://supabase.com/docs/guides/database/connecting-to-postgres).
 
-## Status penerapan — 1 Oktober 2026
+## Status penerapan — 2 Oktober 2026
 
 Perbaikan sudah diterapkan pada proyek Gratify `bnabldxsqpvkyqpjcsdv` melalui SQL Editor admin. Skema aktif memakai UUID; paket yang sesuai adalah `artifacts/launch-audit/supabase-launch-fixes-uuid.sql`. Paket TEXT `supabase-launch-fixes.sql` tidak sesuai untuk proyek aktif ini. Jangan menjalankan paket TEXT atau potongan migrasi secara terpisah pada skema UUID.
 
-Laporan `database-deployment.json` mencatat 14 RPC, tidak ada kebijakan terbuka yang diperiksa, dan 13 akun asli dipertahankan. Pengujian SQL/RLS dan login Auth/PostgREST dua akun sementara lulus. Avatar/Storage, pengiriman email pemulihan dan sinkronisasi dua perangkat belum dibuktikan. Klien lama perlu diperbarui karena jalur mutasi lama sudah dibatasi.
+Laporan `database-deployment.json` mencatat 14 RPC, tidak ada kebijakan terbuka yang diperiksa, dan 13 akun asli dipertahankan. Pengujian SQL/RLS dan login Auth/PostgREST dua akun sementara lulus. Migrasi Storage/avatar 008 sudah diterapkan; enam pemeriksaan upload, upsert, batas file, isolasi pemilik dan penghapusan lulus. Pengiriman email pemulihan dan sinkronisasi dua perangkat belum dibuktikan. Cache URL avatar yang sudah diminta dapat bertahan setelah penghapusan origin. Klien lama perlu diperbarui karena jalur mutasi lama sudah dibatasi.
 
 ## 2. Sentry untuk versi full
 
 1. Buat atau buka proyek Android/Kotlin Gratify di Sentry.
 2. Buka **Project Settings → Client Keys (DSN)** dan salin DSN proyek.
 3. Tambahkan `SENTRY_DSN=<DSN proyek>` ke `local.properties`.
-4. Secret `SENTRY_AUTH_TOKEN` sudah ada di GitHub; keberadaan secret belum membuktikan token masih valid untuk organisasi `calestaan`. Workflow Launch verification memeriksa upload mapping pada build penuh. DSN Android sudah dikonfigurasi secara privat.
+4. Secret `SENTRY_AUTH_TOKEN` sudah ada di GitHub; token sudah terbukti valid untuk organisasi `calestaan` melalui upload mapping pada CI `36879360981`. Workflow Launch verification memeriksa upload mapping pada build penuh. DSN Android sudah dikonfigurasi secara privat.
 
-[Panduan Android Sentry](https://docs.sentry.io/platforms/android/). Event uji dan redaksi data pada Sentry aktif tetap perlu diperiksa. Versi FOSS tidak memakai Sentry.
+[Panduan Android Sentry](https://docs.sentry.io/platforms/android/). Event uji Android diterima dan redaksi pesan exception diverifikasi. Mapping APK sebelum perubahan profil cocok dengan mapping yang diunggah pada CI `36879360981`; build terbaru perlu mapping baru. Runtime desktop belum diperiksa. Versi FOSS tidak memakai Sentry.
 
 ## 3. Penandatanganan APK
 
@@ -46,7 +46,7 @@ Jangan membuat keystore pengganti untuk pembaruan aplikasi yang sudah dibagikan.
 
 ## 4. Dokumen resmi
 
-Draf Terms/Privacy sudah mencantumkan Tan Heradhe Rat Djendra (TanDjendra), Indonesia, dan `supportgratify@gmail.com`. Tinjau `docs/legal/REVIEW.md`, lengkapi fakta operasional yang masih kosong, lalu tetapkan URL resmi. Lokasi komponen signup tidak menggantikan URL kebijakan resmi. Label draf hanya boleh diubah setelah isi disetujui dan resource aplikasi diperbarui sesuai dokumen.
+Draf Terms/Privacy sudah mencantumkan Tan Heradhe Rat Djendra (TanDjendra), Indonesia, dan `supportgratify@gmail.com`. Tinjau `docs/legal/REVIEW.md`, lengkapi fakta operasional yang masih kosong, Halaman web untuk peninjauan sudah diterbitkan pada https://tandjendra.github.io/Gratify/terms/ dan https://tandjendra.github.io/Gratify/privacy/. Statusnya tetap DRAF sampai isi disetujui. Lokasi komponen signup tidak menggantikan URL kebijakan resmi. Label draf hanya boleh diubah setelah isi disetujui dan resource aplikasi diperbarui sesuai dokumen.
 
 ## 5. Uji perangkat dan server
 

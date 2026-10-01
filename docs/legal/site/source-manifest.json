@@ -1,0 +1,7 @@
+{
+  "status": "DRAFT",
+  "source_sha256": {
+    "terms-of-use.md": "fc7b0632c0692c27884c675fe4ec58b5b8c7a437578b81b6f18367b68a6635ac",
+    "privacy-policy.md": "2bca0dcc981c28fdeb83b32288975e287f1661b17f4bd019ff7fe95861d5174b"
+  }
+}

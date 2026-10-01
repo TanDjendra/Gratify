@@ -1,6 +1,7 @@
 package com.tan.gratify.ui.component
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
@@ -28,6 +29,7 @@ fun LegalDocumentLinks() {
     var document by rememberSaveable { mutableStateOf<String?>(null) }
     var content by rememberSaveable { mutableStateOf("") }
     var contactUnavailable by rememberSaveable { mutableStateOf(false) }
+    var webUnavailable by rememberSaveable { mutableStateOf(false) }
     val uriHandler = LocalUriHandler.current
     Column {
         TextButton(onClick = { content = ""; document = "terms-of-use.md" }) { Text("Baca Terms of Use (draf)") }
@@ -37,6 +39,7 @@ fun LegalDocumentLinks() {
     }
     val file = document
     if (file != null) {
+        val webUrl = if (file == "terms-of-use.md") "https://tandjendra.github.io/Gratify/terms/" else "https://tandjendra.github.io/Gratify/privacy/"
         LaunchedEffect(file) {
             content = try { Res.readBytes("files/legal/$file").decodeToString() }
             catch (e: CancellationException) { throw e }
@@ -46,7 +49,15 @@ fun LegalDocumentLinks() {
             onDismissRequest = { document = null },
             title = { Text(if (file == "terms-of-use.md") "Terms of Use — draf" else "Privacy Policy — draf") },
             text = { SelectionContainer { Text(content.ifBlank { "Memuat dokumen…" }, modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp).verticalScroll(rememberScrollState())) } },
-            confirmButton = { TextButton(onClick = { document = null }) { Text("Tutup") } },
+            confirmButton = {
+                Column {
+                    if (webUnavailable) SelectionContainer { Text("Browser belum tersedia. Tautan: $webUrl") }
+                    Row {
+                        TextButton(onClick = { webUnavailable = runCatching { uriHandler.openUri(webUrl) }.isFailure }) { Text("Buka di browser") }
+                        TextButton(onClick = { document = null; webUnavailable = false }) { Text("Tutup") }
+                    }
+                }
+            },
         )
     }
 }

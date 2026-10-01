@@ -18,6 +18,7 @@ import kotlinx.serialization.json.put
 import org.koin.core.component.inject
 import com.tan.gratify.utils.compressImage
 import kotlinx.datetime.Clock
+import io.ktor.http.ContentType
 
 data class CreateProfileUiState(
     val displayName: String = "",
@@ -79,10 +80,13 @@ class CreateProfileViewModel(
                             bucket.upload(
                                 path = fileName,
                                 data = compressedBytes
-                            ) { upsert = true }
+                            ) {
+                                upsert = true
+                                contentType = ContentType.Image.JPEG
+                            }
                             // Get public url dan tambahkan timestamp agar cache gambar (Coil) di aplikasi ter-refresh
                             val timestamp = Clock.System.now().toEpochMilliseconds()
-                            avatarUrlToSave = bucket.publicUrl(fileName) + "?v=$timestamp"
+                            avatarUrlToSave = bucket.publicUrl(fileName) + "?cacheNonce=$timestamp"
                         }
                     }
                 }

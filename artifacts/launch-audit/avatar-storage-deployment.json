@@ -1,0 +1,28 @@
+{
+  "status": "APPLIED_AND_API_VERIFIED",
+  "time_utc": "2026-10-01T22:13:39.576028+00:00",
+  "project_ref": "bnabldxsqpvkyqpjcsdv",
+  "migration": "supabase\\migrations\\202610010008_avatar_storage.sql",
+  "migration_sha256": "1e04f50acdce52c03a0589a370f7b93db65f6492f69048247bac759a55046bcd",
+  "rehearsal": "Successful transaction ending ROLLBACK",
+  "deployment": "Successful transaction ending COMMIT",
+  "policies": [
+    "gratify_avatar_select",
+    "gratify_avatar_insert",
+    "gratify_avatar_update",
+    "gratify_avatar_delete"
+  ],
+  "scope": "Authenticated owner only; avatars/<auth uid>.jpg",
+  "file_size_limit_bytes": 5242880,
+  "allowed_mime_types": [
+    "image/jpeg",
+    "image/png",
+    "image/webp"
+  ],
+  "public_read_setting": "Existing public bucket preserved",
+  "api_evidence": "live-storage-verification.json",
+  "screenshot": "supabase-avatar-proof.png",
+  "limitations": [
+    "Previously fetched public avatar URLs may remain cached after origin deletion."
+  ]
+}

@@ -114,6 +114,9 @@ import com.tan.gratify.viewModel.UserProfileViewModel
 import com.tan.gratify.utils.compressImage
 import io.github.jan.supabase.storage.storage
 import kotlinx.datetime.Clock
+import io.ktor.http.ContentType
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
 import gratify.composeapp.generated.resources.baseline_arrow_back_ios_new_24
 import gratify.composeapp.generated.resources.baseline_settings_24
 import gratify.composeapp.generated.resources.baseline_more_vert_24
@@ -139,6 +142,7 @@ fun ProfileScreen(
     val localPlaylistRepository: LocalPlaylistRepository = koinInject()
     val socialRepository: com.tan.domain.repository.SocialRepository = koinInject()
     val artistRepository: ArtistRepository = koinInject()
+    val userRepository: com.tan.domain.repository.UserRepository = koinInject()
     val userProfileViewModel: UserProfileViewModel = koinViewModel()
     val sharedViewModel: com.tan.gratify.viewModel.SharedViewModel = koinInject()
     
@@ -174,6 +178,7 @@ fun ProfileScreen(
     val coroutineScope = rememberCoroutineScope()
 
     var showEditProfile by remember { mutableStateOf(false) }
+    var isSavingProfile by remember { mutableStateOf(false) }
     var editName by remember(displayName) { mutableStateOf(displayName) }
     var editImage by remember(displayImage) { mutableStateOf(displayImage ?: "") }
     
@@ -965,7 +970,7 @@ fun ProfileScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        IconButton(onClick = { showEditProfile = false }, modifier = Modifier.size(32.dp)) {
+                        IconButton(onClick = { showEditProfile = false }, enabled = !isSavingProfile, modifier = Modifier.size(32.dp)) {
                             Icon(Icons.Rounded.Close, contentDescription = "Close", tint = Color.White)
                         }
                         Text(
@@ -973,70 +978,58 @@ fun ProfileScreen(
                             style = typo().titleMedium.copy(fontWeight = FontWeight.Bold, color = Color.White)
                         )
                         Text(
-                            text = "Simpan",
+                            text = if (isSavingProfile) "Menyimpan…" else "Simpan",
                             style = typo().bodyMedium.copy(color = Color.White, fontWeight = FontWeight.Bold),
-                            modifier = Modifier.clickable {
+                            modifier = Modifier.clickable(enabled = !isSavingProfile) {
+                                val nameToSave = editName.trim()
+                                val imageToSave = editImage
+                                if (nameToSave.isBlank()) {
+                                    userProfileViewModel.makeToast("Nama tidak boleh kosong.")
+                                    return@clickable
+                                }
+                                isSavingProfile = true
                                 coroutineScope.launch {
-                                    dataStoreManager.putString("AppProfileName", editName)
-                                    showEditProfile = false
-
                                     try {
-                                        val currentUser = supabase.auth.currentUserOrNull()
-                                        if (currentUser != null) {
-                                            var avatarUrlToSave = editImage
-                                            Logger.d("ProfileEdit", "editImage value: $avatarUrlToSave")
-
-                                            if (avatarUrlToSave.isNotEmpty() && !avatarUrlToSave.startsWith("http")) {
-                                                Logger.d("ProfileEdit", "Compressing image...")
-                                                val compressedBytes = compressImage(avatarUrlToSave)
-                                                if (compressedBytes != null) {
-                                                    Logger.d("ProfileEdit", "Compressed: ${compressedBytes.size} bytes")
-                                                    val fileName = "${currentUser.id}.jpg"
-                                                    val bucket = supabase.storage.from("avatars")
-
-                                                    try {
-                                                        bucket.upload(
-                                                            path = fileName,
-                                                            data = compressedBytes
-                                                        ) { upsert = true }
-                                                        val timestamp = Clock.System.now().toEpochMilliseconds()
-                                                        avatarUrlToSave = bucket.publicUrl(fileName) + "?v=$timestamp"
-                                                        Logger.d("ProfileEdit", "Upload success: $avatarUrlToSave")
-                                                    } catch (uploadError: Exception) {
-                                                        Logger.e("ProfileEdit", "Upload FAILED: ${uploadError.message}")
-                                                        uploadError.printStackTrace()
-                                                    }
-                                                } else {
-                                                    Logger.e("ProfileEdit", "compressImage returned null!")
-                                                }
+                                        val ownerId = requireNotNull(supabase.auth.currentUserOrNull()?.id) { "Login required" }
+                                        var avatarUrlToSave = imageToSave
+                                        if (imageToSave.isNotEmpty() && !imageToSave.startsWith("http")) {
+                                            val compressedBytes = requireNotNull(compressImage(imageToSave)) { "Avatar cannot be processed" }
+                                            check(supabase.auth.currentUserOrNull()?.id == ownerId) { "Account changed" }
+                                            val fileName = "$ownerId.jpg"
+                                            val bucket = supabase.storage.from("avatars")
+                                            bucket.upload(path = fileName, data = compressedBytes) {
+                                                upsert = true
+                                                contentType = ContentType.Image.JPEG
                                             }
-
-                                            dataStoreManager.putString("AppProfileImage", avatarUrlToSave)
-
-                                            supabase.auth.updateUser {
-                                                data = buildJsonObject {
-                                                    put("display_name", editName)
-                                                    if (avatarUrlToSave.isNotEmpty()) {
-                                                        put("avatar_url", avatarUrlToSave)
-                                                    }
-                                                }
-                                            }
-                                            try {
-                                                supabase.postgrest["profiles"].upsert(
-                                                    com.tan.domain.data.entities.UserProfile(
-                                                        id = currentUser.id,
-                                                        displayName = editName,
-                                                        avatarUrl = avatarUrlToSave.ifEmpty { null }
-                                                    )
-                                                )
-                                                userProfileViewModel.loadProfile(currentUser.id)
-                                            } catch (e: Exception) {
-                                                e.printStackTrace()
+                                            val timestamp = Clock.System.now().toEpochMilliseconds()
+                                            avatarUrlToSave = bucket.publicUrl(fileName) + "?cacheNonce=$timestamp"
+                                        }
+                                        check(supabase.auth.currentUserOrNull()?.id == ownerId) { "Account changed" }
+                                        supabase.auth.updateUser {
+                                            data = buildJsonObject {
+                                                put("display_name", nameToSave)
+                                                put("avatar_url", avatarUrlToSave)
                                             }
                                         }
-                                    } catch (e: Exception) {
-                                        Logger.e("ProfileEdit", "Save profile error: ${e.message}")
-                                        e.printStackTrace()
+                                        check(supabase.auth.currentUserOrNull()?.id == ownerId) { "Account changed" }
+                                        userRepository.upsertUserProfile(
+                                            com.tan.domain.data.entities.UserProfile(
+                                                id = ownerId,
+                                                displayName = nameToSave,
+                                                avatarUrl = avatarUrlToSave.ifEmpty { null }
+                                            )
+                                        ).first().getOrThrow()
+                                        check(supabase.auth.currentUserOrNull()?.id == ownerId) { "Account changed" }
+                                        dataStoreManager.putString("AppProfileName", nameToSave)
+                                        dataStoreManager.putString("AppProfileImage", avatarUrlToSave)
+                                        userProfileViewModel.loadProfile(ownerId)
+                                        showEditProfile = false
+                                    } catch (e: CancellationException) {
+                                        throw e
+                                    } catch (_: Exception) {
+                                        userProfileViewModel.makeToast("Profil belum tersimpan. Periksa koneksi lalu coba lagi.")
+                                    } finally {
+                                        isSavingProfile = false
                                     }
                                 }
                             }
@@ -1050,7 +1043,7 @@ fun ProfileScreen(
                         modifier = Modifier
                             .size(140.dp)
                             .align(Alignment.CenterHorizontally)
-                            .clickable { photoPicker.launch() }
+                            .clickable(enabled = !isSavingProfile) { photoPicker.launch() }
                     ) {
                         Box(
                             modifier = Modifier
@@ -1120,6 +1113,7 @@ fun ProfileScreen(
                                 .height(40.dp)
                         ) {
                             BasicTextField(
+                                enabled = !isSavingProfile,
                                 value = editName,
                                 onValueChange = { editName = it },
                                 textStyle = typo().bodyLarge.copy(color = Color.White),

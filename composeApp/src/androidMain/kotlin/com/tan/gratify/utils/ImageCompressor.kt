@@ -14,7 +14,7 @@ import kotlin.math.max
 /**
  * Kompres gambar ke ByteArray sebelum diupload ke server.
  * Memastikan ukuran gambar menjadi lebih kecil (kisaran 100-300kb) jika memungkinkan,
- * dan mengonversi format ke WebP atau JPEG.
+ * dan mengonversi format ke JPEG agar sesuai dengan path avatar .jpg.
  */
 actual suspend fun compressImage(filePath: String): ByteArray? = withContext(Dispatchers.IO) {
     try {
@@ -43,14 +43,9 @@ actual suspend fun compressImage(filePath: String): ByteArray? = withContext(Dis
         }
         
         val outputStream = ByteArrayOutputStream()
-        // Kompresi (menggunakan WebP lebih efisien, tapi JPEG juga baik)
-        // Kualitas 70 biasanya cukup untuk avatar (100-300kb max)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-            bitmapToCompress.compress(Bitmap.CompressFormat.WEBP_LOSSY, 70, outputStream)
-        } else {
-            bitmapToCompress.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
-        }
-        
+        // Avatar Storage uses a .jpg path on every platform.
+        bitmapToCompress.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
+
         val byteArray = outputStream.toByteArray()
         
         // Membersihkan memori
@@ -61,7 +56,7 @@ actual suspend fun compressImage(filePath: String): ByteArray? = withContext(Dis
         
         return@withContext byteArray
     } catch (e: Exception) {
-        e.printStackTrace()
+        if (e is kotlinx.coroutines.CancellationException) throw e
         return@withContext null
     }
 }

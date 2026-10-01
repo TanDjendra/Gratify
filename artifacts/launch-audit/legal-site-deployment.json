@@ -1,0 +1,17 @@
+{
+  "status": "LIVE_DRAFT_VERIFIED",
+  "branch": "codex/legal-pages",
+  "commit": "d8760b3b91321be93fc4cfa88b827f56015e3046",
+  "html_url": "https://tandjendra.github.io/Gratify/",
+  "legal_status": "DRAFT_NOT_OFFICIAL",
+  "source": {
+    "branch": "codex/legal-pages",
+    "path": "/"
+  },
+  "https_enforced": true,
+  "terms_url": "https://tandjendra.github.io/Gratify/terms/",
+  "privacy_url": "https://tandjendra.github.io/Gratify/privacy/",
+  "browser_verified": true,
+  "evidence": "legal-site-published.png",
+  "pages_build_url": "https://github.com/TanDjendra/Gratify/actions/runs/36933345646"
+}

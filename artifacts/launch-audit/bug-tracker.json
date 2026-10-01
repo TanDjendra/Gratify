@@ -487,10 +487,11 @@
     "id": "R04",
     "title": "Avatar pemilik gagal diunggah karena Storage belum mempunyai kebijakan akses",
     "priority": "P1",
-    "status": "PREPARED_AWAITING_ACCESS_CONFIRMATION",
+    "status": "DEPLOYED_STORAGE_API_VERIFIED_DEVICE_UI_PENDING",
     "repair_report": "LAUNCH_COMPLETION_2026-10-01.md",
     "discovered_by": "Live service/device/CI verification",
-    "original_audit_status": "PREPARED_AWAITING_ACCESS_CONFIRMATION"
+    "original_audit_status": "PREPARED_AWAITING_ACCESS_CONFIRMATION",
+    "deployment_evidence": "artifacts/launch-audit/avatar-storage-deployment.json"
   },
   {
     "id": "R05",
@@ -509,5 +510,12 @@
     "repair_report": "LAUNCH_COMPLETION_2026-10-01.md",
     "discovered_by": "Native Android search and album smoke test",
     "original_audit_status": "FIXED_RELEASE_DEVICE_VERIFIED"
+  },
+  {
+    "id": "R07",
+    "title": "Edit profil menutup form dan menyimpan perubahan lokal meskipun unggah/update backend gagal",
+    "priority": "P1",
+    "status": "FIX_PREPARED_BUILD_AND_DEVICE_VERIFICATION_PENDING",
+    "repair_report": "LAUNCH_COMPLETION_2026-10-01.md"
   }
 ]
