@@ -1,4 +1,5 @@
 package com.tan.data.repository
+import com.tan.data.sync.retryCloudRead
 
 import com.tan.data.db.datasource.LocalDataSource
 import com.tan.domain.data.entities.LocalPlaylistEntity
@@ -119,21 +120,30 @@ internal class SocialRepositoryImpl(
             try { flushPlaylistRemovals(userId) } catch (e: CancellationException) { throw e }
             catch (_: Exception) { Logger.w("SocialRepositoryImpl", "Playlist deletion will retry") }
             val pending = localDataSource.getLibraryRemovals(userId, "cloud_playlists").map { it.itemId }.toSet()
-            val tombstones = supabase.postgrest["playlist_sync_tombstones"]
-                .select { filter { eq("user_id", userId) } }.decodeList<PlaylistTombstone>().map { it.syncId }
+            val tombstones = retryCloudRead {
+                check(supabase.auth.currentUserOrNull()?.id == userId)
+                supabase.postgrest["playlist_sync_tombstones"]
+                    .select { filter { eq("user_id", userId) } }.decodeList<PlaylistTombstone>().map { it.syncId }
+            }
             check(supabase.auth.currentUserOrNull()?.id == userId)
             localDataSource.applyPlaylistTombstones(userId, tombstones)
-            val playlists = supabase.postgrest["cloud_playlists"]
-                .select { filter { eq("user_id", userId) } }.decodeList<CloudPlaylistDto>()
+            val playlists = retryCloudRead {
+                check(supabase.auth.currentUserOrNull()?.id == userId)
+                supabase.postgrest["cloud_playlists"]
+                    .select { filter { eq("user_id", userId) } }.decodeList<CloudPlaylistDto>()
+            }
             var restored = 0
             for (playlist in playlists) {
                 val cloudId = playlist.id ?: continue
                 // Legacy server rows receive their own ID in migration 007. Never guess by title/local ID.
                 val syncId = requireNotNull(playlist.clientSyncId) { "Playlist identity migration is required" }
                 if (syncId in pending || localDataSource.getLocalPlaylistBySyncId(syncId) != null) continue
-                val items = supabase.postgrest.rpc("gratify_get_cloud_playlist_items", buildJsonObject {
-                    put("p_playlist_id", cloudId)
-                }).decodeList<CloudPlaylistItemDto>()
+                val items = retryCloudRead {
+                    check(supabase.auth.currentUserOrNull()?.id == userId)
+                    supabase.postgrest.rpc("gratify_get_cloud_playlist_items", buildJsonObject {
+                        put("p_playlist_id", cloudId)
+                    }).decodeList<CloudPlaylistItemDto>()
+                }
                 val songs = items.map { item ->
                     SongEntity(videoId = item.videoId, title = item.title, artistName = listOf(item.artist),
                         duration = "${item.duration / 60}:${(item.duration % 60).toString().padStart(2, '0')}",

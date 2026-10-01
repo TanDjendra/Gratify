@@ -134,7 +134,7 @@ fun LoginLandingScreen(
                     }
                     val user = supabase.auth.currentUserOrNull() ?: return@collect
                     try {
-                        userDataSyncManager.performLoginSync()
+                        userDataSyncManager.performLoginSync(waitForCloud = false)
                         // Account-specific preferences are cleared before cloud restore by the sync manager.
                         dataStoreManager.setLoggedIn(true)
                         dataStoreManager.putString("AccountEmail", user.email ?: "")

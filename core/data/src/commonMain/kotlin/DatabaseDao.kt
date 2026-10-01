@@ -664,6 +664,14 @@ interface DatabaseDao {
     @Insert(onConflict = OnConflictStrategy.Companion.REPLACE)
     suspend fun recoverQueue(queue: QueueEntity)
 
+    @Transaction
+    suspend fun restoreQueueIfUnchanged(owner: String, expected: QueueEntity?, incoming: QueueEntity): Boolean {
+        check(getLibraryOwner() == owner) { "Account ownership changed" }
+        if (getQueue().firstOrNull() != expected) return false
+        recoverQueue(incoming)
+        return true
+    }
+
     @Query("DELETE FROM queue")
     suspend fun deleteQueue()
 
@@ -1097,6 +1105,52 @@ interface DatabaseDao {
 
     @Query("SELECT * FROM library_removal WHERE ownerId = :owner AND tableName = :table")
     suspend fun getLibraryChanges(owner: String, table: String): List<LibraryRemoval>
+
+    @Query("SELECT EXISTS(SELECT 1 FROM library_removal WHERE ownerId = :owner AND tableName = :table AND itemId = :item)")
+    suspend fun hasPendingLibraryChange(owner: String, table: String, item: String): Boolean
+
+    @Transaction
+    suspend fun applyRemoteLibraryRemoval(owner: String, table: String, item: String): Boolean {
+        check(getLibraryOwner() == owner) { "Account ownership changed" }
+        if (hasPendingLibraryChange(owner, table, item)) return false
+        when (table) {
+            "user_liked_songs" -> updateLiked(0, item, null)
+            "user_followed_artists" -> updateFollowed(0, item, null)
+            "user_saved_albums" -> updateAlbumLiked(0, item, null)
+            else -> error("Unsupported library table")
+        }
+        return true
+    }
+
+    @Transaction
+    suspend fun restoreRemoteLikedSong(owner: String, song: SongEntity): Boolean {
+        check(getLibraryOwner() == owner) { "Account ownership changed" }
+        if (hasPendingLibraryChange(owner, "user_liked_songs", song.videoId)) return false
+        val existing = getSong(song.videoId)
+        if (existing == null) insertSong(song)
+        else if (!existing.liked) updateLiked(1, song.videoId, song.favoriteAt)
+        return true
+    }
+
+    @Transaction
+    suspend fun restoreRemoteFollowedArtist(owner: String, artist: ArtistEntity): Boolean {
+        check(getLibraryOwner() == owner) { "Account ownership changed" }
+        if (hasPendingLibraryChange(owner, "user_followed_artists", artist.channelId)) return false
+        val existing = getArtist(artist.channelId)
+        if (existing == null) insertArtist(artist)
+        else if (!existing.followed) updateFollowed(1, artist.channelId, artist.followedAt)
+        return true
+    }
+
+    @Transaction
+    suspend fun restoreRemoteSavedAlbum(owner: String, album: AlbumEntity): Boolean {
+        check(getLibraryOwner() == owner) { "Account ownership changed" }
+        if (hasPendingLibraryChange(owner, "user_saved_albums", album.browseId)) return false
+        val existing = getAlbum(album.browseId)
+        if (existing == null) insertAlbum(album)
+        else if (!existing.liked) updateAlbumLiked(1, album.browseId, album.favoriteAt)
+        return true
+    }
 
     @Transaction
     suspend fun insertOwnedSong(song: SongEntity, revision: String): Long {

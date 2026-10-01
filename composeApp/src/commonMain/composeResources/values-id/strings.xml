@@ -621,4 +621,11 @@
     <string name="detail_close_search">Tutup pencarian</string>
     <string name="detail_no_matches">Tidak ada lagu yang cocok</string>
     <string name="detail_search_hint">Coba judul atau artis lain.</string>
+    <string name="cloud_backup_title">Cadangkan ke cloud</string>
+    <string name="cloud_backup_description">Simpan perubahan ke akun Gratify Anda</string>
+    <string name="cloud_restore_title">Pulihkan dari cloud</string>
+    <string name="cloud_restore_description">Pulihkan library dan playlist akun ini</string>
+    <string name="cloud_sync_working">Menyinkronkan…</string>
+    <string name="cloud_sync_success">Sinkronisasi cloud selesai</string>
+    <string name="cloud_sync_failed">Sebagian data belum tersinkron. Periksa koneksi lalu coba lagi.</string>
 </resources>

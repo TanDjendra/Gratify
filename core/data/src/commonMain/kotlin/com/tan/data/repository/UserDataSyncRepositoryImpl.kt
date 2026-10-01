@@ -11,6 +11,7 @@ import com.tan.domain.data.model.searchResult.songs.Artist
 import com.tan.domain.data.model.searchResult.songs.Thumbnail
 import kotlinx.serialization.json.*
 import com.tan.data.sync.AccountLibraryStore
+import com.tan.data.sync.retryCloudRead
 import com.tan.data.db.MusicDatabase
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.storage.storage
@@ -109,9 +110,12 @@ internal class UserDataSyncRepositoryImpl(
     }
 
     private suspend fun applyRemoteLibraryChanges(table: String, userId: String): Set<String> {
+        val states = retryCloudRead {
+            requireOwner(userId)
+            supabase.postgrest["user_library_state"].select { filter { eq("user_id", userId); eq("kind", table) } }.decodeList<RemoteLibraryState>()
+        }
         val pending = localDataSource.getLibraryChanges(userId, table).map { it.itemId }.toSet()
-        val states = supabase.postgrest["user_library_state"].select { filter { eq("user_id", userId); eq("kind", table) } }.decodeList<RemoteLibraryState>()
-        states.filter { !it.enabled && it.itemId !in pending }.forEach { localDataSource.applyRemoteLibraryRemoval(table, it.itemId) }
+        states.filter { !it.enabled && it.itemId !in pending }.forEach { localDataSource.applyRemoteLibraryRemoval(userId, table, it.itemId) }
         return pending + states.filter { !it.enabled }.map { it.itemId }
     }
 
@@ -168,10 +172,16 @@ internal class UserDataSyncRepositoryImpl(
             val queueResult = syncDownQueue(userId)
             val settingsResult = syncDownSettings(userId)
 
-            val libraryFailure = listOf(liked, artists, albums, historyResult, queueResult, settingsResult).firstNotNullOfOrNull { it.exceptionOrNull() }
+            val libraryFailure = listOf(
+                "liked songs" to liked, "artists" to artists, "albums" to albums,
+                "history" to historyResult, "queue" to queueResult, "settings" to settingsResult,
+            ).firstNotNullOfOrNull { (stage, result) ->
+                result.exceptionOrNull()?.let { stage to it }
+            }
             if (libraryFailure != null) {
-                Logger.e("UserDataSync", "syncDown failed for $userId: [details omitted]")
-                emit(Result.failure(libraryFailure))
+                // Report the stage and type only; server messages can contain account data.
+                Logger.e("UserDataSync", "Cloud restore failed at ${libraryFailure.first}: ${libraryFailure.second::class.simpleName}")
+                emit(Result.failure(libraryFailure.second))
                 return@flow
             }
 
@@ -264,74 +274,69 @@ internal class UserDataSyncRepositoryImpl(
 
     override suspend fun syncDownLikedSongs(userId: String): Result<Int> = cancellableResult {
         requireOwner(userId)
-        val cloudSongs = supabase.postgrest[TABLE_LIKED_SONGS]
+        val cloudSongs = retryCloudRead {
+            requireOwner(userId)
+            supabase.postgrest[TABLE_LIKED_SONGS]
             .select { filter { eq("user_id", userId) } }
             .decodeList<CloudLikedSongDto>()
+        }
 
         val removed = applyRemoteLibraryChanges(TABLE_LIKED_SONGS, userId)
         var restored = 0
         for (dto in cloudSongs) {
             if (dto.videoId in removed) continue
-            val existing = localDataSource.getSong(dto.videoId)
-            if (existing == null) {
-                localDataSource.insertRemoteSong(dto.toSongEntity())
-            } else if (!existing.liked) {
-                // Pakai tanggal like ASLI dari cloud, bukan now(), supaya urutan
-                // "Recently added" di pustaka tidak teracak tiap kali ganti akun.
-                localDataSource.updateLiked(1, dto.videoId, dto.favoriteAt.toLocalDateTimeOrNull() ?: now())
-            }
-            restored++
+            requireOwner(userId)
+            if (localDataSource.restoreRemoteLikedSong(userId, dto.toSongEntity())) restored++
         }
         restored
     }
 
     override suspend fun syncDownFollowedArtists(userId: String): Result<Int> = cancellableResult {
         requireOwner(userId)
-        val cloudArtists = supabase.postgrest[TABLE_FOLLOWED_ARTISTS]
+        val cloudArtists = retryCloudRead {
+            requireOwner(userId)
+            supabase.postgrest[TABLE_FOLLOWED_ARTISTS]
             .select { filter { eq("user_id", userId) } }
             .decodeList<CloudFollowedArtistDto>()
+        }
 
         val removed = applyRemoteLibraryChanges(TABLE_FOLLOWED_ARTISTS, userId)
         var restored = 0
         for (dto in cloudArtists) {
             if (dto.channelId in removed) continue
-            val existing = localDataSource.getArtist(dto.channelId)
-            if (existing == null) {
-                localDataSource.insertRemoteArtist(dto.toArtistEntity())
-            } else if (!existing.followed) {
-                localDataSource.updateFollowed(1, dto.channelId, dto.followedAt.toLocalDateTimeOrNull() ?: now())
-            }
-            restored++
+            requireOwner(userId)
+            if (localDataSource.restoreRemoteFollowedArtist(userId, dto.toArtistEntity())) restored++
         }
         restored
     }
 
     override suspend fun syncDownSavedAlbums(userId: String): Result<Int> = cancellableResult {
         requireOwner(userId)
-        val cloudAlbums = supabase.postgrest[TABLE_SAVED_ALBUMS]
+        val cloudAlbums = retryCloudRead {
+            requireOwner(userId)
+            supabase.postgrest[TABLE_SAVED_ALBUMS]
             .select { filter { eq("user_id", userId) } }
             .decodeList<CloudSavedAlbumDto>()
+        }
 
         val removed = applyRemoteLibraryChanges(TABLE_SAVED_ALBUMS, userId)
         var restored = 0
         for (dto in cloudAlbums) {
             if (dto.browseId in removed) continue
-            val existing = localDataSource.getAlbum(dto.browseId)
-            if (existing == null) {
-                localDataSource.insertRemoteAlbum(dto.toAlbumEntity())
-            } else if (!existing.liked) {
-                localDataSource.updateAlbumLiked(1, dto.browseId, dto.favoriteAt.toLocalDateTimeOrNull() ?: now())
-            }
-            restored++
+            requireOwner(userId)
+            if (localDataSource.restoreRemoteSavedAlbum(userId, dto.toAlbumEntity())) restored++
         }
         restored
     }
 
     override suspend fun syncDownPlayHistory(userId: String): Result<Int> = cancellableResult {
         requireOwner(userId)
-        val cloudHistory = supabase.postgrest[TABLE_PLAY_HISTORY]
+        val cloudHistory = retryCloudRead {
+            requireOwner(userId)
+            supabase.postgrest[TABLE_PLAY_HISTORY]
             .select { filter { eq("user_id", userId) } }
             .decodeList<CloudPlayHistoryDto>()
+        }
 
         var restored = 0
         for (dto in cloudHistory) {
@@ -362,9 +367,13 @@ internal class UserDataSyncRepositoryImpl(
 
     override suspend fun syncDownQueue(userId: String): Result<Int> = cancellableResult {
         requireOwner(userId)
-        val cloudQueue = supabase.postgrest[TABLE_QUEUE]
+        val queueBeforeRequest = localDataSource.getQueue().firstOrNull()
+        val cloudQueue = retryCloudRead {
+            requireOwner(userId)
+            supabase.postgrest[TABLE_QUEUE]
             .select { filter { eq("user_id", userId) } }
             .decodeList<CloudQueueItemDto>()
+        }
         val tracks = cloudQueue.sortedBy { it.position }.map { dto ->
             Track(album = null, artists = dto.artistName?.let { listOf(Artist(name = it, id = null)) },
                 duration = null, durationSeconds = dto.duration, isAvailable = true, isExplicit = false,
@@ -372,15 +381,19 @@ internal class UserDataSyncRepositoryImpl(
                 title = dto.title.orEmpty(), videoId = dto.videoId, videoType = null, category = null,
                 feedbackTokens = null, resultType = null)
         }
-        localDataSource.recoverQueue(QueueEntity(listTrack = tracks))
-        tracks.size
+        requireOwner(userId)
+        // Playback started while the cloud request was in flight takes priority.
+        if (localDataSource.restoreQueueIfUnchanged(userId, queueBeforeRequest, QueueEntity(listTrack = tracks))) tracks.size else 0
     }
 
     override suspend fun syncDownSettings(userId: String): Result<Unit> = cancellableResult {
         requireOwner(userId)
-        val result = supabase.postgrest[TABLE_SETTINGS]
+        val result = retryCloudRead {
+            requireOwner(userId)
+            supabase.postgrest[TABLE_SETTINGS]
             .select { filter { eq("user_id", userId) } }
             .decodeList<CloudUserSettingsDto>()
+        }
 
         if (result.isNotEmpty()) {
             val settingsJson = result.first().settingsJson

@@ -238,7 +238,7 @@ class EmailLoginViewModel(
     private suspend fun handleSuccessfulLogin() {
         val user = supabase.auth.currentUserOrNull()
         if (user != null) {
-            userDataSyncManager.performLoginSync()
+            userDataSyncManager.performLoginSync(waitForCloud = false)
             // Account-specific preferences are cleared before cloud restore by the sync manager.
             dataStoreManager.setLoggedIn(true)
             dataStoreManager.putString("AccountEmail", user.email ?: "")

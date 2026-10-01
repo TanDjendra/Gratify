@@ -405,6 +405,8 @@ internal class LocalDataSource(
     suspend fun getSongInfo(videoId: String) = databaseDao.getSongInfo(videoId)
 
     suspend fun recoverQueue(queueEntity: QueueEntity) = databaseDao.recoverQueue(queueEntity)
+    suspend fun restoreQueueIfUnchanged(owner: String, expected: QueueEntity?, incoming: QueueEntity) =
+        databaseDao.restoreQueueIfUnchanged(owner, expected, incoming)
 
     suspend fun getQueue() = databaseDao.getQueue()
 
@@ -666,13 +668,11 @@ internal class LocalDataSource(
 
     suspend fun getLibraryRemovals(owner: String, table: String) = databaseDao.getLibraryRemovals(owner, table)
     suspend fun getLibraryChanges(owner: String, table: String) = databaseDao.getLibraryChanges(owner, table)
-    suspend fun applyRemoteLibraryRemoval(table: String, item: String) {
-        when (table) {
-            "user_liked_songs" -> databaseDao.updateLiked(0, item, null)
-            "user_followed_artists" -> databaseDao.updateFollowed(0, item, null)
-            "user_saved_albums" -> databaseDao.updateAlbumLiked(0, item, null)
-        }
-    }
+    suspend fun applyRemoteLibraryRemoval(owner: String, table: String, item: String) =
+        databaseDao.applyRemoteLibraryRemoval(owner, table, item)
+    suspend fun restoreRemoteLikedSong(owner: String, song: SongEntity) = databaseDao.restoreRemoteLikedSong(owner, song)
+    suspend fun restoreRemoteFollowedArtist(owner: String, artist: ArtistEntity) = databaseDao.restoreRemoteFollowedArtist(owner, artist)
+    suspend fun restoreRemoteSavedAlbum(owner: String, album: AlbumEntity) = databaseDao.restoreRemoteSavedAlbum(owner, album)
     suspend fun acknowledgeLibraryRemoval(owner: String, table: String, item: String, revision: String) =
         databaseDao.acknowledgeLibraryRemoval(owner, table, item, revision)
 

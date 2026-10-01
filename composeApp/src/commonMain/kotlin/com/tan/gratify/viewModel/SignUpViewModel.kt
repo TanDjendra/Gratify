@@ -180,7 +180,7 @@ class SignUpViewModel(
                 // Set password (karena signInWith(OTP) tidak set password)
                 setPasswordAfterOtp()
 
-                userDataSyncManager.performLoginSync()
+                userDataSyncManager.performLoginSync(waitForCloud = false)
                 saveDisplayNameToMetadata()
 
                 // Cek apakah profil sudah ada

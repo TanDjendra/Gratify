@@ -27,6 +27,7 @@ import com.tan.gratify.viewModel.base.BaseViewModel
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -1619,25 +1620,33 @@ class SettingsViewModel(
     val syncState: StateFlow<SyncUiState> = _syncState
 
     fun syncUpNow() {
+        if (_syncState.value is SyncUiState.InProgress) return
+        _syncState.value = SyncUiState.InProgress
         viewModelScope.launch(Dispatchers.IO) {
-            _syncState.value = SyncUiState.InProgress
             try {
-                userDataSyncManager.performSyncUp()
+                check(userDataSyncManager.performSyncUp(force = true)) { "Backup incomplete" }
                 _syncState.value = SyncUiState.Success
+            } catch (e: CancellationException) {
+                _syncState.value = SyncUiState.Idle
+                throw e
             } catch (e: Exception) {
-                _syncState.value = SyncUiState.Error(e.message ?: "Sync failed")
+                _syncState.value = SyncUiState.Error("Cloud backup incomplete; retry when online")
             }
         }
     }
 
     fun syncDownNow() {
+        if (_syncState.value is SyncUiState.InProgress) return
+        _syncState.value = SyncUiState.InProgress
         viewModelScope.launch(Dispatchers.IO) {
-            _syncState.value = SyncUiState.InProgress
             try {
                 userDataSyncManager.performSyncDown()
                 _syncState.value = SyncUiState.Success
+            } catch (e: CancellationException) {
+                _syncState.value = SyncUiState.Idle
+                throw e
             } catch (e: Exception) {
-                _syncState.value = SyncUiState.Error(e.message ?: "Sync failed")
+                _syncState.value = SyncUiState.Error("Cloud restore incomplete; recovered data retained for retry")
             }
         }
     }

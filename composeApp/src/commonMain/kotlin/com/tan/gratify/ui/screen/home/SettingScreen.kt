@@ -1,4 +1,12 @@
 package com.tan.gratify.ui.screen.home
+import com.tan.gratify.viewModel.SyncUiState
+import gratify.composeapp.generated.resources.cloud_backup_title
+import gratify.composeapp.generated.resources.cloud_backup_description
+import gratify.composeapp.generated.resources.cloud_restore_title
+import gratify.composeapp.generated.resources.cloud_restore_description
+import gratify.composeapp.generated.resources.cloud_sync_working
+import gratify.composeapp.generated.resources.cloud_sync_success
+import gratify.composeapp.generated.resources.cloud_sync_failed
 
 import androidx.compose.ui.text.style.TextOverflow
 
@@ -539,6 +547,7 @@ fun SettingScreen(
     val updateChannel by viewModel.updateChannel.collectAsStateWithLifecycle()
     val keepServiceAlive by viewModel.keepServiceAlive.collectAsStateWithLifecycle()
     val deletingAccount by viewModel.deletingAccount.collectAsStateWithLifecycle()
+    val cloudSyncState by viewModel.syncState.collectAsStateWithLifecycle()
 
     val crossfadeEnabled by viewModel.crossfadeEnabled.collectAsStateWithLifecycle()
     val crossfadeDuration by viewModel.crossfadeDuration.collectAsStateWithLifecycle()
@@ -2012,6 +2021,27 @@ fun SettingScreen(
         if (activeCategory == SettingCategory.PENYIMPANAN) {
             item(key = "backup") {
                 Column {
+                val syncing = cloudSyncState is SyncUiState.InProgress
+                SettingItem(
+                    title = stringResource(Res.string.cloud_backup_title),
+                    subtitle = stringResource(if (syncing) Res.string.cloud_sync_working else Res.string.cloud_backup_description),
+                    isEnable = !syncing,
+                    onClick = { viewModel.syncUpNow() },
+                )
+                SettingItem(
+                    title = stringResource(Res.string.cloud_restore_title),
+                    subtitle = stringResource(if (syncing) Res.string.cloud_sync_working else Res.string.cloud_restore_description),
+                    isEnable = !syncing,
+                    onClick = { viewModel.syncDownNow() },
+                )
+                if (cloudSyncState is SyncUiState.Success || cloudSyncState is SyncUiState.Error) {
+                    Text(
+                        text = stringResource(if (cloudSyncState is SyncUiState.Success) Res.string.cloud_sync_success else Res.string.cloud_sync_failed),
+                        color = if (cloudSyncState is SyncUiState.Error) GratifyColors.Error else GratifyColors.Accent,
+                        style = typo().bodySmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                }
                 Text(
                     text = stringResource(Res.string.backup),
                     style = typo().labelMedium,

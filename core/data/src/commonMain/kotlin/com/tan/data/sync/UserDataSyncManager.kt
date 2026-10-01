@@ -24,6 +24,7 @@ class UserDataSyncManager(
     private val userRepository: com.tan.domain.repository.UserRepository,
 ) {
     private var syncJob: Job? = null
+    private var restoreJob: Job? = null
     private val syncMutex = Mutex()
     private var activeOwner: String? = null
 
@@ -41,7 +42,10 @@ class UserDataSyncManager(
         }
     }
 
-    fun stopSync() { syncJob?.cancel(); syncJob = null }
+    fun stopSync() {
+        syncJob?.cancel(); syncJob = null
+        restoreJob?.cancel(); restoreJob = null
+    }
     fun syncNow() { scope.launch { performSyncUp() } }
 
     private fun requireActiveOwner(): String {
@@ -64,14 +68,16 @@ class UserDataSyncManager(
     }
 
     suspend fun performSyncDown() {
-        if (syncMutex.isLocked) return
         syncMutex.withLock { syncDown(requireActiveOwner()) }
     }
 
     private suspend fun syncDown(userId: String) {
         userRepository.getUserProfile(userId).first()
-        userDataSyncRepository.syncDown(userId).first().getOrThrow()
-        socialRepository.syncDownPlaylists(userId).first().getOrThrow()
+        // A failed library request must not prevent independent playlist recovery.
+        restoreLibraryAndPlaylists(
+            library = { userDataSyncRepository.syncDown(userId).first().getOrThrow(); Unit },
+            playlists = { socialRepository.syncDownPlaylists(userId).first().getOrThrow(); Unit },
+        )
     }
 
     /** Local ownership commits before any cloud request or navigation to account screens. */
@@ -99,7 +105,7 @@ class UserDataSyncManager(
             catch (_: Exception) { Logger.w(TAG, "Cloud restore unavailable; using this account's local library") }
         }
         startPeriodicSync()
-        if (!waitForCloud) scope.launch {
+        if (!waitForCloud) restoreJob = scope.launch {
             try { performSyncDown() } catch (e: CancellationException) { throw e }
             catch (_: Exception) { Logger.w(TAG, "Background cloud restore unavailable") }
         }

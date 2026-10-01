@@ -631,4 +631,11 @@
     <string name="detail_close_search">Close search</string>
     <string name="detail_no_matches">No matching songs</string>
     <string name="detail_search_hint">Try another title or artist.</string>
+    <string name="cloud_backup_title">Back up to cloud</string>
+    <string name="cloud_backup_description">Save changes to your Gratify account</string>
+    <string name="cloud_restore_title">Restore from cloud</string>
+    <string name="cloud_restore_description">Recover this account’s library and playlists</string>
+    <string name="cloud_sync_working">Syncing…</string>
+    <string name="cloud_sync_success">Cloud sync completed</string>
+    <string name="cloud_sync_failed">Some data could not be synced. Check your connection and try again.</string>
 </resources>
