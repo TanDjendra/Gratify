@@ -1,5 +1,7 @@
 package com.tan.gratify.ui.component
 
+import com.tan.gratify.ui.theme.GratifyShapes
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -45,7 +47,7 @@ fun LibraryEmptyRecommendationBox(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 24.dp)
-            .clip(RoundedCornerShape(20.dp))
+            .clip(GratifyShapes.large)
             .background(Color.White.copy(alpha = 0.03f))
             .border(
                 border = BorderStroke(
@@ -57,7 +59,7 @@ fun LibraryEmptyRecommendationBox(
                         )
                     )
                 ),
-                shape = RoundedCornerShape(20.dp)
+                shape = GratifyShapes.large
             )
             .padding(24.dp)
     ) {
@@ -74,7 +76,7 @@ fun LibraryEmptyRecommendationBox(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .size(48.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(GratifyShapes.medium)
                         .angledGradientBackground(gradientColors, 45f)
                 ) {
                     Icon(

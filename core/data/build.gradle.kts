@@ -96,6 +96,10 @@ kotlin {
             }
         }
 
+        commonTest {
+            dependencies { implementation(libs.kotlin.test) }
+        }
+
         androidMain {
             dependencies {
                 // Add Android-specific dependencies here. Note that this source set depends on

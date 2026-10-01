@@ -236,11 +236,11 @@ interface DataStoreManager {
 
     val playbackSpeed: Flow<Float>
 
-    fun setPlaybackSpeed(speed: Float)
+    suspend fun setPlaybackSpeed(speed: Float)
 
     val pitch: Flow<Int>
 
-    fun setPitch(pitch: Int)
+    suspend fun setPitch(pitch: Int)
 
     val dataSyncId: Flow<String>
 
@@ -353,6 +353,11 @@ interface DataStoreManager {
     suspend fun setAutoBackupLastTime(time: Long)
 
     suspend fun clearPerUserData()
+
+    /** Capture legacy preferences only when their recorded account matches. */
+    suspend fun captureLegacyProfilePrivacy(ownerId: String): Map<String, Boolean>
+    suspend fun acknowledgeLegacyProfilePrivacy(ownerId: String, applied: Map<String, Boolean>)
+    suspend fun clearLegacyProfilePrivacy(ownerId: String)
 
     enum class ProxyType {
         PROXY_TYPE_HTTP,

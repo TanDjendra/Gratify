@@ -1,139 +1,83 @@
 package com.tan.gratify.ui.component
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hasRoute
-import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.tan.gratify.extension.greyScale
-import com.tan.gratify.ui.navigation.destination.friends.FriendsDestination
 import com.tan.gratify.ui.navigation.destination.home.HomeDestination
-import com.tan.gratify.ui.navigation.destination.library.LibraryDestination
-import com.tan.gratify.ui.navigation.destination.search.SearchDestination
-import com.tan.gratify.ui.theme.typo
+import com.tan.gratify.ui.theme.GratifyColors
+import gratify.composeapp.generated.resources.Res
+import gratify.composeapp.generated.resources.mono
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import gratify.composeapp.generated.resources.*
 import kotlin.reflect.KClass
+
+private val mainTabs = listOf(BottomNavScreen.Home, BottomNavScreen.Search, BottomNavScreen.Library, BottomNavScreen.Friends)
+
+@Composable
+private fun rememberSelectedTab(navController: NavController, startDestination: Any): Int {
+    val entry by navController.currentBackStackEntryAsState()
+    var selected by rememberSaveable {
+        mutableIntStateOf(mainTabs.firstOrNull { it.destination::class == startDestination::class }?.ordinal ?: 0)
+    }
+    LaunchedEffect(entry) {
+        mainTabs.firstOrNull { entry?.destination?.hasRoute(it.destination::class) == true }
+            ?.let { selected = it.ordinal }
+    }
+    return selected
+}
+
+private fun NavController.openTab(screen: BottomNavScreen, onReselect: (KClass<*>) -> Unit) {
+    if (currentDestination?.hasRoute(screen.destination::class) == true) {
+        onReselect(screen.destination::class)
+    } else {
+        navigate(screen.destination) {
+            popUpTo(graph.findStartDestination().id) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+}
 
 @Composable
 fun AppBottomNavigationBar(
     startDestination: Any = HomeDestination,
     navController: NavController,
     isTranslucentBackground: Boolean = false,
-    reloadDestinationIfNeeded: (KClass<*>) -> Unit = { _ -> },
+    reloadDestinationIfNeeded: (KClass<*>) -> Unit = {},
 ) {
-    val currentBackStackEntry by navController.currentBackStackEntryAsState()
-    val bottomNavScreens =
-        listOf(
-            BottomNavScreen.Home,
-            BottomNavScreen.Search,
-            BottomNavScreen.Library,
-            BottomNavScreen.Friends,
-        )
-    var selectedIndex by rememberSaveable {
-        mutableIntStateOf(
-            when (startDestination) {
-                is HomeDestination -> BottomNavScreen.Home.ordinal
-                is SearchDestination -> BottomNavScreen.Search.ordinal
-                is LibraryDestination -> BottomNavScreen.Library.ordinal
-                is FriendsDestination -> BottomNavScreen.Friends.ordinal
-                else -> BottomNavScreen.Home.ordinal // Default to Home if not recognized
-            },
-        )
-    }
-    LaunchedEffect(currentBackStackEntry) {
-        currentBackStackEntry?.destination?.let { dest ->
-            if (dest.hasRoute(HomeDestination::class)) {
-                selectedIndex = BottomNavScreen.Home.ordinal
-            } else if (dest.hasRoute(SearchDestination::class)) {
-                selectedIndex = BottomNavScreen.Search.ordinal
-            } else if (dest.hasRoute(LibraryDestination::class)) {
-                selectedIndex = BottomNavScreen.Library.ordinal
-            } else if (dest.hasRoute(FriendsDestination::class)) {
-                selectedIndex = BottomNavScreen.Friends.ordinal
-            }
-        }
-    }
-    Box(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            Color.Transparent,
-                            Color.Black.copy(alpha = 0.5f),
-                            Color.Black.copy(alpha = 0.85f),
-                            Color.Black,
-                        ),
-                    ),
-                ),
+    val selected = rememberSelectedTab(navController, startDestination)
+    NavigationBar(
+        modifier = Modifier.fillMaxWidth(),
+        containerColor = GratifyColors.Navigation,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        tonalElevation = 0.dp,
+        windowInsets = NavigationBarDefaults.windowInsets,
     ) {
-        NavigationBar(
-            windowInsets = WindowInsets(0, 0, 0, 0),
-            containerColor = Color.Transparent,
-        ) {
-            bottomNavScreens.forEach { screen ->
-                NavigationBarItem(
-                    selected = selectedIndex == screen.ordinal,
-                    onClick = {
-                        if (selectedIndex == screen.ordinal) {
-                            if (currentBackStackEntry?.destination?.hierarchy?.any {
-                                    it.hasRoute(screen.destination::class)
-                                } == true
-                            ) {
-                                reloadDestinationIfNeeded(
-                                    screen.destination::class,
-                                )
-                            } else {
-                                navController.navigate(screen.destination)
-                            }
-                        } else {
-                            selectedIndex = screen.ordinal
-                            navController.navigate(screen.destination) {
-                                popUpTo(navController.graph.startDestinationId) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        }
-                    },
-                    label = {
-                        Text(
-                            stringResource(screen.title),
-                            style =
-                                if (selectedIndex == screen.ordinal) {
-                                    typo().bodySmall
-                                } else {
-                                    typo().bodySmall.greyScale()
-                                },
-                        )
-                    },
-                    icon = screen.icon,
-                    modifier =
-                        Modifier.windowInsetsPadding(
-                            NavigationBarDefaults.windowInsets,
-                        ),
-                )
-            }
+        mainTabs.forEach { screen ->
+            NavigationBarItem(
+                selected = selected == screen.ordinal,
+                onClick = { navController.openTab(screen, reloadDestinationIfNeeded) },
+                icon = screen.icon,
+                label = {
+                    Text(stringResource(screen.title), style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.onSurface,
+                    selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                    indicatorColor = Color.Transparent,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+            )
         }
     }
 }
@@ -142,101 +86,36 @@ fun AppBottomNavigationBar(
 fun AppNavigationRail(
     startDestination: Any = HomeDestination,
     navController: NavController,
-    reloadDestinationIfNeeded: (KClass<*>) -> Unit = { _ -> },
+    reloadDestinationIfNeeded: (KClass<*>) -> Unit = {},
 ) {
-    val currentBackStackEntry by navController.currentBackStackEntryAsState()
-    val bottomNavScreens =
-        listOf(
-            BottomNavScreen.Home,
-            BottomNavScreen.Search,
-            BottomNavScreen.Library,
-            BottomNavScreen.Friends,
-        )
-    var selectedIndex by rememberSaveable {
-        mutableIntStateOf(
-            when (startDestination) {
-                is HomeDestination -> BottomNavScreen.Home.ordinal
-                is SearchDestination -> BottomNavScreen.Search.ordinal
-                is LibraryDestination -> BottomNavScreen.Library.ordinal
-                is FriendsDestination -> BottomNavScreen.Friends.ordinal
-                else -> BottomNavScreen.Home.ordinal // Default to Home if not recognized
-            },
-        )
-    }
-    LaunchedEffect(currentBackStackEntry) {
-        currentBackStackEntry?.destination?.let { dest ->
-            if (dest.hasRoute(HomeDestination::class)) {
-                selectedIndex = BottomNavScreen.Home.ordinal
-            } else if (dest.hasRoute(SearchDestination::class)) {
-                selectedIndex = BottomNavScreen.Search.ordinal
-            } else if (dest.hasRoute(LibraryDestination::class)) {
-                selectedIndex = BottomNavScreen.Library.ordinal
-            } else if (dest.hasRoute(FriendsDestination::class)) {
-                selectedIndex = BottomNavScreen.Friends.ordinal
-            }
-        }
-    }
-    NavigationRail {
-        Spacer(Modifier.height(16.dp))
-        Box(Modifier.padding(horizontal = 16.dp)) {
-            Box(
-                Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(Color.DarkGray),
-                contentAlignment = Alignment.Center,
-            ) {
-                Image(
-                    painter = painterResource(Res.drawable.mono),
-                    contentDescription = null,
-                    modifier =
-                        Modifier
-                            .height(32.dp)
-                            .clip(CircleShape),
-                )
-            }
-        }
-        Spacer(Modifier.weight(1f))
-        bottomNavScreens.forEachIndexed { index, screen ->
-            NavigationRailItem(
-                icon = screen.icon,
-                label = {
-                    Text(
-                        stringResource(screen.title),
-                        style =
-                            if (selectedIndex == screen.ordinal) {
-                                typo().bodySmall
-                            } else {
-                                typo().bodySmall.greyScale()
-                            },
-                    )
-                },
-                selected = selectedIndex == index,
-                onClick = {
-                    if (selectedIndex == screen.ordinal) {
-                        if (currentBackStackEntry?.destination?.hierarchy?.any {
-                                it.hasRoute(screen.destination::class)
-                            } == true
-                        ) {
-                            reloadDestinationIfNeeded(
-                                screen.destination::class,
-                            )
-                        } else {
-                            navController.navigate(screen.destination)
-                        }
-                    } else {
-                        selectedIndex = screen.ordinal
-                        navController.navigate(screen.destination) {
-                            popUpTo(navController.graph.startDestinationId) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                },
+    val selected = rememberSelectedTab(navController, startDestination)
+    NavigationRail(
+        containerColor = GratifyColors.Navigation,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        header = {
+            Image(
+                painter = painterResource(Res.drawable.mono),
+                contentDescription = "Gratify",
+                modifier = Modifier.padding(vertical = 20.dp).size(36.dp),
             )
+        },
+    ) {
+        Spacer(Modifier.height(24.dp))
+        mainTabs.forEach { screen ->
+            NavigationRailItem(
+                selected = selected == screen.ordinal,
+                onClick = { navController.openTab(screen, reloadDestinationIfNeeded) },
+                icon = screen.icon,
+                label = { Text(stringResource(screen.title), style = MaterialTheme.typography.labelSmall) },
+                colors = NavigationRailItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                    selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+            )
+            Spacer(Modifier.height(12.dp))
         }
-        Spacer(Modifier.height(32.dp))
     }
 }

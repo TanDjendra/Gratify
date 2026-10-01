@@ -1,5 +1,9 @@
 package com.tan.gratify.ui.component
 
+import androidx.compose.ui.text.style.TextOverflow
+
+import com.tan.gratify.ui.theme.GratifyShapes
+
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.MarqueeAnimationMode
 import androidx.compose.foundation.basicMarquee
@@ -125,16 +129,14 @@ fun LibraryItem(
                     style = typo().headlineMedium,
                     color = Color.White,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     modifier =
                         Modifier
                             .fillMaxWidth()
                             .height(35.dp)
                             .wrapContentHeight(align = Alignment.CenterVertically)
                             .weight(1f)
-                            .basicMarquee(
-                                iterations = Int.MAX_VALUE,
-                                animationMode = MarqueeAnimationMode.Immediately,
-                            ).focusable(),
+                            .focusable(),
                 )
             }
             Crossfade(targetState = state.isLoading, label = "Loading") { isLoading ->
@@ -269,13 +271,14 @@ fun LibraryItem(
                                                 .build(),
                                         placeholder = painterResource(Res.drawable.holder),
                                         error = painterResource(Res.drawable.holder),
+                                        fallback = painterResource(Res.drawable.holder),
                                         contentDescription = null,
                                         contentScale = ContentScale.Crop,
                                         modifier =
                                             Modifier
                                                 .fillMaxSize()
                                                 .clip(
-                                                    RoundedCornerShape(8.dp),
+                                                    GratifyShapes.small,
                                                 ),
                                     )
                                     Column(
@@ -289,14 +292,12 @@ fun LibraryItem(
                                             style = typo().labelSmall,
                                             color = Color.White,
                                             maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
                                             modifier =
                                                 Modifier
                                                     .fillMaxWidth()
                                                     .wrapContentHeight(
                                                         align = Alignment.CenterVertically,
-                                                    ).basicMarquee(
-                                                        iterations = Int.MAX_VALUE,
-                                                        animationMode = MarqueeAnimationMode.Immediately,
                                                     ).focusable(),
                                         )
                                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -313,14 +314,12 @@ fun LibraryItem(
                                                 text = (song.artistName?.connectArtists() ?: ""),
                                                 style = typo().bodySmall,
                                                 maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
                                                 modifier =
                                                     Modifier
                                                         .weight(1f)
                                                         .wrapContentHeight(
                                                             align = Alignment.CenterVertically,
-                                                        ).basicMarquee(
-                                                            iterations = Int.MAX_VALUE,
-                                                            animationMode = MarqueeAnimationMode.Immediately,
                                                         ).focusable(),
                                             )
                                         }

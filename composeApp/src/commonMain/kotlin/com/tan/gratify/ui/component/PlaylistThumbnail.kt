@@ -267,6 +267,7 @@ fun PlaylistCollageThumbnail(
                     color = Color.White,
                     style = typo().labelSmall,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(8.dp)
                 )
             }

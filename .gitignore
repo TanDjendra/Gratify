@@ -47,11 +47,18 @@ sentry.properties
 logcat_crash.txt
 # Supabase local config
 /supabase/
+!/supabase/
+/supabase/*
+!/supabase/migrations/
+!/supabase/migrations/*.sql
+!/supabase/migrations/README.md
 
 # Signing keystore - NEVER commit
 gratify.jks
 *.jks
 *.keystore
+*Keystore*Password*.txt
+/.local-release-access/
 # Local test/scratch files
 req.json
 build_output*.txt
@@ -62,3 +69,8 @@ test_supabase.ps1
 
 # Gradle build output in any module
 build/
+
+# Disposable local PostgreSQL used by launch regression tests
+/artifacts/launch-audit/postgres-test-runtime/
+/artifacts/launch-audit/postgres-test-data/
+/artifacts/launch-audit/postgres-test*.log

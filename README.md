@@ -78,8 +78,7 @@ Inherited from SimpMusic unless marked:
 
 | Route | Status |
 |---|---|
-| [Direct APK](https://tanweb.vercel.app/releases/GratifyMusic.apk) | ✅ Available |
-| GitHub Releases | ⏳ Planned — this repository is not published yet |
+| [GitHub Releases](https://github.com/TanDjendra/Gratify/releases/latest) | ✅ Available — download the APK asset |
 | F-Droid | ⏳ Planned — not submitted yet |
 | Desktop (Windows / macOS / Linux) | ⏳ In development |
 
@@ -90,7 +89,7 @@ Release page with FAQ and install notes:
 
 ## Building
 
-Requires JDK 17+ and the Android SDK.
+Requires JDK 21 and the Android SDK.
 
 ```bash
 git clone https://github.com/TanDjendra/Gratify.git
@@ -113,8 +112,21 @@ credentials. The same goes for any `*.jks` signing keystore.
 ./gradlew :desktopApp:packageDistributionForCurrentOS     # Desktop (WIP)
 ```
 
-Modules: `androidApp` · `composeApp` · `desktopApp` · `core` · `supabase` ·
-`crashlytics`
+Main Gradle modules: `androidApp` · `composeApp` · `desktopApp` · `core/*` ·
+`crashlytics-empty`. The Supabase schema is maintained in the SQL files below.
+
+---
+
+## Supabase database policies
+
+For a new database, run [`supabase_setup.sql`](supabase_setup.sql) in the Supabase SQL Editor.
+
+If the database has already used an older version of that setup script, run
+[`supabase_user_data_rls_hotfix.sql`](supabase_user_data_rls_hotfix.sql) and then
+[`supabase_social_rls_hotfix.sql`](supabase_social_rls_hotfix.sql). Each hotfix
+is transactional and replaces old row-level security policies. After applying
+them, verify access with two separate user accounts and an unauthenticated
+client. Existing data may need review if the old policies were active.
 
 ---
 
@@ -140,7 +152,7 @@ audio and video is streamed directly from Google's servers. If you value the
 artists and creators behind the music, subscribe to
 [YouTube Premium](https://www.youtube.com/premium).
 
-Legal enquiries: tandjendra11@gmail.com
+Support and legal enquiries: supportgratify@gmail.com
 
 ---
 

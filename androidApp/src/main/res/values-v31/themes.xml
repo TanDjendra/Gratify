@@ -1,0 +1,8 @@
+<resources>
+    <style name="Theme.Gratify" parent="Theme.Gratify.Base">
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowSplashScreenBackground">#121212</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/mono</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">#121212</item>
+    </style>
+</resources>

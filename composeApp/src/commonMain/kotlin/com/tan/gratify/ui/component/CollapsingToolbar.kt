@@ -1,5 +1,7 @@
 package com.tan.gratify.ui.component
 
+import com.tan.gratify.ui.theme.GratifyColors
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -195,7 +197,7 @@ fun CollapsingToolbarParallaxEffect(
                     colors =
                         IconButtonDefaults.iconButtonColors().copy(
                             containerColor =
-                                Color.DarkGray.copy(
+                                GratifyColors.SurfaceHighest.copy(
                                     alpha = 0.8f,
                                 ),
                             contentColor =
@@ -246,6 +248,7 @@ private fun Header(
             },
             placeholder = painterResource(Res.drawable.holder_video),
             error = painterResource(Res.drawable.holder_video),
+            fallback = painterResource(Res.drawable.holder_video),
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier =

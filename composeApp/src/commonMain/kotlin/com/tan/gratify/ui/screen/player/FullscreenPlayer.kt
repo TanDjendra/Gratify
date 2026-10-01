@@ -1,5 +1,10 @@
 package com.tan.gratify.ui.screen.player
 
+import androidx.compose.ui.text.style.TextOverflow
+
+import com.tan.gratify.ui.theme.GratifyColors
+import com.tan.gratify.ui.theme.GratifyShapes
+
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.MarqueeAnimationMode
 import androidx.compose.foundation.background
@@ -342,6 +347,7 @@ fun FullscreenPlayer(
                                     text = nowPlayingState.nowPlayingTitle,
                                     style = typo().titleMedium,
                                     maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                     modifier =
                                         Modifier
                                             .fillMaxWidth()
@@ -398,7 +404,7 @@ fun FullscreenPlayer(
                             ) {
                                 Icon(
                                     imageVector = Icons.Filled.SkipPrevious,
-                                    tint = if (controllerState.isPreviousAvailable) Color.White else Color.DarkGray,
+                                    tint = if (controllerState.isPreviousAvailable) Color.White else GratifyColors.SurfaceHighest,
                                     contentDescription = "",
                                     modifier =
                                         Modifier
@@ -512,7 +518,7 @@ fun FullscreenPlayer(
                             ) {
                                 Icon(
                                     imageVector = Icons.Filled.SkipNext,
-                                    tint = if (controllerState.isNextAvailable) Color.White else Color.DarkGray,
+                                    tint = if (controllerState.isNextAvailable) Color.White else GratifyColors.SurfaceHighest,
                                     contentDescription = "",
                                     modifier =
                                         Modifier
@@ -553,10 +559,10 @@ fun FullscreenPlayer(
                                                             .padding(
                                                                 horizontal = 3.dp,
                                                             ).clip(
-                                                                RoundedCornerShape(8.dp),
+                                                                GratifyShapes.small,
                                                             ),
-                                                    color = Color.Gray,
-                                                    trackColor = Color.DarkGray,
+                                                    color = GratifyColors.TextSecondary,
+                                                    trackColor = GratifyColors.SurfaceHighest,
                                                     strokeCap = StrokeCap.Round,
                                                 )
                                             }
@@ -571,10 +577,10 @@ fun FullscreenPlayer(
                                                             .padding(
                                                                 horizontal = 3.dp,
                                                             ).clip(
-                                                                RoundedCornerShape(8.dp),
+                                                                GratifyShapes.small,
                                                             ),
-                                                    color = Color.Gray,
-                                                    trackColor = Color.DarkGray,
+                                                    color = GratifyColors.TextSecondary,
+                                                    trackColor = GratifyColors.SurfaceHighest,
                                                     strokeCap = StrokeCap.Round,
                                                     drawStopIndicator = {},
                                                 )

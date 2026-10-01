@@ -34,17 +34,18 @@ import com.tan.domain.mediaservice.handler.MediaPlayerHandler
 import com.tan.domain.mediaservice.handler.ToastType
 import com.tan.logger.Logger
 import com.tan.media3.di.setServiceActivitySession
-import com.tan.gratify.di.viewModelModule
 import com.tan.gratify.service.test.notification.NotifyWork
 import com.tan.gratify.utils.ComposeResUtils
 import com.tan.gratify.utils.VersionManager
 import com.tan.gratify.viewModel.SharedViewModel
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.handleDeeplinks
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import org.koin.core.context.loadKoinModules
-import org.koin.core.context.unloadKoinModules
 import org.koin.dsl.module
 import com.tan.gratify.crashlytics.pushPlayerError
 import pub.devrel.easypermissions.EasyPermissions
@@ -127,21 +128,35 @@ class MainActivity : AppCompatActivity() {
                 album = emptyList(),
                 time = com.tan.domain.extension.now()
             )
-            runBlocking {
-                commonRepository.insertNotification(entity)
+            lifecycleScope.launch(Dispatchers.IO) {
+                try { commonRepository.insertNotification(entity) }
+                catch (error: Exception) { Logger.e("MainActivity", "Failed to save notification") }
             }
         } catch (e: Exception) {
             Logger.e("MainActivity", "Failed to save notification from intent: ${e.message}")
         }
     }
 
+    private fun handleAuthenticationIntent(intent: Intent): Boolean {
+        val uri = intent.data ?: return false
+        if (uri.scheme != "com.tan.gratify" || uri.host != "login-callback") return false
+        val fragment = "https://callback.invalid/?${uri.fragment.orEmpty()}".toUri()
+        val recovery = uri.getQueryParameter("flow") == "recovery" ||
+            uri.getQueryParameter("type") == "recovery" || fragment.getQueryParameter("type") == "recovery"
+        if (recovery) com.tan.gratify.viewModel.auth.PasswordRecoveryCoordinator.request()
+        supabase.handleDeeplinks(intent) { session ->
+            if (recovery) session.user?.id?.let(com.tan.gratify.viewModel.auth.PasswordRecoveryCoordinator::verify)
+        }
+        return true
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        Logger.d("MainActivity", "onNewIntent: $intent")
+        Logger.d("MainActivity", "New intent received")
 
         // CRITICAL: Serahkan deep link ke Supabase Auth agar OAuth callback token bisa diproses.
         // Tanpa ini, SDK tidak pernah menerima hasil autentikasi dari browser.
-        supabase.handleDeeplinks(intent)
+        if (handleAuthenticationIntent(intent)) return
 
         handleNotificationIntent(intent)
         viewModel.setIntent(
@@ -161,9 +176,7 @@ class MainActivity : AppCompatActivity() {
                 single<AppCompatActivity> { this@MainActivity }
             },
         )
-        // Recreate view model to fix the issue of view model not getting data from the service
-        unloadKoinModules(viewModelModule)
-        loadKoinModules(viewModelModule)
+        // Application owns the shared definitions; activity recreation preserves playback state.
         VersionManager.initialize()
         checkForUpdate()
         if (viewModel.recreateActivity.value || viewModel.isServiceRunning) {
@@ -175,11 +188,11 @@ class MainActivity : AppCompatActivity() {
 
         // CRITICAL: Handle deep link dari cold start (app tidak di memory)
         // saat browser redirect kembali ke app setelah OAuth.
-        supabase.handleDeeplinks(intent)
+        val authenticationCallback = handleAuthenticationIntent(intent)
 
         handleNotificationIntent(intent)
         val data = (intent?.data ?: intent?.getStringExtra(Intent.EXTRA_TEXT)?.toUri())?.toKmpUriOrNull()
-        if (data != null) {
+        if (data != null && !authenticationCallback) {
             viewModel.setIntent(
                 GenericIntent(
                     action = intent.action,
@@ -297,7 +310,6 @@ class MainActivity : AppCompatActivity() {
         if (shouldStopMusicService && shouldUnbind && isFinishing) {
             viewModel.isServiceRunning = false
         }
-        unloadKoinModules(viewModelModule)
         super.onDestroy()
         Logger.d("MainActivity", "onDestroy: ")
     }

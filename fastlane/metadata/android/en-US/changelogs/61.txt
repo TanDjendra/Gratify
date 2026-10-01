@@ -1,4 +1,4 @@
-- Sign in with email, Google, or Apple, with OTP verification and password recovery
+- Sign in with email or Google, with OTP verification and password recovery
 - Your liked songs, followed artists, saved albums, play history, queue, settings and playlists now sync to the cloud
 - New profile screen with avatar upload and follower counts
 - Follow other users, browse their profiles, and see what they are listening to in Friends Activity

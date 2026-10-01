@@ -1,0 +1,20 @@
+{
+  "status": "PASS",
+  "environment": "Isolated local PostgreSQL 17.6 on loopback; not live Supabase",
+  "schema": "production UUID fixture",
+  "checks": [
+    "SQL Editor preflight rejects incompatible schema before mutations and the outer transaction rolls back",
+    "SQL Editor bundle applies all hotfixes and seven migrations together; every migration applies again without errors",
+    "Malformed replacement rolls back cloud metadata, cloud tracks and shared publication",
+    "Same titles retain distinct identities; cross-device rename and retry reuse one cloud/shared identity",
+    "Hide/delete affects only the selected stable identity, preserving another playlist with the same title",
+    "Direct REST mutations and legacy column grants are blocked; only owner-checked transaction RPCs can write playlists",
+    "Anonymous cannot read hidden activity, follow graph, playlists or child tracks, nor delete accounts",
+    "Owner can read own private data; second user cannot replace another owner's playlist",
+    "Explicit additions, deletions and re-additions are owner scoped; invalid batch rolls back every edit",
+    "Atomic ordered snapshots preserve 1,025 tracks in one JSON value and cannot bypass private-playlist RLS",
+    "Queue replacement failure preserves previous queue",
+    "Playlist deletion removes owner cloud/shared data together, rejects numeric clients and stale-device resurrection",
+    "Account deletion removes only authenticated account and its cloud state, preserving other account"
+  ]
+}

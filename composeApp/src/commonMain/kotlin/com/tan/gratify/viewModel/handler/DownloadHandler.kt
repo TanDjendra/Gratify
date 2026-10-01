@@ -169,22 +169,18 @@ class DownloadHandler(
     }
 
     fun downloadFile(bitmap: ImageBitmap) {
-        val fileName =
-            "${nowPlayingScreenData.value.nowPlayingTitle} - ${nowPlayingScreenData.value.artistName}"
-                .replace(Regex("""[|\\?*<":>]"""), "")
-                .replace(" ", "_")
+        val fileName = com.tan.domain.utils.safeExportFileName(
+            "${nowPlayingScreenData.value.nowPlayingTitle} - ${nowPlayingScreenData.value.artistName}")
         val path =
             "${getDownloadFolderPath()}/$fileName"
         scope.launch {
             nowPlayingState.value?.track?.let { track ->
                 val bytesArray = bitmap.toByteArray()
                 try {
-                    val fileOutputStream = FileOutputStream("$path.jpg")
-                    fileOutputStream.write(bytesArray)
-                    fileOutputStream.close()
-                    Logger.d(tag, "Thumbnail saved to $path.jpg")
+                    FileOutputStream("$path.jpg").use { it.write(bytesArray) }
                 } catch (e: Exception) {
-                    throw RuntimeException(e)
+                    _downloadFileProgress.value = DownloadProgress.failed("Gagal menyimpan file. Periksa ruang penyimpanan dan izin.")
+                    return@launch
                 }
                 songRepository
                     .downloadToFile(

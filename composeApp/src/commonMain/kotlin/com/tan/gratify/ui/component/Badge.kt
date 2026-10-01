@@ -1,5 +1,7 @@
 package com.tan.gratify.ui.component
 
+import com.tan.gratify.ui.theme.GratifyColors
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,7 +36,7 @@ fun ExplicitBadge(modifier: Modifier = Modifier) {
         Icon(
             imageVector = Icons.Filled.Explicit,
             "Explicit",
-            tint = Color.LightGray,
+            tint = GratifyColors.TextSecondary,
         )
     }
 }
@@ -46,7 +48,7 @@ fun AIBadge() {
             .padding(3.dp)
             .wrapContentWidth()
             .clip(RoundedCornerShape(2.dp))
-            .background(Color.LightGray),
+            .background(GratifyColors.TextSecondary),
         contentAlignment = Alignment.Center,
     ) {
         BasicText(

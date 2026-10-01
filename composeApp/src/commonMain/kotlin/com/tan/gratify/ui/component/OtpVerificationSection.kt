@@ -1,5 +1,8 @@
 package com.tan.gratify.ui.component
 
+import com.tan.gratify.ui.theme.GratifyColors
+import com.tan.gratify.ui.theme.GratifyShapes
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -7,6 +10,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -41,11 +46,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tan.gratify.ui.theme.typo
 
-private val AntigravityGreen = Color(0xFFE0E0E0)
-private val BackgroundBlack = Color(0xFF000000)
-private val DarkGray = Color(0xFF2E2E2E)
-private val LightGray = Color(0xFFE0E0E0)
-private val ErrorRed = Color(0xFFFF5252)
+private val AntigravityGreen = GratifyColors.Accent
+private val BackgroundBlack = GratifyColors.Background
+private val DarkGray = GratifyColors.SurfaceRaised
+private val LightGray = GratifyColors.TextPrimary
+private val ErrorRed = GratifyColors.Error
 
 /**
  * Komponen OTP verification yang dapat digunakan ulang
@@ -80,6 +85,7 @@ fun OtpVerificationSection(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
             .padding(top = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -98,7 +104,7 @@ fun OtpVerificationSection(
 
         Text(
             text = "Masukkan kode 6 digit yang telah dikirim ke",
-            style = typo().bodyMedium.copy(color = Color.Gray),
+            style = typo().bodyMedium.copy(color = GratifyColors.TextSecondary),
             textAlign = TextAlign.Center,
         )
 
@@ -136,7 +142,7 @@ fun OtpVerificationSection(
                         Box(
                             modifier = Modifier
                                 .size(48.dp)
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(GratifyShapes.medium)
                                 .background(DarkGray)
                                 .border(
                                     width = 2.dp,
@@ -145,7 +151,7 @@ fun OtpVerificationSection(
                                         char.isNotEmpty() -> LightGray.copy(alpha = 0.5f)
                                         else -> Color.Transparent
                                     },
-                                    shape = RoundedCornerShape(12.dp),
+                                    shape = GratifyShapes.medium,
                                 ),
                             contentAlignment = Alignment.Center,
                         ) {
@@ -202,7 +208,7 @@ fun OtpVerificationSection(
                 containerColor = AntigravityGreen,
                 disabledContainerColor = DarkGray,
                 contentColor = Color.Black,
-                disabledContentColor = Color.Gray,
+                disabledContentColor = GratifyColors.TextSecondary,
             ),
         ) {
             if (isLoading) {
@@ -226,7 +232,7 @@ fun OtpVerificationSection(
         if (resendCooldownSeconds > 0) {
             Text(
                 text = "Kirim ulang kode dalam ${resendCooldownSeconds}s",
-                style = typo().bodySmall.copy(color = Color.Gray),
+                style = typo().bodySmall.copy(color = GratifyColors.TextSecondary),
                 textAlign = TextAlign.Center,
             )
         } else {
@@ -258,7 +264,7 @@ fun OtpVerificationSection(
         Text(
             text = "Cek folder spam jika tidak menemukan email verifikasi.",
             style = typo().bodySmall.copy(
-                color = Color.Gray.copy(alpha = 0.7f),
+                color = GratifyColors.TextSecondary.copy(alpha = 0.7f),
             ),
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 24.dp),

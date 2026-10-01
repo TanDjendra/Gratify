@@ -1,5 +1,7 @@
 package com.tan.gratify.viewModel
 
+import com.tan.domain.utils.LocalResource
+
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewModelScope
 import androidx.paging.LoadState
@@ -103,6 +105,7 @@ class LocalPlaylistViewModel(
     private val supabase: SupabaseClient by inject()
     private val converter = Converters()
     private val downloadUtils: DownloadHandler by inject<DownloadHandler>()
+    private var playlistStateJob: Job? = null
 
     private var _offset: MutableStateFlow<Int> = MutableStateFlow(0)
     val offset: StateFlow<Int> = _offset
@@ -455,36 +458,7 @@ class LocalPlaylistViewModel(
     }
 
     fun deletePlaylist(id: Long, onDeleted: () -> Unit = {}) {
-        val initialTitle = uiState.value.title
         viewModelScope.launch(Dispatchers.IO) {
-            val dbEntity = localPlaylistRepository.getLocalPlaylist(id).firstOrNull()?.data
-            val currentTitle = dbEntity?.title ?: initialTitle
-            val sourceSharedId = dbEntity?.sourceSharedPlaylistId
-
-            // Delete cloud and shared playlists FIRST before local delete
-            try {
-                val user = supabase.auth.currentUserOrNull()
-                val userId = user?.id?.toString()
-                if (userId != null) {
-                    kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
-                        if (sourceSharedId != null) {
-                            // Playlist ini hasil menambahkan playlist publik orang lain:
-                            // turunkan hitungan "ditambahkan X kali" (unik per user).
-                            sharedPlaylistRepository.removePlaylistSave(sourceSharedId, userId)
-                        } else {
-                            socialRepository.deleteCloudPlaylist(id, userId, currentTitle).collect {}
-                            if (currentTitle.isNotBlank()) {
-                                sharedPlaylistRepository.deleteSharedPlaylistByLocalId(
-                                    userId = userId,
-                                    localPlaylistId = id,
-                                    fallbackTitle = currentTitle
-                                )
-                            }
-                        }
-                    }
-                }
-            } catch (_: Exception) {}
-
             localPlaylistRepository
                 .deleteLocalPlaylist(id, getString(Res.string.delete))
                 .collectLatestResource(
@@ -679,41 +653,9 @@ class LocalPlaylistViewModel(
                     return@launch
                 }
                 
-                // Get creator name
-                val creatorName = dataStoreManager.getString("AppProfileName").first() 
-                    ?: dataStoreManager.getString("AccountName").first() 
-                    ?: "Anonim"
-                
-                // Get all tracks from local playlist
-                val fullTracks = localPlaylistRepository.getFullPlaylistTracks(id = uiState.value.id)
-                val sharedTracks = fullTracks.map { track ->
-                    SharedPlaylistTrack(
-                        playlistId = "", // Assigned in repository
-                        videoId = track.videoId,
-                        title = track.title,
-                        artists = track.artistName?.joinToString(", ") ?: "Unknown Artist",
-                        durationSeconds = track.durationSeconds
-                    )
-                }
-                
-                val result = sharedPlaylistRepository.sharePlaylist(
-                    userId = userId,
-                    localPlaylistId = uiState.value.id,
-                    title = uiState.value.title,
-                    creatorName = creatorName,
-                    thumbnailUrl = if (isAutoAssignedOrNullThumbnail(uiState.value.thumbnail, uiState.value.ytPlaylistId)) {
-                        uiState.value.top4Tracks.firstOrNull()?.let { "https://i.ytimg.com/vi/$it/maxresdefault.jpg" }
-                    } else {
-                        uiState.value.thumbnail
-                    },
-                    tracks = sharedTracks
-                )
-                
-                // Sekalian sync ke cloud_playlists untuk backup cloud & profil mutualan
-                socialRepository.syncUpPlaylist(uiState.value.id, userId, isPublic = true).collect { syncResult ->
-                    Logger.i(tag, "Backup ke cloud_playlists: ${syncResult.isSuccess}")
-                }
-                
+                // One server transaction publishes shared tracks and the cloud backup together.
+                val result = socialRepository.syncUpPlaylist(uiState.value.id, userId, isPublic = true).first()
+
                 if (result.isSuccess) {
                     _uiState.update { it.copy(isPublic = true) }
                     makeToast("Berhasil dibagikan ke Publik!")
@@ -741,17 +683,7 @@ class LocalPlaylistViewModel(
                     return@launch
                 }
 
-                socialRepository.unshareOrHideCloudPlaylist(uiState.value.id, userId).collect {}
-
-                try {
-                    sharedPlaylistRepository.deleteSharedPlaylistByLocalId(
-                        userId = userId,
-                        localPlaylistId = uiState.value.id,
-                        fallbackTitle = uiState.value.title
-                    )
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+                socialRepository.unshareOrHideCloudPlaylist(uiState.value.id, userId).first().getOrThrow()
 
                 _uiState.update { it.copy(isPublic = false) }
                 makeToast("Playlist berhasil disembunyikan dari publik.")
@@ -796,11 +728,14 @@ class LocalPlaylistViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val userId = supabase.auth.currentUserOrNull()?.id ?: return@launch
+                val playlist = localPlaylistRepository.getLocalPlaylist(playlistId)
+                    .first { it !is LocalResource.Loading }
+                val syncId = playlist.data?.syncId ?: return@launch
                 val cloudLists = supabase.postgrest["cloud_playlists"]
                     .select {
                         filter {
                             eq("user_id", userId)
-                            eq("local_playlist_id", playlistId)
+                            eq("client_sync_id", syncId)
                         }
                     }.decodeList<CloudPlaylistDto>()
                 if (cloudLists.isNotEmpty()) {
@@ -1113,7 +1048,11 @@ class LocalPlaylistViewModel(
         id: Long,
         refresh: Boolean = false,
     ) {
-        viewModelScope.launch {
+        playlistStateJob?.cancel()
+        if (_uiState.value.id != id || _uiState.value.loadState == LocalPlaylistState.PlaylistLoadState.Error) {
+            _uiState.value = LocalPlaylistState.initial().copy(id = id)
+        }
+        playlistStateJob = viewModelScope.launch {
             localPlaylistRepository.getLocalPlaylist(id).collectLatestResource(
                 onSuccess = { pl ->
                     if (pl != null) {
@@ -1129,6 +1068,7 @@ class LocalPlaylistViewModel(
                                 trackCount = pl.tracks?.size ?: 0,
                                 top4Tracks = pl.tracks?.take(4) ?: emptyList(),
                                 creatorName = pl.creatorName,
+                                loadState = LocalPlaylistState.PlaylistLoadState.Success,
                             )
                         }
 
@@ -1172,7 +1112,7 @@ class LocalPlaylistViewModel(
                                         .select {
                                             filter {
                                                 eq("user_id", currentUserId)
-                                                eq("local_playlist_id", pl.id)
+                                                eq("client_sync_id", pl.syncId ?: return@launch)
                                             }
                                         }.decodeList<CloudPlaylistDto>()
                                     val isPub = if (cloudLists.isEmpty()) false else cloudLists.any { it.isPublic }
@@ -1182,8 +1122,11 @@ class LocalPlaylistViewModel(
                                 }
                             }
                         }
+                    } else {
+                        _uiState.update { it.copy(loadState = LocalPlaylistState.PlaylistLoadState.Error) }
                     }
                 },
+                onError = { _uiState.update { it.copy(loadState = LocalPlaylistState.PlaylistLoadState.Error) } },
             )
         }
     }
@@ -1263,19 +1206,12 @@ class LocalPlaylistViewModel(
             val loadedList =
                 lazyTrackPagingItems.value?.itemSnapshotList?.toList() ?: return
             val fromItem = loadedList.getOrNull(from)?.first ?: return
-            val toItem = loadedList.getOrNull(to)?.first ?: return
-            val fromPosition = loadedList.getOrNull(from)?.second?.position ?: from
-            val toPosition = loadedList.getOrNull(to)?.second?.position ?: to
+            val toPosition = loadedList.getOrNull(to)?.second?.position ?: return
             val playlistId = uiState.value.id
-
-            localPlaylistRepository
-                .changePositionOfSongInPlaylist(playlistId, fromItem.videoId, toPosition)
-                .lastOrNull()
-                ?.let { log("changeLocalPlaylistItemPosition: from $it") }
-            localPlaylistRepository
-                .changePositionOfSongInPlaylist(playlistId, toItem.videoId, fromPosition)
-                .lastOrNull()
-                ?.let { log("changeLocalPlaylistItemPosition: to $it") }
+            try {
+                localPlaylistRepository.changePositionOfSongInPlaylist(playlistId, fromItem.videoId, toPosition).lastOrNull()
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { makeToast("Gagal mengubah urutan playlist."); return }
             syncToCloudIfNeeded(playlistId)
         }
     }

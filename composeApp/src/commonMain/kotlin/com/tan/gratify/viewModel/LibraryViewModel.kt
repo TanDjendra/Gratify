@@ -303,9 +303,12 @@ class LibraryViewModel(
         viewModelScope.launch {
             localPlaylistRepository
                 .deleteLocalPlaylist(id, "Playlist dihapus")
-                .collectLatest {
-                    makeToast("Playlist dihapus")
-                    getLocalPlaylist()
+                .collectLatest { result ->
+                    when (result) {
+                        is LocalResource.Success -> { makeToast(result.data ?: "Playlist dihapus"); getLocalPlaylist() }
+                        is LocalResource.Error -> makeToast(result.message ?: "Gagal menghapus playlist")
+                        else -> Unit
+                    }
                 }
         }
     }

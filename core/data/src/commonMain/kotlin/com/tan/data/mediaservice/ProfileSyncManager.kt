@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 
 object ProfileSyncManager {
+    private var syncJob: kotlinx.coroutines.Job? = null
     fun startSync(
         mediaPlayerHandler: MediaPlayerHandler,
         userRepository: UserRepository,
@@ -26,8 +27,12 @@ object ProfileSyncManager {
         dataStoreManager: DataStoreManager,
         scope: CoroutineScope
     ) {
+        syncJob?.cancel()
+        val job = kotlinx.coroutines.SupervisorJob(scope.coroutineContext[kotlinx.coroutines.Job])
+        syncJob = job
+        val heartbeatScope = CoroutineScope(scope.coroutineContext + job)
         // Observe Now Playing track changes
-        scope.launch {
+        heartbeatScope.launch {
             mediaPlayerHandler.nowPlayingState
                 .distinctUntilChangedBy {
                     val rawId = it.songEntity?.videoId ?: it.track?.videoId ?: it.mediaItem.mediaId
@@ -45,7 +50,7 @@ object ProfileSyncManager {
         }
 
         // Observe Play/Pause state changes
-        scope.launch {
+        heartbeatScope.launch {
             mediaPlayerHandler.controlState
                 .map { it.isPlaying }
                 .distinctUntilChanged()
@@ -62,7 +67,7 @@ object ProfileSyncManager {
         }
 
         // 2-minute Heartbeat loop while playing
-        scope.launch {
+        heartbeatScope.launch {
             while (isActive) {
                 delay(120_000)
                 if (mediaPlayerHandler.controlState.value.isPlaying) {
@@ -80,6 +85,7 @@ object ProfileSyncManager {
     ) {
         try {
             val currentUserId = supabase.auth.currentUserOrNull()?.id ?: return
+            if (dataStoreManager.getString("last_synced_user_id").firstOrNull() != currentUserId) return
             val rawVideoId = state.songEntity?.videoId
                 ?: state.track?.videoId
                 ?: state.mediaItem.mediaId
@@ -105,6 +111,7 @@ object ProfileSyncManager {
             )
             userRepository.updateNowPlaying(currentUserId, update).collectLatest {}
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             // Silent catch
         }
     }
@@ -116,6 +123,7 @@ object ProfileSyncManager {
     ) {
         try {
             val currentUserId = supabase.auth.currentUserOrNull()?.id ?: return
+            if (dataStoreManager.getString("last_synced_user_id").firstOrNull() != currentUserId) return
             val localName = dataStoreManager.getString("AppProfileName").firstOrNull()?.takeIf { it.isNotBlank() } ?: "Pengguna Gratify"
             val localAvatar = dataStoreManager.getString("AppProfileImage").firstOrNull()
             val update = NowPlayingUpdate(
@@ -128,6 +136,7 @@ object ProfileSyncManager {
             )
             userRepository.updateNowPlaying(currentUserId, update).collectLatest {}
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             // Silent catch
         }
     }

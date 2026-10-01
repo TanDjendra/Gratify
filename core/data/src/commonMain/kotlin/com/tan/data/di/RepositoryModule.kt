@@ -64,7 +64,7 @@ val repositoryModule =
         }
 
         single<LocalPlaylistRepository>(createdAtStart = true) {
-            LocalPlaylistRepositoryImpl(get(), get())
+            LocalPlaylistRepositoryImpl(get(), get(), get())
         }
 
         single<LyricsCanvasRepository>(createdAtStart = true) {
@@ -88,7 +88,7 @@ val repositoryModule =
         }
 
         single<StreamRepository>(createdAtStart = true) {
-            StreamRepositoryImpl(get(), get())
+            StreamRepositoryImpl(get(), get(), get(named(SERVICE_SCOPE)))
         }
 
         single<UpdateRepository>(createdAtStart = true) {
@@ -100,11 +100,11 @@ val repositoryModule =
         }
         
         single<SharedPlaylistRepository>(createdAtStart = true) {
-            SharedPlaylistRepositoryImpl(get())
+            SharedPlaylistRepositoryImpl(get(), get())
         }
         
         single<UserRepository>(createdAtStart = true) {
-            UserRepositoryImpl(get())
+            UserRepositoryImpl(get(), get())
         }
 
         single<com.tan.domain.repository.SocialRepository>(createdAtStart = true) {
@@ -112,6 +112,6 @@ val repositoryModule =
         }
 
         single<UserDataSyncRepository>(createdAtStart = true) {
-            UserDataSyncRepositoryImpl(get(), get(), get())
+            UserDataSyncRepositoryImpl(get(), get(), get(), get())
         }
     }

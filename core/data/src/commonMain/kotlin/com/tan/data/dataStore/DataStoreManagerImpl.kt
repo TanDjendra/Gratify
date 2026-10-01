@@ -956,12 +956,9 @@ internal class DataStoreManagerImpl(
             preferences[PLAYBACK_SPEED] ?: 1.0f
         }
 
-    override fun setPlaybackSpeed(speed: Float) {
-        runBlocking {
-            settingsDataStore.edit { settings ->
-                settings[PLAYBACK_SPEED] = speed
-            }
-        }
+    override suspend fun setPlaybackSpeed(speed: Float) {
+        require(speed.isFinite() && speed in 0.25f..4f)
+        settingsDataStore.edit { settings -> settings[PLAYBACK_SPEED] = speed }
     }
 
     override val pitch =
@@ -969,12 +966,9 @@ internal class DataStoreManagerImpl(
             preferences[PITCH] ?: 0
         }
 
-    override fun setPitch(pitch: Int) {
-        runBlocking {
-            settingsDataStore.edit { settings ->
-                settings[PITCH] = pitch
-            }
-        }
+    override suspend fun setPitch(pitch: Int) {
+        require(pitch in -24..24)
+        settingsDataStore.edit { settings -> settings[PITCH] = pitch }
     }
 
     override val dataSyncId =
@@ -1397,7 +1391,49 @@ internal class DataStoreManagerImpl(
         }
     }
 
+    override suspend fun captureLegacyProfilePrivacy(ownerId: String): Map<String, Boolean> {
+        if (ownerId.isBlank()) return emptyMap()
+        val pending = linkedMapOf<String, Boolean>()
+        settingsDataStore.edit { settings ->
+            val prefix = "privacy_migration_${ownerId}_"
+            if (settings[stringPreferencesKey(prefix + "done")] == TRUE) return@edit
+            val ownsLegacy = settings[stringPreferencesKey("last_synced_user_id")] == ownerId
+            for ((localKey, serverKey) in LEGACY_PRIVACY_KEYS) {
+                val pendingKey = stringPreferencesKey(prefix + serverKey)
+                val value = settings[pendingKey] ?: if (ownsLegacy) settings[stringPreferencesKey(localKey)] else null
+                if (value == TRUE || value == FALSE) {
+                    settings[pendingKey] = value
+                    pending[serverKey] = value == TRUE
+                }
+            }
+        }
+        return pending
+    }
+
+    override suspend fun acknowledgeLegacyProfilePrivacy(ownerId: String, applied: Map<String, Boolean>) {
+        settingsDataStore.edit { settings ->
+            val prefix = "privacy_migration_${ownerId}_"
+            // Do not acknowledge a value which changed while the server request was running.
+            val matches = applied.all { (key, value) ->
+                settings[stringPreferencesKey(prefix + key)] == if (value) TRUE else FALSE
+            }
+            if (matches) {
+                applied.keys.forEach { settings.remove(stringPreferencesKey(prefix + it)) }
+                settings[stringPreferencesKey(prefix + "done")] = TRUE
+            }
+        }
+    }
+
+    override suspend fun clearLegacyProfilePrivacy(ownerId: String) {
+        settingsDataStore.edit { settings ->
+            settings.asMap().keys.filter { it.name.startsWith("privacy_migration_${ownerId}_") }
+                .forEach { settings.remove(it) }
+        }
+    }
+
     override suspend fun clearPerUserData() {
+        // Keep retryable choices under their previous owner's key before clearing screen preferences.
+        getString("last_synced_user_id").first()?.takeIf { it.isNotBlank() }?.let { captureLegacyProfilePrivacy(it) }
         withContext(Dispatchers.IO) {
             settingsDataStore.edit { settings ->
                 val userKeys = listOf(
@@ -1420,10 +1456,17 @@ internal class DataStoreManagerImpl(
             }
             setDiscordToken("")
             setSpdc("")
+            setSpotifyPersonalToken("")
+            setSpotifyPersonalTokenExpires(0L)
         }
     }
 
     companion object Settings {
+        private val LEGACY_PRIVACY_KEYS = mapOf(
+            "privacy_show_followers" to "show_followers",
+            "privacy_show_playlist" to "show_playlists",
+            "privacy_show_recent_artists" to "show_recent_artists",
+        )
         val APP_VERSION = stringPreferencesKey("app_version")
         val COOKIE = stringPreferencesKey("cookie")
 

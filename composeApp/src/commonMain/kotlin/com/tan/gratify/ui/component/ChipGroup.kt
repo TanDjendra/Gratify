@@ -1,21 +1,13 @@
 package com.tan.gratify.ui.component
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Done
-import androidx.compose.material3.ElevatedFilterChip
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalMinimumInteractiveComponentSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -25,50 +17,18 @@ fun Chip(
     text: String,
     onClick: () -> Unit,
 ) {
-    InfiniteBorderAnimationView(
-        isAnimated = isAnimated && isSelected,
-        brush = Brush.sweepGradient(listOf(Color.Gray, Color.White)),
-        backgroundColor = Color.Transparent,
-        contentPadding = 0.dp,
-        borderWidth = 1.dp,
+    FilterChip(
+        selected = isSelected,
+        onClick = onClick,
+        modifier = Modifier.heightIn(min = 44.dp),
         shape = CircleShape,
-        oneCircleDurationMillis = 2500,
-    ) {
-        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
-            ElevatedFilterChip(
-                shape = CircleShape,
-                colors =
-                    FilterChipDefaults.elevatedFilterChipColors(
-                        containerColor = Color.Transparent,
-                        iconColor = Color.White,
-                        selectedContainerColor = Color.DarkGray.copy(alpha = 0.8f),
-                        labelColor = Color.LightGray,
-                        selectedLabelColor = Color.LightGray,
-                    ),
-                onClick = { onClick.invoke() },
-                label = {
-                    Text(text, maxLines = 1)
-                },
-                border =
-                    FilterChipDefaults.filterChipBorder(
-                        enabled = true,
-                        selected = isSelected,
-                        selectedBorderColor = Color.Transparent,
-                        borderColor = Color.Gray.copy(alpha = 0.8f),
-                    ),
-                selected = isSelected,
-                leadingIcon = {
-                    AnimatedContent(isSelected) {
-                        if (it) {
-                            Icon(
-                                imageVector = Icons.Filled.Done,
-                                contentDescription = "Done icon",
-                                modifier = Modifier.size(FilterChipDefaults.IconSize),
-                            )
-                        }
-                    }
-                },
-            )
-        }
-    }
+        label = { Text(text, maxLines = 1, style = MaterialTheme.typography.labelLarge) },
+        border = null,
+        colors = FilterChipDefaults.filterChipColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            labelColor = MaterialTheme.colorScheme.onSurface,
+            selectedContainerColor = MaterialTheme.colorScheme.primary,
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+        ),
+    )
 }

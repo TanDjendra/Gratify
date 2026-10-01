@@ -1,8 +1,12 @@
 package com.tan.gratify.ui.screen.login
 
+import com.tan.gratify.ui.theme.GratifyColors
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -66,11 +70,11 @@ import gratify.composeapp.generated.resources.baseline_arrow_back_ios_new_24
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
-private val AntigravityGreen = Color(0xFFE0E0E0)
-private val BackgroundBlack = Color(0xFF000000)
-private val LightGray = Color(0xFFE0E0E0)
-private val DarkGray = Color(0xFF2E2E2E)
-private val ErrorRed = Color(0xFFFF5252)
+private val GratifyAccent = GratifyColors.Accent
+private val BackgroundBlack = GratifyColors.Background
+private val LightGray = GratifyColors.Accent
+private val DarkGray = GratifyColors.SurfaceRaised
+private val ErrorRed = GratifyColors.Error
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -174,6 +178,7 @@ fun SignUpScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .imePadding()
                 .padding(horizontal = 24.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
@@ -255,7 +260,7 @@ private fun EmailStep(
     onNext: () -> Unit
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.Top
     ) {
         Spacer(Modifier.height(24.dp))
@@ -274,7 +279,7 @@ private fun EmailStep(
                 unfocusedBorderColor = DarkGray,
                 focusedTextColor = Color.White,
                 unfocusedTextColor = Color.White,
-                cursorColor = AntigravityGreen
+                cursorColor = GratifyAccent
             ),
             isError = !isValid && email.isNotEmpty() || errorMessage != null,
             keyboardOptions = KeyboardOptions(
@@ -292,7 +297,7 @@ private fun EmailStep(
             ?: if (email.isEmpty()) "You'll need to confirm this email later."
             else if (!isValid) "Please enter a valid email address."
             else ""
-        val messageColor = if ((!isValid && email.isNotEmpty()) || errorMessage != null) ErrorRed else Color.Gray
+        val messageColor = if ((!isValid && email.isNotEmpty()) || errorMessage != null) ErrorRed else GratifyColors.TextSecondary
 
         Text(
             text = displayMessage,
@@ -305,10 +310,10 @@ private fun EmailStep(
             enabled = isValid && !isLoading,
             modifier = Modifier.align(Alignment.CenterHorizontally),
             colors = ButtonDefaults.buttonColors(
-                containerColor = AntigravityGreen,
+                containerColor = GratifyAccent,
                 disabledContainerColor = DarkGray,
                 contentColor = Color.Black,
-                disabledContentColor = Color.Gray
+                disabledContentColor = GratifyColors.TextSecondary
             ),
             shape = RoundedCornerShape(50)
         ) {
@@ -331,7 +336,7 @@ private fun PasswordStep(
     var passwordVisible by remember { mutableStateOf(false) }
 
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.Top
     ) {
         Spacer(Modifier.height(24.dp))
@@ -351,7 +356,7 @@ private fun PasswordStep(
                     Icon(
                         imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                         contentDescription = "Toggle password visibility",
-                        tint = Color.Gray
+                        tint = GratifyColors.TextSecondary
                     )
                 }
             },
@@ -360,7 +365,7 @@ private fun PasswordStep(
                 unfocusedBorderColor = DarkGray,
                 focusedTextColor = Color.White,
                 unfocusedTextColor = Color.White,
-                cursorColor = AntigravityGreen
+                cursorColor = GratifyAccent
             ),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password,
@@ -373,7 +378,7 @@ private fun PasswordStep(
         Spacer(Modifier.height(8.dp))
         Text(
             text = "Use at least 8 characters.",
-            style = typo().bodySmall.copy(color = if (!isValid && password.isNotEmpty()) ErrorRed else Color.Gray)
+            style = typo().bodySmall.copy(color = if (!isValid && password.isNotEmpty()) ErrorRed else GratifyColors.TextSecondary)
         )
         Spacer(Modifier.height(32.dp))
         Button(
@@ -381,10 +386,10 @@ private fun PasswordStep(
             enabled = isValid,
             modifier = Modifier.align(Alignment.CenterHorizontally),
             colors = ButtonDefaults.buttonColors(
-                containerColor = AntigravityGreen,
+                containerColor = GratifyAccent,
                 disabledContainerColor = DarkGray,
                 contentColor = Color.Black,
-                disabledContentColor = Color.Gray
+                disabledContentColor = GratifyColors.TextSecondary
             ),
             shape = RoundedCornerShape(50)
         ) {
@@ -405,7 +410,7 @@ private fun NameStep(
     onCreateAccount: () -> Unit
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.Top
     ) {
         Spacer(Modifier.height(24.dp))
@@ -424,7 +429,7 @@ private fun NameStep(
                 unfocusedBorderColor = DarkGray,
                 focusedTextColor = Color.White,
                 unfocusedTextColor = Color.White,
-                cursorColor = AntigravityGreen
+                cursorColor = GratifyAccent
             ),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Text,
@@ -437,7 +442,7 @@ private fun NameStep(
         Spacer(Modifier.height(8.dp))
         Text(
             text = "This appears on your profile.",
-            style = typo().bodySmall.copy(color = Color.Gray)
+            style = typo().bodySmall.copy(color = GratifyColors.TextSecondary)
         )
         Spacer(Modifier.height(24.dp))
         Row(
@@ -448,28 +453,29 @@ private fun NameStep(
                 checked = isTermsAccepted,
                 onCheckedChange = onTermsChanged,
                 colors = CheckboxDefaults.colors(
-                    checkedColor = AntigravityGreen,
+                    checkedColor = GratifyAccent,
                     uncheckedColor = DarkGray,
                     checkmarkColor = Color.Black
                 )
             )
             Spacer(Modifier.width(8.dp))
             Text(
-                text = "I agree to the Terms of Use and Privacy Policy.",
+                text = "Saya telah membaca draf Terms of Use dan Privacy Policy.",
                 style = typo().bodySmall.copy(color = Color.White),
                 modifier = Modifier.fillMaxWidth()
             )
         }
+        com.tan.gratify.ui.component.LegalDocumentLinks()
         Spacer(Modifier.height(32.dp))
         Button(
             onClick = onCreateAccount,
             enabled = isValid && isTermsAccepted && !isLoading,
             modifier = Modifier.align(Alignment.CenterHorizontally),
             colors = ButtonDefaults.buttonColors(
-                containerColor = AntigravityGreen,
+                containerColor = GratifyAccent,
                 disabledContainerColor = DarkGray,
                 contentColor = Color.Black,
-                disabledContentColor = Color.Gray
+                disabledContentColor = GratifyColors.TextSecondary
             ),
             shape = RoundedCornerShape(50)
         ) {

@@ -28,7 +28,10 @@ data class UserProfile(
     val note: String? = null,
     // Epoch millis (string) saat note terakhir diubah — dipakai untuk kedaluwarsa 24 jam.
     @SerialName("note_updated_at")
-    val noteUpdatedAt: String? = null
+    val noteUpdatedAt: String? = null,
+    @SerialName("show_followers") val showFollowers: Boolean = false,
+    @SerialName("show_playlists") val showPlaylists: Boolean = false,
+    @SerialName("show_recent_artists") val showRecentArtists: Boolean = false,
 )
 
 @Serializable

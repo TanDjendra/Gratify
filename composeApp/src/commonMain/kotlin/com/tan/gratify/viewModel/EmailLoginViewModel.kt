@@ -1,6 +1,7 @@
 package com.tan.gratify.viewModel
 
 import androidx.lifecycle.viewModelScope
+import com.tan.gratify.viewModel.auth.isValidEmailAddress
 import com.tan.domain.manager.DataStoreManager
 import com.tan.gratify.viewModel.auth.AuthUiState
 import com.tan.gratify.viewModel.auth.LoginFormState
@@ -89,10 +90,7 @@ class EmailLoginViewModel(
 
     // ── Validation ───────────────────────────────────────────────────────────
 
-    private fun isValidEmail(email: String): Boolean {
-        val emailRegex = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$".toRegex()
-        return email.matches(emailRegex)
-    }
+    private fun isValidEmail(email: String): Boolean = isValidEmailAddress(email)
 
     // ── Core Auth: Login ─────────────────────────────────────────────────────
 
@@ -118,7 +116,7 @@ class EmailLoginViewModel(
                 handleSuccessfulLogin()
 
             } catch (e: Throwable) {
-                log("signIn failed: ${e.message}", com.tan.logger.LogLevel.ERROR)
+                log("signIn failed: [details omitted]", com.tan.logger.LogLevel.ERROR)
                 val errorMsg = e.message ?: e.toString()
 
                 when {
@@ -159,7 +157,7 @@ class EmailLoginViewModel(
                 handleSuccessfulLogin()
 
             } catch (e: Throwable) {
-                log("verifyOtp failed: ${e.message}", com.tan.logger.LogLevel.ERROR)
+                log("verifyOtp failed: [details omitted]", com.tan.logger.LogLevel.ERROR)
                 val errorMsg = e.message ?: e.toString()
                 val userMsg = when {
                     errorMsg.contains("otp_expired", ignoreCase = true) ||
@@ -196,7 +194,7 @@ class EmailLoginViewModel(
                 _otpState.update { it.copy(code = "", isResending = false) }
                 startResendCooldown()
             } catch (e: Throwable) {
-                log("Resend OTP gagal: ${e.message}", com.tan.logger.LogLevel.ERROR)
+                log("Resend OTP gagal: [details omitted]", com.tan.logger.LogLevel.ERROR)
                 _otpState.update { it.copy(isResending = false) }
                 makeToast("Gagal mengirim ulang kode. Coba lagi nanti.")
             }
@@ -240,7 +238,8 @@ class EmailLoginViewModel(
     private suspend fun handleSuccessfulLogin() {
         val user = supabase.auth.currentUserOrNull()
         if (user != null) {
-            dataStoreManager.clearPerUserData()
+            userDataSyncManager.performLoginSync()
+            // Account-specific preferences are cleared before cloud restore by the sync manager.
             dataStoreManager.setLoggedIn(true)
             dataStoreManager.putString("AccountEmail", user.email ?: "")
 
@@ -259,8 +258,6 @@ class EmailLoginViewModel(
             // Pulihkan semua data user (playlist, likes, artists, history, dll).
             // performLoginSync membersihkan DB akun sebelumnya bila akun yang login berbeda,
             // agar tiap akun punya datanya sendiri dan tidak saling menabrak.
-            userDataSyncManager.performLoginSync()
-            
             _authState.value = AuthUiState.Authenticated(needsProfile = needsProfile)
         } else {
             _authState.value = AuthUiState.Error("Sesi tidak ditemukan setelah login.")

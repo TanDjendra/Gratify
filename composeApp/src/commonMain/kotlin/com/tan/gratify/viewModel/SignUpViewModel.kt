@@ -1,6 +1,7 @@
 package com.tan.gratify.viewModel
 
 import androidx.lifecycle.viewModelScope
+import com.tan.gratify.viewModel.auth.isValidEmailAddress
 import com.tan.domain.manager.DataStoreManager
 import com.tan.data.sync.UserDataSyncManager
 import com.tan.logger.Logger
@@ -58,6 +59,7 @@ class SignUpViewModel(
     val otpState: StateFlow<OtpFormState> = _otpState.asStateFlow()
 
     private var cooldownJob: Job? = null
+    private var verifiedEmail: String? = null
 
     // ── Form Field Updates ───────────────────────────────────────────────────
 
@@ -105,10 +107,7 @@ class SignUpViewModel(
 
     // ── Validation Helpers ───────────────────────────────────────────────────
 
-    private fun isValidEmail(email: String): Boolean {
-        val emailRegex = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$".toRegex()
-        return email.matches(emailRegex)
-    }
+    private fun isValidEmail(email: String): Boolean = isValidEmailAddress(email)
 
     // ── Core Auth Actions ────────────────────────────────────────────────────
 
@@ -141,7 +140,7 @@ class SignUpViewModel(
                 startResendCooldown()
 
             } catch (e: Throwable) {
-                log("sendOtp failed: ${e.message}", com.tan.logger.LogLevel.ERROR)
+                log("sendOtp failed: [details omitted]", com.tan.logger.LogLevel.ERROR)
                 _authState.value = AuthUiState.Error(mapSignUpError(e))
             }
         }
@@ -161,29 +160,34 @@ class SignUpViewModel(
         val email = (_authState.value as? AuthUiState.VerificationPending)?.email
             ?: _formState.value.email
 
-        if (code.length != 6 || email.isBlank()) return
+        if (code.length != 6 || email.isBlank() || _authState.value is AuthUiState.Loading) return
 
         viewModelScope.launch {
             _authState.value = AuthUiState.Loading("Memverifikasi kode...")
             try {
-                supabase.auth.verifyEmailOtp(
-                    type = io.github.jan.supabase.auth.OtpType.Email.EMAIL,
-                    email = email,
-                    token = code,
-                )
+                dataStoreManager.putString("pending_signup_email", email)
+                dataStoreManager.setLoggedIn(false)
+                if (verifiedEmail != email || supabase.auth.currentUserOrNull()?.email != email) {
+                    supabase.auth.verifyEmailOtp(
+                        type = io.github.jan.supabase.auth.OtpType.Email.EMAIL,
+                        email = email,
+                        token = code,
+                    )
+                    verifiedEmail = email
+                }
 
                 // Kode terverifikasi & session aktif
                 // Set password (karena signInWith(OTP) tidak set password)
                 setPasswordAfterOtp()
 
-                // Set display_name ke metadata
+                userDataSyncManager.performLoginSync()
                 saveDisplayNameToMetadata()
 
                 // Cek apakah profil sudah ada
                 val needsProfile = checkNeedsProfile()
 
                 // Bersihkan data user lama sebelum menyimpan data user baru
-                dataStoreManager.clearPerUserData()
+                // Account-specific preferences are cleared before cloud restore by the sync manager.
 
                 // Tandai login
                 dataStoreManager.setLoggedIn(true)
@@ -192,12 +196,12 @@ class SignUpViewModel(
                 // Pulihkan semua data user dari cloud (playlist, likes, artists, dll).
                 // performLoginSync membersihkan DB akun sebelumnya bila akun berbeda,
                 // agar tiap akun punya datanya sendiri dan tidak saling menabrak.
-                userDataSyncManager.performLoginSync()
-
+                dataStoreManager.putString("pending_signup_email", "")
                 _authState.value = AuthUiState.Authenticated(needsProfile = needsProfile)
 
             } catch (e: Throwable) {
-                log("verifyOtp failed: ${e.message}", com.tan.logger.LogLevel.ERROR)
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                log("Signup completion failed", com.tan.logger.LogLevel.ERROR)
                 val errorMsg = e.message ?: e.toString()
                 val userMsg = when {
                     errorMsg.contains("otp_expired", ignoreCase = true) ||
@@ -210,7 +214,7 @@ class SignUpViewModel(
                     errorMsg.contains("invalid", ignoreCase = true) ->
                         "Kode verifikasi salah atau sudah kedaluwarsa."
 
-                    else -> "Verifikasi gagal. Silakan coba lagi."
+                    else -> if (verifiedEmail == email) "Kode sudah diverifikasi, tetapi penyimpanan akun gagal. Tekan verifikasi untuk mencoba lagi." else "Verifikasi gagal. Silakan coba lagi."
                 }
                 _authState.value = AuthUiState.VerificationPending(email)
                 makeToast(userMsg)
@@ -237,7 +241,7 @@ class SignUpViewModel(
                 _otpState.update { it.copy(code = "", isResending = false) }
                 startResendCooldown()
             } catch (e: Throwable) {
-                log("resendOtp failed: ${e.message}", com.tan.logger.LogLevel.ERROR)
+                log("resendOtp failed: [details omitted]", com.tan.logger.LogLevel.ERROR)
                 _otpState.update { it.copy(isResending = false) }
                 makeToast("Gagal mengirim ulang kode. Coba lagi nanti.")
             }
@@ -260,7 +264,7 @@ class SignUpViewModel(
             } catch (e: kotlinx.coroutines.CancellationException) {
                 _authState.value = AuthUiState.Idle
             } catch (e: Throwable) {
-                log("Google login failed: ${e.message}", com.tan.logger.LogLevel.ERROR)
+                log("Google login failed: [details omitted]", com.tan.logger.LogLevel.ERROR)
                 _authState.value = AuthUiState.Error("Google Login gagal. Silakan coba lagi.")
             }
         }
@@ -275,15 +279,8 @@ class SignUpViewModel(
      */
     private suspend fun setPasswordAfterOtp() {
         val password = _formState.value.password
-        if (password.length < 8) return
-
-        try {
-            supabase.auth.updateUser {
-                this.password = password
-            }
-        } catch (e: Throwable) {
-            log("setPasswordAfterOtp failed: ${e.message}", com.tan.logger.LogLevel.ERROR)
-        }
+        require(password.length >= 8) { "Password must contain at least 8 characters" }
+        supabase.auth.updateUser { this.password = password }
     }
 
     /**
@@ -302,7 +299,7 @@ class SignUpViewModel(
             dataStoreManager.putString("AppProfileName", name)
             dataStoreManager.putString("AccountName", name)
         } catch (e: Throwable) {
-            log("saveDisplayNameToMetadata failed: ${e.message}", com.tan.logger.LogLevel.ERROR)
+            log("saveDisplayNameToMetadata failed: [details omitted]", com.tan.logger.LogLevel.ERROR)
         }
     }
 

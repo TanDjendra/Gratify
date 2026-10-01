@@ -41,6 +41,10 @@ internal class CommonRepositoryImpl(
     private val spotify: Spotify,
     private val aiClient: AiClient,
 ) : CommonRepository {
+    override suspend fun exportActiveAccountDatabase(destination: String) {
+        com.tan.data.sync.AccountLibraryStore(database).exportActiveAccount(destination)
+    }
+
     @OptIn(ExperimentalTime::class)
     override fun init(
         cookiePath: String,

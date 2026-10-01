@@ -1169,7 +1169,7 @@ class YouTube {
                         ?.ytConfigData
                         ?.visitorData
             Logger.d(TAG, "Visitor Data $visitorData")
-            Logger.d(TAG, "New Cookie $cookie")
+            Logger.d("Credentials", "Credential state updated")
             Logger.d(TAG, "Playback Tracking $playbackTracking")
             return Triple(cookie, visitorData ?: this@YouTube.visitorData ?: "", playbackTracking)
         } catch (e: Exception) {
@@ -2028,7 +2028,7 @@ class YouTube {
                         }.onSuccess {
                             Logger.d(TAG, "Download Video Success")
                         }.onFailure {
-                            it.printStackTrace()
+                            if (it is kotlinx.coroutines.CancellationException) throw it
                             trySend(DownloadProgress.failed(it.message ?: "Download failed"))
                         }
                     } else {
@@ -2040,7 +2040,7 @@ class YouTube {
                                     if (!downloadProgress.first) {
                                         trySend(DownloadProgress(audioDownloadProgress = downloadProgress.second))
                                     } else {
-                                        trySend(DownloadProgress(audioDownloadProgress = 1f, isDone = true))
+                                        trySend(DownloadProgress(audioDownloadProgress = 1f))
                                     }
                                 }
                         }.onSuccess {
@@ -2053,7 +2053,7 @@ class YouTube {
                                 ),
                             )
                         }.onFailure { e ->
-                            e.printStackTrace()
+                            if (e is kotlinx.coroutines.CancellationException) throw e
                             trySend(DownloadProgress.failed(e.message ?: "Download failed"))
                         }
                     }

@@ -1,6 +1,7 @@
 package com.tan.gratify.di
 
-import io.github.jan.supabase.auth.SessionManager
+import com.russhwolf.settings.Settings
 import org.koin.core.scope.Scope
 
-expect fun Scope.createSessionManager(): SessionManager
+/** Persistent platform storage shared by sessions and OAuth PKCE verification. */
+expect fun Scope.createAuthSettings(): Settings

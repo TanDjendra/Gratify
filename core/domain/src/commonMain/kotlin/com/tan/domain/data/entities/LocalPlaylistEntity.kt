@@ -32,6 +32,10 @@ data class LocalPlaylistEntity(
     // orang lain, dipakai untuk menampilkan watermark "Dibuat oleh X".
     @ColumnInfo(name = "creator_name", defaultValue = "NULL")
     val creatorName: String? = null,
+
+    // Stable across devices; the Room primary key is only a device-local row ID.
+    @ColumnInfo(name = "sync_id", defaultValue = "NULL")
+    val syncId: String? = null,
 ) : PlaylistType,
     HomeContentType {
     override fun playlistType(): PlaylistType.Type = PlaylistType.Type.LOCAL

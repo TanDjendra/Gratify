@@ -1,0 +1,12 @@
+<resources>
+    <style name="Theme.Gratify.Base" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">#121212</item>
+        <item name="android:colorBackground">#121212</item>
+        <item name="colorPrimary">#1ED760</item>
+        <item name="colorAccent">#1ED760</item>
+        <item name="android:statusBarColor">#121212</item>
+        <item name="android:navigationBarColor">#0C0C0C</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+    <style name="Theme.Gratify" parent="Theme.Gratify.Base" />
+</resources>

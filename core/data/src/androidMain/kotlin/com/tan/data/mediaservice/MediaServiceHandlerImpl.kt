@@ -432,7 +432,7 @@ internal class MediaServiceHandlerImpl(
                         var thumbUrl =
                             track?.thumbnails?.lastOrNull()?.url
                                 ?: songEntity.thumbnails
-                                ?: "http://i.ytimg.com/vi/${songEntity.videoId}/maxresdefault.jpg"
+                                ?: "https://i.ytimg.com/vi/${songEntity.videoId}/maxresdefault.jpg"
                         Logger.w(TAG, "getDataOfNowPlayingState before: $thumbUrl")
                         thumbUrl = THUMB_SIZE_REGEX.replace(thumbUrl, "$1544")
                         Logger.w(TAG, "getDataOfNowPlayingState: $thumbUrl")
@@ -460,7 +460,7 @@ internal class MediaServiceHandlerImpl(
                         _controlState.update { it.copy(isLiked = false) }
                         var thumbUrl =
                             track?.thumbnails?.lastOrNull()?.url
-                                ?: "http://i.ytimg.com/vi/${track?.videoId}/maxresdefault.jpg"
+                                ?: "https://i.ytimg.com/vi/${track?.videoId}/maxresdefault.jpg"
                         Logger.w(TAG, "getDataOfNowPlayingState before: $thumbUrl")
                         thumbUrl = THUMB_SIZE_REGEX.replace(thumbUrl, "$1544")
                         val songEntity =
@@ -946,7 +946,18 @@ internal class MediaServiceHandlerImpl(
         _queueData.value = QueueData()
     }
 
+    private val listeningTimeTracker = com.tan.domain.utils.ListeningTimeTracker()
+
+    private var sleepEndMediaId: String? = null
+    private fun finishEndOfTrackSleep() {
+        if (sleepEndMediaId == null) return
+        sleepEndMediaId = null
+        player.pause()
+        _sleepTimerState.value = SleepTimerState(true, 0)
+    }
+
     override fun sleepStart(minutes: Int) {
+        sleepEndMediaId = null
         sleepTimerJob?.cancel()
         sleepTimerJob =
             coroutineScope.launch(Dispatchers.Main) {
@@ -955,18 +966,8 @@ internal class MediaServiceHandlerImpl(
                     _sleepTimerState.update {
                         it.copy(isDone = false, timeRemaining = -1)
                     }
-                    // Poll until player duration is available (may be -1 initially)
-                    var duration = player.duration
-                    while (duration <= 0L) {
-                        delay(500)
-                        duration = player.duration
-                    }
-                    val remaining = (duration - player.currentPosition).coerceAtLeast(0L)
-                    delay(remaining)
-                    player.pause()
-                    _sleepTimerState.update {
-                        it.copy(isDone = true, timeRemaining = 0)
-                    }
+                    sleepEndMediaId = nowPlayingState.value.mediaItem.mediaId.takeIf { it.isNotBlank() }
+                    if (sleepEndMediaId == null) _sleepTimerState.value = SleepTimerState(false, 0)
                 } else {
                     _sleepTimerState.update {
                         it.copy(isDone = false, timeRemaining = minutes)
@@ -988,6 +989,7 @@ internal class MediaServiceHandlerImpl(
     }
 
     override fun sleepStop() {
+        sleepEndMediaId = null
         sleepTimerJob?.cancel()
         _sleepTimerState.value = SleepTimerState(false, 0)
     }
@@ -1487,7 +1489,7 @@ internal class MediaServiceHandlerImpl(
             val track = listTrack[i]
             var thumbUrl =
                 track.thumbnails?.lastOrNull()?.url
-                    ?: "http://i.ytimg.com/vi/${track.videoId}/maxresdefault.jpg"
+                    ?: "https://i.ytimg.com/vi/${track.videoId}/maxresdefault.jpg"
             thumbUrl = THUMB_SIZE_REGEX.replace(thumbUrl, "$1544")
             val artistName: String = track.artists.toListName().connectArtists()
             val isSong =
@@ -1626,7 +1628,7 @@ internal class MediaServiceHandlerImpl(
                 if (track == current) continue
                 var thumbUrl =
                     track.thumbnails?.lastOrNull()?.url
-                        ?: "http://i.ytimg.com/vi/${track.videoId}/maxresdefault.jpg"
+                        ?: "https://i.ytimg.com/vi/${track.videoId}/maxresdefault.jpg"
                 thumbUrl = THUMB_SIZE_REGEX.replace(thumbUrl, "$1544")
                 val isSong =
                     (
@@ -1896,7 +1898,7 @@ internal class MediaServiceHandlerImpl(
                 .toCollection(arrayListOf())
         var thumbUrl =
             track.thumbnails?.lastOrNull()?.url
-                ?: "http://i.ytimg.com/vi/${track.videoId}/maxresdefault.jpg"
+                ?: "https://i.ytimg.com/vi/${track.videoId}/maxresdefault.jpg"
         thumbUrl = THUMB_SIZE_REGEX.replace(thumbUrl, "$1544")
         val artistName: String = track.artists.toListName().connectArtists()
         val isSong =
@@ -2310,6 +2312,7 @@ internal class MediaServiceHandlerImpl(
             }
 
             PlayerConstants.STATE_ENDED -> {
+                finishEndOfTrackSleep()
                 _simpleMediaState.value = SimpleMediaState.Ended
                 Logger.d(TAG, "onPlaybackStateChanged: Ended")
             }
@@ -2329,6 +2332,7 @@ internal class MediaServiceHandlerImpl(
     }
 
     override fun onIsPlayingChanged(isPlaying: Boolean) {
+        listeningTimeTracker.setPlaying(isPlaying)
         _controlState.value = _controlState.value.copy(isPlaying = isPlaying)
         if (isPlaying) {
             startProgressUpdate()
@@ -2348,12 +2352,12 @@ internal class MediaServiceHandlerImpl(
         mediaItem: GenericMediaItem?,
         reason: Int,
     ) {
+        if (sleepEndMediaId != null && (mediaItem?.mediaId != sleepEndMediaId || reason == PlayerConstants.MEDIA_ITEM_TRANSITION_REASON_REPEAT)) finishEndOfTrackSleep()
+
         Logger.w(TAG, "Checking current state before transition ${simpleMediaState.value}")
         val lastPlayed = nowPlayingState.value.songEntity
-        val currentState = simpleMediaState.value
-        if (currentState is SimpleMediaState.Progress && lastPlayed != null && lastPlayed.durationSeconds > 0) {
-            mayBeTrackingListeningLocal(lastPlayed, currentState.progress)
-        }
+        val listenedMillis = listeningTimeTracker.takeMillis()
+        if (lastPlayed != null && lastPlayed.durationSeconds > 0) mayBeTrackingListeningLocal(lastPlayed, listenedMillis)
         Logger.w(TAG, "Smooth Switching Transition Current Position: ${player.currentPosition}")
         mayBeNormalizeVolume()
         Logger.w(TAG, "REASON onMediaItemTransition: $reason")
@@ -2412,12 +2416,7 @@ internal class MediaServiceHandlerImpl(
                     channelIds = song.artistId ?: emptyList(),
                     albumBrowseId = song.albumId,
                     durationSecond = song.durationSeconds.toLong(),
-                    listenedSecond =
-                        if (percent >= 0.8f) {
-                            song.durationSeconds.toLong()
-                        } else {
-                            (currentPositionMillis / 1000)
-                        },
+                    listenedSecond = currentPositionMillis / 1000,
                 ).collect {
                     Logger.d(TAG, "Inserted playback event for ${song.title}: $it")
                 }

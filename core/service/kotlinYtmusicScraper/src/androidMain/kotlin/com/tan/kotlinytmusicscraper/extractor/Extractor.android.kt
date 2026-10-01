@@ -22,7 +22,7 @@ actual class Extractor {
     private var braveNewPipeDownloader = BraveNewPipeDownloaderImpl(proxy = null)
 
     actual fun init() {
-        NewPipe.init(newPipeDownloader)
+        initializePipePipeSecurely(newPipeDownloader)
         BraveNewPipe.init(braveNewPipeDownloader)
     }
 
@@ -30,7 +30,7 @@ actual class Extractor {
         val javaProxy = proxy as? java.net.Proxy
         newPipeDownloader = NewPipeDownloaderImpl(javaProxy)
         braveNewPipeDownloader = BraveNewPipeDownloaderImpl(javaProxy)
-        NewPipe.init(newPipeDownloader)
+        initializePipePipeSecurely(newPipeDownloader)
         BraveNewPipe.init(braveNewPipeDownloader)
     }
 

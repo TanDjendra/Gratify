@@ -44,10 +44,15 @@ class AlbumViewModel(
     val uiState: StateFlow<AlbumUIState> = _uiState
 
     private var job: Job? = null
+    private var fetchJob: Job? = null
     private var collectDownloadStateJob: Job? = null
 
     fun updateBrowseId(browseId: String) {
-        viewModelScope.launch {
+        fetchJob?.cancel()
+        job?.cancel()
+        collectDownloadStateJob?.cancel()
+        _uiState.value = AlbumUIState.initial().copy(browseId = browseId)
+        fetchJob = viewModelScope.launch {
             _uiState.update { it.copy(browseId = browseId) }
             albumRepository.getAlbumData(browseId).collectLatest { res ->
                 when (res) {

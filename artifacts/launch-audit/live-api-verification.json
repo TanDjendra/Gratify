@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "environment": "Live Supabase Auth and PostgREST",
+  "checks": [
+    "Two temporary Auth accounts created and signed in using real password tokens",
+    "Actual JWT owners can read their playlist; account B and anonymous cannot read A private playlist or snapshot",
+    "Owner identities remain separate; explicit privacy choices control anonymous publication",
+    "Library data cannot be read by a second account and direct playlist deletion is revoked",
+    "Deleted identities cannot be resurrected; account B data remains intact",
+    "Account deletion RPC removes B Auth record while A session remains valid"
+  ],
+  "temporary_accounts_retained_for_device": 1
+}

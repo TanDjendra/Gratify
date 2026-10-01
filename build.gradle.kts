@@ -58,10 +58,4 @@ subprojects {
         }
     }
 
-    // Disable all lint tasks across all subprojects to bypass ClassNotFound/ProtocolMessageEnum crashes
-    tasks.configureEach {
-        if (name.contains("lint", ignoreCase = true)) {
-            enabled = false
-        }
-    }
 }

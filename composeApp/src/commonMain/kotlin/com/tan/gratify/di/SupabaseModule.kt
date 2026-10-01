@@ -3,6 +3,8 @@ package com.tan.gratify.di
 import com.tan.data.sync.UserDataSyncManager
 import com.tan.gratify.BuildKonfig
 import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.auth.SettingsSessionManager
+import io.github.jan.supabase.auth.SettingsCodeVerifierCache
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
@@ -14,13 +16,14 @@ import org.koin.dsl.module
 
 val supabaseModule = module {
     single<SupabaseClient> {
-        val sm = createSessionManager()
+        val authSettings = createAuthSettings()
         createSupabaseClient(
             supabaseUrl = BuildKonfig.SUPABASE_URL,
             supabaseKey = BuildKonfig.SUPABASE_KEY,
         ) {
             install(Auth) {
-                sessionManager = sm
+                sessionManager = SettingsSessionManager(authSettings)
+                codeVerifierCache = SettingsCodeVerifierCache(authSettings)
                 // Deeplink redirect untuk OAuth (mis. Login Google).
                 // WAJIB cocok dengan intent-filter di androidApp/src/main/AndroidManifest.xml:
                 //   <data android:scheme="com.tan.gratify" android:host="login-callback" />
@@ -42,6 +45,8 @@ val supabaseModule = module {
             supabase = get(),
             dataStoreManager = get(),
             scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+            mediaPlayerHandler = get(),
+            userRepository = get(),
         )
     }
 }

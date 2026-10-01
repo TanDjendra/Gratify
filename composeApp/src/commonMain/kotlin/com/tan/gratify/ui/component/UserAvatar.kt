@@ -25,6 +25,7 @@ import coil3.compose.LocalPlatformContext
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import com.tan.gratify.ui.theme.GratifyColors
 import com.tan.gratify.ui.theme.typo
 
 @Composable
@@ -33,7 +34,7 @@ fun UserAvatar(
     name: String?,
     modifier: Modifier = Modifier,
     borderWidth: Dp = 0.5.dp,
-    borderColor: Color = Color(0xFF8E8E8E),
+    borderColor: Color = GratifyColors.Accent.copy(alpha = 0.25f),
     textStyle: TextStyle? = null
 ) {
     Box(
@@ -41,7 +42,7 @@ fun UserAvatar(
             .clip(CircleShape)
             .background(
                 brush = Brush.linearGradient(
-                    colors = listOf(Color(0xFF5A5A5A), Color(0xFF2B2B2B))
+                    colors = listOf(GratifyColors.AccentContainer, GratifyColors.SurfaceRaised)
                 )
             )
             .then(
@@ -76,7 +77,7 @@ fun UserAvatar(
                 Icon(
                     imageVector = Icons.Default.Person,
                     contentDescription = "Person",
-                    tint = Color(0xFFCCCCCC),
+                    tint = GratifyColors.TextSecondary,
                     modifier = Modifier.fillMaxSize(0.55f)
                 )
             }

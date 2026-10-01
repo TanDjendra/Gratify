@@ -13,418 +13,143 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.*
+import io.github.jan.supabase.auth.auth
+import kotlin.coroutines.cancellation.CancellationException
+
+@Serializable
+private data class NewCloudPlaylistItemDto(
+    @SerialName("playlist_id") val playlistId: String,
+    @SerialName("video_id") val videoId: String,
+    val title: String,
+    val artist: String,
+    val duration: Int,
+    @SerialName("thumbnail_url") val thumbnailUrl: String?,
+    val position: Int,
+)
 
 internal class SocialRepositoryImpl(
     private val supabase: SupabaseClient,
     private val localDataSource: LocalDataSource
 ) : SocialRepository {
+    @Serializable
+    private data class PlaylistTombstone(@SerialName("client_sync_id") val syncId: String)
+    override suspend fun flushPlaylistRemovals(userId: String) {
+        check(supabase.auth.currentUserOrNull()?.id == userId && localDataSource.getLibraryOwner() == userId)
+        for (removal in localDataSource.getLibraryRemovals(userId, "cloud_playlists")) {
+            // Old numeric deletion intents cannot identify a playlist across devices.
+            // Retain them for explicit review instead of deleting an unrelated row.
+            if (removal.itemId.toLongOrNull() != null) continue
+            supabase.postgrest.rpc("gratify_delete_owned_playlist_v2", buildJsonObject {
+                put("p_sync_id", removal.itemId)
+            })
+            localDataSource.acknowledgeLibraryRemoval(userId, "cloud_playlists", removal.itemId, removal.revision)
+        }
+        for (removal in localDataSource.getLibraryRemovals(userId, "shared_playlist_saves")) {
+            supabase.postgrest["shared_playlist_saves"].delete {
+                filter { eq("user_id", userId); eq("playlist_id", removal.itemId) }
+            }
+            localDataSource.acknowledgeLibraryRemoval(userId, "shared_playlist_saves", removal.itemId, removal.revision)
+        }
+    }
+
 
     override suspend fun syncUpPlaylist(localPlaylistId: Long, userId: String, isPublic: Boolean?): Flow<Result<String>> = flow {
-        try {
-            val localPlaylist = localDataSource.getLocalPlaylist(localPlaylistId)
-                ?: throw IllegalArgumentException("Playlist lokal tidak ditemukan.")
-
-            // 1. Cek apakah cloud_playlists sudah punya entri untuk (user_id, local_playlist_id)
-            val existingList = try {
-                supabase.postgrest["cloud_playlists"]
-                    .select {
-                        filter {
-                            eq("user_id", userId)
-                            eq("local_playlist_id", localPlaylistId)
-                        }
-                    }.decodeList<CloudPlaylistDto>()
-            } catch (e: Exception) {
-                emptyList()
+        val result = try {
+            check(supabase.auth.currentUserOrNull()?.id == userId && localDataSource.getLibraryOwner() == userId)
+            val syncId = localDataSource.ensurePlaylistSyncId(localPlaylistId, userId)
+            val playlist = requireNotNull(localDataSource.getLocalPlaylist(localPlaylistId)) { "Playlist not found" }
+            val pairs = localDataSource.getAllPlaylistPairSongByPosition(localPlaylistId).orEmpty()
+            val songs = localDataSource.getSongByListVideoIdFull(pairs.map { it.songId }).associateBy { it.videoId }
+            // Missing local metadata must fail before replacement, never silently drop tracks.
+            val items = pairs.mapIndexed { index, pair ->
+                val song = requireNotNull(songs[pair.songId]) { "Playlist song metadata missing" }
+                NewCloudPlaylistItemDto("", song.videoId, song.title, song.artistName?.joinToString(", ").orEmpty(),
+                    song.durationSeconds, song.thumbnails, index)
             }
-
-            // Ambil SEMUA lagu di dalam playlist lokal terlebih dahulu untuk menentukan thumbnail efektif
-            val pairs = localDataSource.getAllPlaylistPairSongByPosition(localPlaylistId) ?: emptyList()
-            val songs = if (pairs.isNotEmpty()) {
-                localDataSource.getSongByListVideoIdFull(pairs.map { it.songId })
-            } else {
-                emptyList()
+            check(playlist.syncId == syncId && localDataSource.getLibraryOwner() == userId && supabase.auth.currentUserOrNull()?.id == userId) {
+                "Account ownership changed"
             }
-            val songMap = songs.associateBy { it.videoId }
-
-            val effectiveThumbnail = if (!localPlaylist.thumbnail.isNullOrBlank()) {
-                localPlaylist.thumbnail
-            } else {
-                songs.firstOrNull()?.thumbnails
-            }
-
-            if (localPlaylist.thumbnail.isNullOrBlank() && !effectiveThumbnail.isNullOrBlank()) {
-                try {
-                    localDataSource.updateLocalPlaylistThumbnail(thumbnail = effectiveThumbnail, id = localPlaylistId)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
-
-            val effectiveIsPublic = if (existingList.isNotEmpty()) {
-                isPublic ?: existingList.first().isPublic
-            } else {
-                isPublic ?: false
-            }
-
-            val cloudPlaylistId: String
-            if (existingList.isNotEmpty()) {
-                val existing = existingList.first()
-                cloudPlaylistId = existing.id ?: throw IllegalStateException("Cloud ID null")
-
-                // Bersihkan duplikat yang berlebih jika sebelumnya sempat ter-duplicate
-                if (existingList.size > 1) {
-                    val duplicateIds = existingList.drop(1).mapNotNull { it.id }
-                    for (dupId in duplicateIds) {
-                        try {
-                            supabase.postgrest["cloud_playlist_items"].delete { filter { eq("playlist_id", dupId) } }
-                            supabase.postgrest["cloud_playlists"].delete { filter { eq("id", dupId) } }
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
-                    }
-                }
-
-                // Update data playlist cloud yang sudah ada
-                val updateDto = CloudPlaylistDto(
-                    id = cloudPlaylistId,
-                    userId = userId,
-                    localPlaylistId = localPlaylistId,
-                    title = localPlaylist.title,
-                    thumbnailUrl = effectiveThumbnail,
-                    isPublic = effectiveIsPublic
-                )
-                supabase.postgrest["cloud_playlists"].update(updateDto) {
-                    filter { eq("id", cloudPlaylistId) }
-                }
-
-                // Hapus item lagu lama di cloud_playlist_items sebelum insert yang baru
-                try {
-                    supabase.postgrest["cloud_playlist_items"].delete {
-                        filter { eq("playlist_id", cloudPlaylistId) }
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            } else {
-                // Buat baru jika belum ada
-                val cloudPlaylistDto = CloudPlaylistDto(
-                    userId = userId,
-                    localPlaylistId = localPlaylistId,
-                    title = localPlaylist.title,
-                    thumbnailUrl = effectiveThumbnail,
-                    isPublic = effectiveIsPublic
-                )
-                val insertedPlaylist = supabase.postgrest["cloud_playlists"]
-                    .insert(cloudPlaylistDto) {
-                        select()
-                    }.decodeSingle<CloudPlaylistDto>()
-                cloudPlaylistId = insertedPlaylist.id
-                    ?: throw IllegalStateException("Gagal mendapatkan ID playlist cloud.")
-            }
-
-            if (pairs.isNotEmpty()) {
-                val cloudItems = pairs.mapIndexedNotNull { index, pair ->
-                    val song = songMap[pair.songId] ?: return@mapIndexedNotNull null
-                    CloudPlaylistItemDto(
-                        playlistId = cloudPlaylistId,
-                        videoId = song.videoId,
-                        title = song.title,
-                        artist = song.artistName?.firstOrNull() ?: "Unknown Artist",
-                        duration = song.durationSeconds,
-                        thumbnailUrl = song.thumbnails,
-                        position = index
-                    )
-                }
-
-                if (cloudItems.isNotEmpty()) {
-                    supabase.postgrest["cloud_playlist_items"].insert(cloudItems)
-                }
-            }
-
-            // Jika playlist ini publik, sinkronkan otomatis juga ke shared_playlists agar perubahan langsung ter-update di server
-            if (effectiveIsPublic) {
-                try {
-                    val sharedList = supabase.postgrest["shared_playlists"]
-                        .select { filter { eq("user_id", userId) } }
-                        .decodeList<com.tan.domain.data.entities.SharedPlaylist>()
-                    val existingShared = sharedList.firstOrNull { it.title.trim().equals(localPlaylist.title.trim(), ignoreCase = true) }
-                    if (existingShared != null && existingShared.id != null) {
-                        val sharedId = existingShared.id!!
-                        supabase.postgrest["shared_playlists"].update(existingShared.copy(title = localPlaylist.title, thumbnailUrl = effectiveThumbnail)) {
-                            filter { eq("id", sharedId) }
-                        }
-                        supabase.postgrest["shared_playlist_tracks"].delete { filter { eq("playlist_id", sharedId) } }
-                        if (pairs.isNotEmpty()) {
-                            val sharedTracks = pairs.mapNotNull { pair ->
-                                val song = songMap[pair.songId] ?: return@mapNotNull null
-                                com.tan.domain.data.entities.SharedPlaylistTrack(
-                                    playlistId = sharedId,
-                                    videoId = song.videoId,
-                                    title = song.title,
-                                    artists = song.artistName?.joinToString(", ") ?: "Unknown Artist",
-                                    durationSeconds = song.durationSeconds
-                                )
-                            }
-                            if (sharedTracks.isNotEmpty()) {
-                                supabase.postgrest["shared_playlist_tracks"].insert(sharedTracks)
-                            }
-                        }
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
-
-            emit(Result.success(cloudPlaylistId))
-        } catch (e: Exception) {
-            Logger.e("SocialRepositoryImpl", "syncUpPlaylist error: ${e.message}")
-            e.printStackTrace()
-            emit(Result.failure(e))
-        }
+            val saved = supabase.postgrest.rpc("gratify_replace_cloud_playlist_v2", buildJsonObject {
+                put("p_sync_id", syncId)
+                put("p_title", playlist.title)
+                put("p_thumbnail_url", (playlist.thumbnail ?: songs.values.firstOrNull()?.thumbnails)?.let(::JsonPrimitive) ?: JsonNull)
+                put("p_is_public", isPublic?.let(::JsonPrimitive) ?: JsonNull)
+                put("p_tracks", Json.encodeToJsonElement(items))
+            }).decodeSingle<PlaylistRpcResult>()
+            Result.success(saved.playlistId)
+        } catch (e: CancellationException) { throw e }
+        catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Result.failure(e) }
+        emit(result)
     }.flowOn(Dispatchers.IO)
 
     override suspend fun unshareOrHideCloudPlaylist(localPlaylistId: Long, userId: String): Flow<Result<Unit>> = flow {
-        try {
-            val existingList = supabase.postgrest["cloud_playlists"]
-                .select {
-                    filter {
-                        eq("user_id", userId)
-                        eq("local_playlist_id", localPlaylistId)
-                    }
-                }.decodeList<CloudPlaylistDto>()
-
-            for (existing in existingList) {
-                val id = existing.id ?: continue
-                supabase.postgrest["cloud_playlists"].update(existing.copy(isPublic = false)) {
-                    filter { eq("id", id) }
-                }
-                try {
-                    val sharedList = supabase.postgrest["shared_playlists"]
-                        .select { filter { eq("user_id", userId) } }
-                        .decodeList<com.tan.domain.data.entities.SharedPlaylist>()
-                    val existingShared = sharedList.firstOrNull { it.title.trim().equals(existing.title.trim(), ignoreCase = true) }
-                    if (existingShared != null && existingShared.id != null) {
-                        val sharedId = existingShared.id!!
-                        supabase.postgrest["shared_playlist_tracks"].delete { filter { eq("playlist_id", sharedId) } }
-                        supabase.postgrest["shared_playlists"].delete { filter { eq("id", sharedId) } }
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
-            emit(Result.success(Unit))
-        } catch (e: Exception) {
-            Logger.e("SocialRepositoryImpl", "unshareOrHideCloudPlaylist error: ${e.message}")
-            e.printStackTrace()
-            emit(Result.failure(e))
-        }
+        val result = try {
+            val syncId = localDataSource.ensurePlaylistSyncId(localPlaylistId, userId)
+            check(supabase.auth.currentUserOrNull()?.id == userId)
+            supabase.postgrest.rpc("gratify_hide_owned_playlist_v2", buildJsonObject { put("p_sync_id", syncId) })
+            Result.success(Unit)
+        } catch (e: CancellationException) { throw e }
+        catch (e: Exception) { Result.failure(e) }
+        emit(result)
     }.flowOn(Dispatchers.IO)
 
     override suspend fun deleteCloudPlaylist(localPlaylistId: Long, userId: String, title: String?): Flow<Result<Unit>> = flow {
-        try {
-            val allUserCloudPlaylists = supabase.postgrest["cloud_playlists"]
-                .select {
-                    filter {
-                        eq("user_id", userId)
-                    }
-                }.decodeList<CloudPlaylistDto>()
-
-            val existingList = allUserCloudPlaylists.filter {
-                it.localPlaylistId == localPlaylistId || (title != null && it.title.trim().equals(title.trim(), ignoreCase = true))
-            }
-
-            for (existing in existingList) {
-                val id = existing.id ?: continue
-                // cloud_playlist_items di-cascade delete otomatis via FK
-                supabase.postgrest["cloud_playlists"].delete {
-                    filter { eq("id", id) }
-                }
-
-                // Hapus shared_playlists milik owner (title bisa punya suffix "|||localId")
-                try {
-                    val sharedList = supabase.postgrest["shared_playlists"]
-                        .select { filter { eq("user_id", userId) } }
-                        .decodeList<com.tan.domain.data.entities.SharedPlaylist>()
-                    val matchingShared = sharedList.filter {
-                        it.title.trim().equals(existing.title.trim(), ignoreCase = true) ||
-                            it.title.substringBeforeLast("|||").trim().equals(existing.title.trim(), ignoreCase = true)
-                    }
-                    for (shared in matchingShared) {
-                        val sharedId = shared.id ?: continue
-                        supabase.postgrest["shared_playlist_tracks"].delete { filter { eq("playlist_id", sharedId) } }
-                        supabase.postgrest["shared_playlists"].delete { filter { eq("id", sharedId) } }
-                    }
-                } catch (e: Exception) {
-                    Logger.e("SocialRepositoryImpl", "Failed to delete shared_playlists: ${e.message}")
-                    e.printStackTrace()
-                }
-
-                // Hapus salinan di cloud_playlists milik user lain
-                // Match: title exact + thumbnail sama = pasti salinan dari playlist ini
-                try {
-                    val copies = supabase.postgrest["cloud_playlists"]
-                        .select {
-                            filter {
-                                neq("user_id", userId)
-                                eq("title", existing.title)
-                            }
-                        }.decodeList<CloudPlaylistDto>()
-                        .filter { it.thumbnailUrl == existing.thumbnailUrl }
-
-                    for (copy in copies) {
-                        val copyId = copy.id ?: continue
-                        supabase.postgrest["cloud_playlists"].delete {
-                            filter { eq("id", copyId) }
-                        }
-                    }
-                } catch (e: Exception) {
-                    Logger.e("SocialRepositoryImpl", "Failed to remove copies: ${e.message}")
-                    e.printStackTrace()
-                }
-            }
-            emit(Result.success(Unit))
-        } catch (e: Exception) {
-            Logger.e("SocialRepositoryImpl", "deleteCloudPlaylist error: ${e.message}")
-            e.printStackTrace()
-            emit(Result.failure(e))
-        }
+        val result = try {
+            val syncId = localDataSource.ensurePlaylistSyncId(localPlaylistId, userId)
+            check(supabase.auth.currentUserOrNull()?.id == userId)
+            supabase.postgrest.rpc("gratify_delete_owned_playlist_v2", buildJsonObject { put("p_sync_id", syncId) })
+            Result.success(Unit)
+        } catch (e: CancellationException) { throw e }
+        catch (e: Exception) { Result.failure(e) }
+        emit(result)
     }.flowOn(Dispatchers.IO)
 
     override suspend fun syncDownPlaylists(userId: String): Flow<Result<Int>> = flow {
-        try {
-            Logger.d("SocialRepositoryImpl", "Memulai sinkronisasi playlist untuk user: $userId")
-            val cloudPlaylists = supabase.postgrest["cloud_playlists"]
-                .select {
-                    filter {
-                        eq("user_id", userId)
-                    }
+        val result = try {
+            check(supabase.auth.currentUserOrNull()?.id == userId && localDataSource.getLibraryOwner() == userId)
+            try { flushPlaylistRemovals(userId) } catch (e: CancellationException) { throw e }
+            catch (_: Exception) { Logger.w("SocialRepositoryImpl", "Playlist deletion will retry") }
+            val pending = localDataSource.getLibraryRemovals(userId, "cloud_playlists").map { it.itemId }.toSet()
+            val tombstones = supabase.postgrest["playlist_sync_tombstones"]
+                .select { filter { eq("user_id", userId) } }.decodeList<PlaylistTombstone>().map { it.syncId }
+            check(supabase.auth.currentUserOrNull()?.id == userId)
+            localDataSource.applyPlaylistTombstones(userId, tombstones)
+            val playlists = supabase.postgrest["cloud_playlists"]
+                .select { filter { eq("user_id", userId) } }.decodeList<CloudPlaylistDto>()
+            var restored = 0
+            for (playlist in playlists) {
+                val cloudId = playlist.id ?: continue
+                // Legacy server rows receive their own ID in migration 007. Never guess by title/local ID.
+                val syncId = requireNotNull(playlist.clientSyncId) { "Playlist identity migration is required" }
+                if (syncId in pending || localDataSource.getLocalPlaylistBySyncId(syncId) != null) continue
+                val items = supabase.postgrest.rpc("gratify_get_cloud_playlist_items", buildJsonObject {
+                    put("p_playlist_id", cloudId)
+                }).decodeList<CloudPlaylistItemDto>()
+                val songs = items.map { item ->
+                    SongEntity(videoId = item.videoId, title = item.title, artistName = listOf(item.artist),
+                        duration = "${item.duration / 60}:${(item.duration % 60).toString().padStart(2, '0')}",
+                        durationSeconds = item.duration, thumbnails = item.thumbnailUrl,
+                        isAvailable = true, isExplicit = false, likeStatus = "INDIFFERENT",
+                        videoType = "MUSIC_VIDEO_TYPE_ATV", category = null, resultType = null)
                 }
-                .decodeList<CloudPlaylistDto>()
-
-            var restoreCount = 0
-            // Snapshot playlist lokal milik user aktif untuk mencegah DUPLIKASI.
-            // syncDown hanya boleh me-restore playlist yang belum ada di lokal (mis. device baru).
-            // Tanpa ini, setiap login ulang / ganti akun membuat salinan baru dari playlist
-            // publik milik sendiri (sering muncul sebagai duplikat kosong).
-            val existingLocals = (localDataSource.getAllLocalPlaylists(1000, 0) ?: emptyList()).toMutableList()
-            for (cloudPlaylist in cloudPlaylists) {
-                val cloudId = cloudPlaylist.id ?: continue
-
-                // Lewati kalau playlist ini sudah ada di lokal (cocok via id mapping atau judul).
-                val alreadyLocal = existingLocals.firstOrNull { local ->
-                    (cloudPlaylist.localPlaylistId != null && local.id == cloudPlaylist.localPlaylistId) ||
-                        local.title.trim().equals(cloudPlaylist.title.trim(), ignoreCase = true)
-                }
-                if (alreadyLocal != null) {
-                    // Pastikan mapping local_playlist_id di cloud tetap menunjuk ke playlist yang ada.
-                    if (cloudPlaylist.localPlaylistId != alreadyLocal.id) {
-                        try {
-                            supabase.postgrest["cloud_playlists"].update(
-                                cloudPlaylist.copy(localPlaylistId = alreadyLocal.id)
-                            ) { filter { eq("id", cloudId) } }
-                        } catch (e: Exception) {
-                            Logger.e("SocialRepositoryImpl", "Gagal update mapping saat dedup: ${e.message}")
-                        }
-                    }
-                    continue
-                }
-
-                // Unduh item lagu untuk playlist ini
-                val cloudItems = supabase.postgrest["cloud_playlist_items"]
-                    .select {
-                        filter {
-                            eq("playlist_id", cloudId)
-                        }
-                    }
-                    .decodeList<CloudPlaylistItemDto>()
-
-                val trackVideoIds = cloudItems.sortedBy { it.position }.map { it.videoId }
-
-                val localPlaylistEntity = LocalPlaylistEntity(
-                    title = cloudPlaylist.title,
-                    thumbnail = cloudPlaylist.thumbnailUrl,
-                    tracks = trackVideoIds
-                )
-
-                withContext(Dispatchers.IO) {
-                    localDataSource.insertLocalPlaylist(localPlaylistEntity)
-                }
-
-                // Ambil ID lokal dari playlist yang baru saja di-insert
-                val allPlaylists = localDataSource.getAllLocalPlaylists(100, 0) ?: emptyList()
-                val targetLocalPlaylist = allPlaylists.maxByOrNull { it.id }
-
-                if (targetLocalPlaylist != null) {
-                    // Daftarkan agar cloud playlist berikutnya tidak menduplikasi playlist ini.
-                    existingLocals.add(targetLocalPlaylist)
-                    // Update local_playlist_id di cloud agar mapping tetap sinkron setelah re-insert
-                    if (targetLocalPlaylist.id != cloudPlaylist.localPlaylistId) {
-                        try {
-                            supabase.postgrest["cloud_playlists"].update(
-                                CloudPlaylistDto(
-                                    id = cloudId,
-                                    userId = userId,
-                                    localPlaylistId = targetLocalPlaylist.id,
-                                    title = cloudPlaylist.title,
-                                    thumbnailUrl = cloudPlaylist.thumbnailUrl,
-                                    isPublic = cloudPlaylist.isPublic
-                                )
-                            ) {
-                                filter { eq("id", cloudId) }
-                            }
-                        } catch (e: Exception) {
-                            Logger.e("SocialRepositoryImpl", "Failed to update local_playlist_id mapping: ${e.message}")
-                        }
-                    }
-
-                    cloudItems.forEach { item ->
-                        withContext(Dispatchers.IO) {
-                            // Cek apakah song sudah ada di DB lokal
-                            val existingSong = localDataSource.getSong(item.videoId)
-                            if (existingSong == null) {
-                                val dummySong = SongEntity(
-                                    videoId = item.videoId,
-                                    title = item.title,
-                                    artistName = listOf(item.artist),
-                                    duration = "${item.duration ?: 0}s",
-                                    durationSeconds = item.duration ?: 0,
-                                    thumbnails = item.thumbnailUrl,
-                                    isAvailable = true,
-                                    isExplicit = false,
-                                    likeStatus = "INDIFFERENT",
-                                    videoType = "MUSIC_VIDEO_TYPE_ATV",
-                                    category = null,
-                                    resultType = null
-                                )
-                                localDataSource.insertSong(dummySong)
-                            }
-
-                            localDataSource.insertPairSongLocalPlaylist(
-                                PairSongLocalPlaylist(
-                                    playlistId = targetLocalPlaylist.id,
-                                    songId = item.videoId,
-                                    position = item.position,
-                                    inPlaylist = now()
-                                )
-                            )
-                        }
-                    }
-                    restoreCount++
-                }
+                check(supabase.auth.currentUserOrNull()?.id == userId)
+                if (localDataSource.restoreCloudPlaylist(userId,
+                    LocalPlaylistEntity(title = playlist.title, thumbnail = playlist.thumbnailUrl,
+                        tracks = songs.map { it.videoId }, syncId = syncId), songs)) restored++
             }
-
-            Logger.i("SocialRepositoryImpl", "Berhasil memulihkan $restoreCount playlist dari cloud.")
-            emit(Result.success(restoreCount))
-        } catch (e: Exception) {
-            Logger.e("SocialRepositoryImpl", "syncDownPlaylists error: ${e.message}")
-            e.printStackTrace()
-            emit(Result.failure(e))
-        }
+            Result.success(restored)
+        } catch (e: CancellationException) { throw e }
+        catch (e: Exception) { Result.failure(e) }
+        emit(result)
     }.flowOn(Dispatchers.IO)
 
     override suspend fun getUserPublicPlaylists(userId: String): Flow<Result<List<CloudPlaylistDto>>> = flow {
@@ -439,119 +164,26 @@ internal class SocialRepositoryImpl(
                 .decodeList<CloudPlaylistDto>()
             emit(Result.success(playlists))
         } catch (e: Exception) {
-            e.printStackTrace()
+            if (e is CancellationException) throw e
             emit(Result.failure(e))
         }
     }.flowOn(Dispatchers.IO)
 
     override suspend fun getCloudPlaylistItems(playlistId: String): Flow<Result<List<CloudPlaylistItemDto>>> = flow {
         try {
-            val items = supabase.postgrest["cloud_playlist_items"]
-                .select {
-                    filter {
-                        eq("playlist_id", playlistId)
-                    }
-                }
-                .decodeList<CloudPlaylistItemDto>()
+            val items = supabase.postgrest.rpc("gratify_get_cloud_playlist_items", buildJsonObject {
+                put("p_playlist_id", playlistId)
+            }).decodeList<CloudPlaylistItemDto>()
             emit(Result.success(items.sortedBy { it.position }))
         } catch (e: Exception) {
-            e.printStackTrace()
+            if (e is CancellationException) throw e
             emit(Result.failure(e))
         }
     }.flowOn(Dispatchers.IO)
 
-    override suspend fun cleanupDuplicatePlaylists(userId: String): Result<Int> = withContext(Dispatchers.IO) {
-        runCatching {
-            var removed = 0
-
-            // ---------- LOKAL: hapus duplikat KOSONG yang punya kembaran berisi ----------
-            val locals = localDataSource.getAllLocalPlaylists(1000, 0) ?: emptyList()
-            val localByTitle = locals.groupBy { it.title.trim().lowercase() }
-            for ((_, group) in localByTitle) {
-                if (group.size < 2) continue
-                val counted = group.map { pl ->
-                    pl to (localDataSource.getAllPlaylistPairSongByPosition(pl.id)?.size ?: 0)
-                }
-                // Hanya bersihkan bila ada kembaran yang berisi (biar tidak menghapus playlist kosong yang sah).
-                if (counted.none { it.second > 0 }) continue
-                counted.filter { it.second == 0 }.forEach { (pl, _) ->
-                    try {
-                        localDataSource.deleteLocalPlaylist(pl.id)
-                        removed++
-                    } catch (e: Exception) {
-                        Logger.e("SocialRepositoryImpl", "cleanup lokal gagal: ${e.message}")
-                    }
-                }
-            }
-            val survivingLocals = localDataSource.getAllLocalPlaylists(1000, 0) ?: emptyList()
-
-            // ---------- SERVER: cloud_playlists ----------
-            val cloudPlaylists = supabase.postgrest["cloud_playlists"]
-                .select { filter { eq("user_id", userId) } }
-                .decodeList<CloudPlaylistDto>()
-            for ((_, group) in cloudPlaylists.groupBy { it.title.trim().lowercase() }) {
-                if (group.size < 2) continue
-                val counted = group.map { cp ->
-                    val cnt = cp.id?.let { id ->
-                        supabase.postgrest["cloud_playlist_items"]
-                            .select { filter { eq("playlist_id", id) } }
-                            .decodeList<CloudPlaylistItemDto>().size
-                    } ?: 0
-                    cp to cnt
-                }
-                val keeper = counted.maxByOrNull { it.second }?.first ?: continue
-                counted.filter { it.first.id != keeper.id }.forEach { (dup, _) ->
-                    val dupId = dup.id ?: return@forEach
-                    try {
-                        supabase.postgrest["cloud_playlist_items"].delete { filter { eq("playlist_id", dupId) } }
-                        supabase.postgrest["cloud_playlists"].delete { filter { eq("id", dupId) } }
-                        removed++
-                    } catch (e: Exception) {
-                        Logger.e("SocialRepositoryImpl", "cleanup cloud gagal: ${e.message}")
-                    }
-                }
-                // Pastikan keeper menunjuk ke playlist lokal berjudul sama yang masih tersisa.
-                val localMatch = survivingLocals.firstOrNull { it.title.trim().equals(keeper.title.trim(), ignoreCase = true) }
-                if (localMatch != null && keeper.id != null && keeper.localPlaylistId != localMatch.id) {
-                    try {
-                        supabase.postgrest["cloud_playlists"].update(keeper.copy(localPlaylistId = localMatch.id)) {
-                            filter { eq("id", keeper.id!!) }
-                        }
-                    } catch (_: Exception) {}
-                }
-            }
-
-            // ---------- SERVER: shared_playlists (judul punya suffix "|||localId") ----------
-            val sharedList = supabase.postgrest["shared_playlists"]
-                .select { filter { eq("user_id", userId) } }
-                .decodeList<com.tan.domain.data.entities.SharedPlaylist>()
-            for ((_, group) in sharedList.groupBy { it.title.substringBeforeLast("|||").trim().lowercase() }) {
-                if (group.size < 2) continue
-                val counted = group.map { sp ->
-                    val cnt = sp.id?.let { id ->
-                        supabase.postgrest["shared_playlist_tracks"]
-                            .select { filter { eq("playlist_id", id) } }
-                            .decodeList<com.tan.domain.data.entities.SharedPlaylistTrack>().size
-                    } ?: 0
-                    sp to cnt
-                }
-                val keeper = counted.maxByOrNull { it.second }?.first ?: continue
-                counted.filter { it.first.id != keeper.id }.forEach { (dup, _) ->
-                    val dupId = dup.id ?: return@forEach
-                    try {
-                        supabase.postgrest["shared_playlist_tracks"].delete { filter { eq("playlist_id", dupId) } }
-                        supabase.postgrest["shared_playlists"].delete { filter { eq("id", dupId) } }
-                        removed++
-                    } catch (e: Exception) {
-                        Logger.e("SocialRepositoryImpl", "cleanup shared gagal: ${e.message}")
-                    }
-                }
-            }
-
-            Logger.i("SocialRepositoryImpl", "cleanupDuplicatePlaylists: $removed entri dihapus untuk user $userId")
-            removed
-        }.onFailure {
-            Logger.e("SocialRepositoryImpl", "cleanupDuplicatePlaylists error: ${it.message}")
-        }
+    override suspend fun cleanupDuplicatePlaylists(userId: String): Result<Int> {
+        // Equal titles are valid. Stable server identities enforce uniqueness for new writes.
+        // Historical rows need an explicit review before any merge or removal.
+        return Result.success(0)
     }
 }

@@ -4,6 +4,9 @@ import com.tan.domain.data.model.sync.SyncReport
 import kotlinx.coroutines.flow.Flow
 
 interface UserDataSyncRepository {
+    suspend fun activateLocalAccount(userId: String, legacyOwner: String?)
+    suspend fun deleteAccount(userId: String)
+
     suspend fun syncUp(userId: String): Flow<Result<SyncReport>>
     suspend fun syncDown(userId: String): Flow<Result<SyncReport>>
 

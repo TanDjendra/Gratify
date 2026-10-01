@@ -1,5 +1,7 @@
 package com.tan.gratify.ui.component
 
+import com.tan.gratify.ui.theme.GratifyColors
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -41,7 +43,7 @@ fun LoadingDialog(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large,
-                    color = Color(0xFF242424),
+                    color = GratifyColors.SurfaceRaised,
                     tonalElevation = AlertDialogDefaults.TonalElevation,
                     shadowElevation = 1.dp,
                 ) {

@@ -1,5 +1,7 @@
 package com.tan.data.db.datasource
 
+import kotlin.uuid.Uuid
+import kotlin.uuid.ExperimentalUuidApi
 import DatabaseDao
 import com.tan.domain.data.entities.AlbumEntity
 import com.tan.domain.data.entities.ArtistEntity
@@ -29,6 +31,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
 
+@OptIn(ExperimentalUuidApi::class)
 internal class LocalDataSource(
     private val databaseDao: DatabaseDao,
     private val dataStoreManager: DataStoreManager,
@@ -93,7 +96,8 @@ internal class LocalDataSource(
 
     fun getSongAsFlow(videoId: String) = databaseDao.getSongAsFlow(videoId)
 
-    suspend fun insertSong(song: SongEntity) = databaseDao.insertSong(song)
+    suspend fun insertSong(song: SongEntity) = databaseDao.insertOwnedSong(song, Uuid.random().toString())
+    suspend fun insertRemoteSong(song: SongEntity) = databaseDao.insertSong(song)
 
     suspend fun updateThumbnailsSongEntity(
         thumbnail: String,
@@ -101,6 +105,13 @@ internal class LocalDataSource(
     ) = databaseDao.updateThumbnailsSongEntity(thumbnail, videoId)
 
     suspend fun updateListenCount(videoId: String) = databaseDao.updateTotalPlayTime(videoId)
+
+    suspend fun updateMixMetadata(videoId: String, bpm: Int?, musicKey: String?, keyScale: String?) =
+        databaseDao.updateMixMetadata(videoId, bpm, musicKey, keyScale)
+
+    suspend fun getPlayHistory(limit: Int, offset: Int) = databaseDao.getPlayHistory(limit, offset)
+    suspend fun restorePlayHistory(videoId: String, count: Long, playedAt: LocalDateTime) =
+        databaseDao.restorePlayHistory(videoId, count, playedAt)
 
     suspend fun resetTotalPlayTime(videoId: String) = databaseDao.resetTotalPlayTime(videoId)
 
@@ -117,7 +128,7 @@ internal class LocalDataSource(
     suspend fun updateLiked(
         liked: Int,
         videoId: String,
-    ) = databaseDao.updateLiked(liked, videoId)
+    ) = setLibraryFlag("user_liked_songs", videoId, liked, now())
 
     /** Varian yang mempertahankan tanggal like asli (dipakai saat memulihkan dari cloud). */
     suspend fun updateLiked(
@@ -145,7 +156,8 @@ internal class LocalDataSource(
 
     suspend fun getAllArtists(limit: Int) = databaseDao.getAllArtists(limit)
 
-    suspend fun insertArtist(artist: ArtistEntity) = databaseDao.insertArtist(artist)
+    suspend fun insertArtist(artist: ArtistEntity) = databaseDao.insertOwnedArtist(artist, Uuid.random().toString())
+    suspend fun insertRemoteArtist(artist: ArtistEntity) = databaseDao.insertArtist(artist)
 
     suspend fun updateArtistImage(
         channelId: String,
@@ -155,7 +167,7 @@ internal class LocalDataSource(
     suspend fun updateFollowed(
         followed: Int,
         channelId: String,
-    ) = databaseDao.updateFollowed(followed, channelId)
+    ) = setLibraryFlag("user_followed_artists", channelId, followed, now())
 
     /** Varian yang mempertahankan tanggal follow asli (dipakai saat memulihkan dari cloud). */
     suspend fun updateFollowed(
@@ -181,12 +193,13 @@ internal class LocalDataSource(
 
     suspend fun getAllAlbums(limit: Int) = databaseDao.getAllAlbums(limit)
 
-    suspend fun insertAlbum(album: AlbumEntity) = databaseDao.insertAlbum(album)
+    suspend fun insertAlbum(album: AlbumEntity) = databaseDao.insertOwnedAlbum(album, Uuid.random().toString())
+    suspend fun insertRemoteAlbum(album: AlbumEntity) = databaseDao.insertAlbum(album)
 
     suspend fun updateAlbumLiked(
         liked: Int,
         albumId: String,
-    ) = databaseDao.updateAlbumLiked(liked, albumId)
+    ) = setLibraryFlag("user_saved_albums", albumId, liked, now())
 
     /** Varian yang mempertahankan tanggal simpan asli (dipakai saat memulihkan dari cloud). */
     suspend fun updateAlbumLiked(
@@ -291,8 +304,19 @@ internal class LocalDataSource(
 
     suspend fun insertLocalPlaylist(localPlaylist: LocalPlaylistEntity): Long {
         val email = getActiveUserEmail()
-        return databaseDao.insertLocalPlaylist(localPlaylist.copy(ownerEmail = email))
-    }  suspend fun deleteLocalPlaylist(id: Long) = databaseDao.deleteLocalPlaylist(id)
+        return databaseDao.insertLocalPlaylist(localPlaylist.copy(ownerEmail = email, syncId = localPlaylist.syncId ?: Uuid.random().toString()))
+    }  suspend fun deleteLocalPlaylist(id: Long) = databaseDao.deleteOwnedLocalPlaylist(id, Uuid.random().toString())
+
+    suspend fun ensurePlaylistSyncId(id: Long, ownerId: String) =
+        databaseDao.ensurePlaylistSyncId(id, ownerId, Uuid.random().toString())
+
+    suspend fun getLocalPlaylistBySyncId(syncId: String) = databaseDao.getLocalPlaylistBySyncId(syncId)
+
+    suspend fun applyPlaylistTombstones(ownerId: String, syncIds: List<String>) =
+        databaseDao.applyPlaylistTombstones(ownerId, syncIds)
+
+    suspend fun restoreCloudPlaylist(ownerId: String, playlist: LocalPlaylistEntity, songs: List<SongEntity>) =
+        databaseDao.restoreCloudPlaylist(ownerId, playlist.copy(ownerEmail = getActiveUserEmail()), songs)
 
     suspend fun getLocalPlaylistBySourceSharedId(sharedPlaylistId: String) =
         databaseDao.getLocalPlaylistBySourceSharedId(sharedPlaylistId)
@@ -381,7 +405,7 @@ internal class LocalDataSource(
 
     suspend fun insertSetVideoId(setVideoIdEntity: SetVideoIdEntity) = databaseDao.insertSetVideoId(setVideoIdEntity)
 
-    suspend fun getSetVideoId(videoId: String) = databaseDao.getSetVideoId(videoId)
+    suspend fun getSetVideoId(videoId: String, youtubePlaylistId: String) = databaseDao.getSetVideoId(videoId, youtubePlaylistId)
 
     suspend fun insertPairSongLocalPlaylist(pairSongLocalPlaylist: PairSongLocalPlaylist) =
         databaseDao.insertPairSongLocalPlaylist(pairSongLocalPlaylist)
@@ -426,6 +450,10 @@ internal class LocalDataSource(
         null
     }
 
+    suspend fun getPlaylistTimePage(playlistId: Long, filter: FilterState, cutPoint: LocalDateTime?, songId: String) =
+        if (filter == FilterState.NewerFirst) databaseDao.getPlaylistTimePageDescending(playlistId, cutPoint, songId)
+        else databaseDao.getPlaylistTimePageAscending(playlistId, cutPoint, songId)
+
     suspend fun getPlaylistPairSongByTime(
         playlistId: Long,
         filterState: FilterState,
@@ -445,6 +473,8 @@ internal class LocalDataSource(
     }
 
     suspend fun getNewestPlaylistPairSong(playlistId: Long) = databaseDao.getNewestPlaylistPairSong(playlistId)
+
+    suspend fun movePlaylistSong(playlistId: Long, videoId: String, index: Int) = databaseDao.movePlaylistSong(playlistId, videoId, index)
 
     suspend fun editPositionOfSongInPlaylist(
         playlistId: Long,
@@ -621,4 +651,22 @@ internal class LocalDataSource(
         databaseDao.deleteAllEventArtists()
         databaseDao.deleteSearchHistory()
     }
+    @OptIn(ExperimentalUuidApi::class)
+    private suspend fun setLibraryFlag(table: String, item: String, flag: Int, date: LocalDateTime?) =
+        databaseDao.setLibraryFlag(table, item, flag, date, Uuid.random().toString())
+
+    suspend fun getLibraryRemovals(owner: String, table: String) = databaseDao.getLibraryRemovals(owner, table)
+    suspend fun getLibraryChanges(owner: String, table: String) = databaseDao.getLibraryChanges(owner, table)
+    suspend fun applyRemoteLibraryRemoval(table: String, item: String) {
+        when (table) {
+            "user_liked_songs" -> databaseDao.updateLiked(0, item, null)
+            "user_followed_artists" -> databaseDao.updateFollowed(0, item, null)
+            "user_saved_albums" -> databaseDao.updateAlbumLiked(0, item, null)
+        }
+    }
+    suspend fun acknowledgeLibraryRemoval(owner: String, table: String, item: String, revision: String) =
+        databaseDao.acknowledgeLibraryRemoval(owner, table, item, revision)
+
+    suspend fun getLibraryOwner() = databaseDao.getLibraryOwner()
+
 }

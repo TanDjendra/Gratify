@@ -1,5 +1,8 @@
 package com.tan.gratify.ui.component
 
+import com.tan.gratify.ui.theme.GratifyColors
+import com.tan.gratify.ui.theme.GratifyShapes
+
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -46,11 +49,11 @@ import kotlinx.coroutines.delay
 @Composable
 fun InfiniteBorderAnimationView(
     isAnimated: Boolean = false,
-    brush: Brush = Brush.sweepGradient(listOf(Color.Gray, Color.White)),
+    brush: Brush = Brush.sweepGradient(listOf(GratifyColors.TextSecondary, Color.White)),
     backgroundColor: Color = MaterialTheme.colorScheme.background,
     contentPadding: Dp = 0.dp,
     borderWidth: Dp = 1.dp,
-    shape: Shape = RoundedCornerShape(12.dp),
+    shape: Shape = GratifyShapes.medium,
     oneCircleDurationMillis: Int = 3000,
     content: @Composable () -> Unit,
 ) {
@@ -109,11 +112,11 @@ fun InfiniteBorderAnimationView(
 @Composable
 fun LimitedBorderAnimationView(
     isAnimated: Boolean = false,
-    brush: Brush = Brush.sweepGradient(listOf(Color.Gray, Color.White)),
+    brush: Brush = Brush.sweepGradient(listOf(GratifyColors.TextSecondary, Color.White)),
     backgroundColor: Color = MaterialTheme.colorScheme.background,
     contentPadding: Dp = 0.dp,
     borderWidth: Dp = 1.dp,
-    shape: Shape = RoundedCornerShape(12.dp),
+    shape: Shape = GratifyShapes.medium,
     oneCircleDurationMillis: Int = 3000,
     interactionNumber: Int = 1,
     content: @Composable () -> Unit,

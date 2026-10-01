@@ -56,6 +56,7 @@ private const val TAG = "LocalPlaylistRepositoryImpl"
 internal class LocalPlaylistRepositoryImpl(
     private val localDataSource: LocalDataSource,
     private val youTube: YouTube,
+    private val socialRepository: com.tan.domain.repository.SocialRepository,
 ) : LocalPlaylistRepository {
     override fun getLocalPlaylist(id: Long) =
         wrapDataResource {
@@ -109,7 +110,7 @@ internal class LocalPlaylistRepositoryImpl(
     ): Flow<PagingData<Pair<SongEntity, PairSongLocalPlaylist>>> {
         if (filter == FilterState.CustomOrder || filter == FilterState.Title) {
             return Pager(
-                config = PagingConfig(pageSize = 100, prefetchDistance = 5),
+                config = PagingConfig(pageSize = 50, prefetchDistance = 5),
                 pagingSourceFactory = {
                     LocalPlaylistPagingSource(
                         playlistId = id,
@@ -120,7 +121,7 @@ internal class LocalPlaylistRepositoryImpl(
             ).flow
         } else {
             return Pager(
-                config = PagingConfig(pageSize = 100, prefetchDistance = 5),
+                config = PagingConfig(pageSize = 50, prefetchDistance = 5),
                 pagingSourceFactory = {
                     LocalPlaylistTimeBasedPagingSource(
                         playlistId = id,
@@ -181,14 +182,28 @@ internal class LocalPlaylistRepositoryImpl(
     override suspend fun insertLocalPlaylistAndGetId(localPlaylist: LocalPlaylistEntity): Long =
         localDataSource.insertLocalPlaylist(localPlaylist)
 
-    override fun deleteLocalPlaylist(
-        id: Long,
-        successMessage: String,
-    ) = wrapMessageResource(
-        successMessage = successMessage,
-    ) {
-        localDataSource.deleteLocalPlaylist(id)
-    }
+    override fun deleteLocalPlaylist(id: Long, successMessage: String): Flow<LocalResource<String>> = flow {
+        emit(LocalResource.Loading())
+        val result = try {
+            localDataSource.deleteLocalPlaylist(id)
+            val owner = localDataSource.getLibraryOwner()
+            val cleaned = if (owner.isNullOrBlank()) true else try {
+                kotlinx.coroutines.withTimeoutOrNull(3_000) {
+                    socialRepository.flushPlaylistRemovals(owner)
+                    localDataSource.getLibraryRemovals(owner, "cloud_playlists").isEmpty()
+                } ?: false
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { false }
+            val legacyPending = !owner.isNullOrBlank() && localDataSource.getLibraryRemovals(owner, "cloud_playlists").any { it.itemId.toLongOrNull() != null }
+            LocalResource.Success(when {
+                cleaned -> successMessage
+                legacyPending -> "Playlist dihapus di perangkat ini. Cadangan cloud lama perlu ditinjau sebelum dihapus."
+                else -> "Playlist dihapus di perangkat ini. Penghapusan cloud akan dicoba ulang."
+            })
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+        catch (_: Exception) { LocalResource.Error<String>("Gagal menghapus playlist. Silakan coba lagi.") }
+        emit(result)
+    }.flowOn(Dispatchers.IO)
 
     override fun updateTitleLocalPlaylist(
         id: Long,
@@ -598,7 +613,7 @@ internal class LocalPlaylistRepositoryImpl(
             emit(LocalResource.Success(successMessage))
             val ytPlaylistId = localPlaylist.youtubePlaylistId
             if (ytPlaylistId != null) {
-                val setVideoId = localDataSource.getSetVideoId(song.videoId)?.setVideoId
+                val setVideoId = localDataSource.getSetVideoId(song.videoId, ytPlaylistId)?.setVideoId
                 if (setVideoId != null) {
                     youTube
                         .removeItemYouTubePlaylist(ytPlaylistId, song.videoId, setVideoId)
@@ -857,12 +872,11 @@ internal class LocalPlaylistRepositoryImpl(
         newPosition: Int,
     ): Flow<String> =
         flow {
-            localDataSource.editPositionOfSongInPlaylist(
+            localDataSource.movePlaylistSong(
                 playlistId,
                 videoId,
                 newPosition,
             )
-            delay(100)
             emit("Position updated")
         }.flowOn(Dispatchers.IO)
 
@@ -895,7 +909,7 @@ internal class LocalPlaylistRepositoryImpl(
 
             // Get all pairs ordered by position to resolve indexes
             val allPairs = localDataSource.getAllPlaylistPairSongByPosition(playlistId)
-            if (fromIndex >= allPairs.size || toIndex >= allPairs.size) {
+            if (fromIndex !in allPairs.indices || toIndex !in allPairs.indices) {
                 emit(LocalResource.Error("Index out of bounds"))
                 return@flow
             }
@@ -904,7 +918,7 @@ internal class LocalPlaylistRepositoryImpl(
             val movedVideoId = movedPair.songId
 
             // Resolve setVideoId of the moved item
-            val movedSetVideoIdEntity = localDataSource.getSetVideoId(movedVideoId)
+            val movedSetVideoIdEntity = localDataSource.getSetVideoId(movedVideoId, ytPlaylistId)
             val movedSetVideoId = movedSetVideoIdEntity?.setVideoId ?: run {
                 emit(LocalResource.Error("SetVideoId not found for moved item: $movedVideoId"))
                 return@flow
@@ -918,14 +932,14 @@ internal class LocalPlaylistRepositoryImpl(
                 val successorIndex = toIndex + 1
                 if (successorIndex < allPairs.size) {
                     val successorVideoId = allPairs[successorIndex].songId
-                    localDataSource.getSetVideoId(successorVideoId)?.setVideoId
+                    localDataSource.getSetVideoId(successorVideoId, ytPlaylistId)?.setVideoId
                 } else {
                     null // Move to end
                 }
             } else {
                 // Moving up: successor is the item currently at toIndex
                 val successorVideoId = allPairs[toIndex].songId
-                localDataSource.getSetVideoId(successorVideoId)?.setVideoId
+                localDataSource.getSetVideoId(successorVideoId, ytPlaylistId)?.setVideoId
             }
 
             // Step 1: Call YouTube API
@@ -942,19 +956,7 @@ internal class LocalPlaylistRepositoryImpl(
                     return@flow
                 }
 
-            // Step 2: Update local DB positions
-            val movedPosition = movedPair.position
-            val targetPosition = allPairs[toIndex].position
-
-            if (fromIndex < toIndex) {
-                // Moving down: shift items between (from, to] backward by 1
-                localDataSource.shiftPositionsBackward(playlistId, movedPosition, targetPosition)
-            } else {
-                // Moving up: shift items between [to, from) forward by 1
-                localDataSource.shiftPositionsForward(playlistId, targetPosition, movedPosition)
-            }
-            // Place the moved item at the target position
-            localDataSource.editPositionOfSongInPlaylist(playlistId, movedVideoId, targetPosition)
+            localDataSource.movePlaylistSong(playlistId, movedVideoId, toIndex)
 
             emit(LocalResource.Success("Position updated"))
         }.flowOn(Dispatchers.IO)

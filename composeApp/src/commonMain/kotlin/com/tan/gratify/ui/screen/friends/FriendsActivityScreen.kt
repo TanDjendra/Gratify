@@ -1,5 +1,15 @@
 package com.tan.gratify.ui.screen.friends
 
+import com.tan.gratify.ui.theme.GratifyColors
+import com.tan.gratify.ui.theme.GratifyShapes
+
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+
+import org.jetbrains.compose.resources.stringResource
+import gratify.composeapp.generated.resources.Res
+import gratify.composeapp.generated.resources.friends
+
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -39,10 +49,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
-import coil3.compose.LocalPlatformContext
-import coil3.request.CachePolicy
-import coil3.request.ImageRequest
-import coil3.request.crossfade
 import com.tan.domain.manager.DataStoreManager
 import com.tan.gratify.extension.copy
 import com.tan.gratify.extension.isScrollingUp
@@ -51,16 +57,11 @@ import com.tan.gratify.ui.component.EndOfPage
 import com.tan.gratify.ui.component.UserAvatar
 import com.tan.gratify.ui.navigation.destination.social.UserProfileDestination
 import com.tan.gratify.ui.navigation.destination.search.SearchDestination
-import com.tan.gratify.ui.theme.transparent
 import com.tan.gratify.ui.theme.typo
 import com.tan.gratify.viewModel.FriendActivityItem
 import com.tan.gratify.viewModel.FriendsActivityViewModel
 import com.tan.gratify.viewModel.SharedViewModel
-import dev.chrisbanes.haze.hazeEffect
-import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
-import dev.chrisbanes.haze.materials.HazeMaterials
-import dev.chrisbanes.haze.rememberHazeState
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -95,7 +96,6 @@ fun FriendsActivityScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val dataStoreManager: DataStoreManager = koinInject()
 
-    val hazeState = rememberHazeState(blurEnabled = true)
     var topAppBarHeight by remember { mutableStateOf(0.dp) }
 
     var showNoteEditor by remember { mutableStateOf(false) }
@@ -115,12 +115,12 @@ fun FriendsActivityScreen(
             }
     }
 
-    Box(modifier = Modifier.fillMaxSize().hazeSource(hazeState)) {
+    Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             state = listState,
             contentPadding = innerPadding.copy(
                 top = topAppBarHeight + 16.dp,
-                bottom = innerPadding.calculateBottomPadding() + 80.dp
+                bottom = innerPadding.calculateBottomPadding() + 16.dp
             ),
             verticalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.fillMaxSize()
@@ -134,7 +134,7 @@ fun FriendsActivityScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(GratifyShapes.medium)
                         .clickable {
                             noteDraft = if (myNoteActive) state.myNote ?: "" else ""
                             showNoteEditor = true
@@ -157,7 +157,7 @@ fun FriendsActivityScreen(
                             Text(
                                 text = if (myNoteActive) state.myNote ?: "" else "Bagikan catatan… ✏️",
                                 style = typo().bodyMedium,
-                                color = if (myNoteActive) Color.White else Color.Gray,
+                                color = if (myNoteActive) Color.White else GratifyColors.TextSecondary,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -166,7 +166,7 @@ fun FriendsActivityScreen(
                         Text(
                             text = "Catatan kamu",
                             style = typo().labelSmall,
-                            color = Color.Gray
+                            color = GratifyColors.TextSecondary
                         )
                     }
                 }
@@ -210,7 +210,7 @@ fun FriendsActivityScreen(
                         Text(
                             text = "Aktivitas mendengarkan hanya muncul jika kamu dan pengguna lain saling mengikuti (berteman). Cari dan ikuti balik temanmu untuk melihat aktivitas mereka!",
                             style = typo().bodyMedium,
-                            color = Color.Gray,
+                            color = GratifyColors.TextSecondary,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -240,38 +240,15 @@ fun FriendsActivityScreen(
     // Header (Top App Bar) with Haze matching LibraryScreen / HomeScreen
     Column(
         Modifier
-            .background(transparent)
-            .hazeEffect(hazeState, style = HazeMaterials.ultraThin()) {
-                blurEnabled = true
-            }.onGloballyPositioned { coordinates ->
+            .background(MaterialTheme.colorScheme.background).onGloballyPositioned { coordinates ->
                 topAppBarHeight = with(density) { coordinates.size.height.toDp() }
             },
     ) {
-        TopAppBar(
-            windowInsets = TopAppBarDefaults.windowInsets.exclude(
-                TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Start)
-            ),
-            title = {
-                val appProfileImage by dataStoreManager.getString("AppProfileImage").collectAsStateWithLifecycle(initialValue = "")
-                val appProfileName by dataStoreManager.getString("AppProfileName").collectAsStateWithLifecycle(initialValue = "")
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable { onOpenDrawer() }
-                ) {
-                    UserAvatar(
-                        imageUrl = appProfileImage,
-                        name = appProfileName,
-                        modifier = Modifier.size(32.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = "Teman",
-                        style = typo().titleLarge.copy(fontWeight = FontWeight.Bold),
-                        color = Color.White,
-                    )
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+        val headerImage by dataStoreManager.getString("AppProfileImage").collectAsStateWithLifecycle(initialValue = "")
+        val headerName by dataStoreManager.getString("AppProfileName").collectAsStateWithLifecycle(initialValue = "")
+        com.tan.gratify.ui.component.ScreenHeader(
+            title = stringResource(Res.string.friends), profileName = headerName,
+            profileImage = headerImage, onOpenProfile = onOpenDrawer,
             actions = {
                 IconButton(onClick = { navController.navigate(SearchDestination) }) {
                     Icon(Icons.Rounded.Search, "Search", tint = Color.White)
@@ -279,41 +256,41 @@ fun FriendsActivityScreen(
                 IconButton(onClick = { viewModel.loadFriendsActivity() }) {
                     Icon(Icons.Rounded.Refresh, "Refresh", tint = Color.White)
                 }
-            }
+            },
         )
     }
 
     if (showNoteEditor) {
         AlertDialog(
             onDismissRequest = { showNoteEditor = false },
-            containerColor = Color(0xFF282828),
+            containerColor = GratifyColors.SurfaceRaised,
             title = { Text("Catatan kamu", color = Color.White, fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     Text(
                         text = "Ekspresikan lagu atau suasana hatimu — tampil ke teman.",
                         style = typo().bodySmall,
-                        color = Color.Gray
+                        color = GratifyColors.TextSecondary
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     OutlinedTextField(
                         value = noteDraft,
                         onValueChange = { if (it.length <= 100) noteDraft = it },
-                        placeholder = { Text("Tulis catatan…", color = Color.Gray) },
+                        placeholder = { Text("Tulis catatan…", color = GratifyColors.TextSecondary) },
                         maxLines = 3,
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = Color.White,
                             unfocusedTextColor = Color.White,
-                            focusedBorderColor = Color(0xFF1DB954),
-                            unfocusedBorderColor = Color.Gray,
-                            cursorColor = Color(0xFF1DB954)
+                            focusedBorderColor = GratifyColors.Accent,
+                            unfocusedBorderColor = GratifyColors.TextSecondary,
+                            cursorColor = GratifyColors.Accent
                         )
                     )
                     Text(
                         text = "${noteDraft.length}/100",
                         style = typo().labelSmall,
-                        color = Color.Gray,
+                        color = GratifyColors.TextSecondary,
                         modifier = Modifier.align(Alignment.End).padding(top = 4.dp)
                     )
                 }
@@ -322,13 +299,13 @@ fun FriendsActivityScreen(
                 TextButton(onClick = {
                     viewModel.updateMyNote(noteDraft)
                     showNoteEditor = false
-                }) { Text("Simpan", color = Color(0xFF1DB954), fontWeight = FontWeight.Bold) }
+                }) { Text("Simpan", color = GratifyColors.Accent, fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
                 TextButton(onClick = {
                     viewModel.updateMyNote("")
                     showNoteEditor = false
-                }) { Text("Hapus", color = Color.Gray) }
+                }) { Text("Hapus", color = GratifyColors.TextSecondary) }
             }
         )
     }
@@ -354,9 +331,9 @@ fun FriendListItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(GratifyShapes.medium)
             .background(Color.White.copy(alpha = 0.04f))
-            .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(12.dp))
+            .border(1.dp, Color.White.copy(alpha = 0.06f), GratifyShapes.medium)
             .padding(14.dp)
     ) {
         // User info row
@@ -373,10 +350,10 @@ fun FriendListItem(
                         .clip(CircleShape)
                         .background(
                             Brush.linearGradient(
-                                colors = listOf(Color(0xFF5A5A5A), Color(0xFF2B2B2B))
+                                colors = listOf(GratifyColors.AccentContainer, GratifyColors.SurfaceRaised)
                             )
                         )
-                        .border(1.dp, Color(0xFF8E8E8E), CircleShape),
+                        .border(1.dp, GratifyColors.Outline, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     if (!item.userProfile.avatarUrl.isNullOrEmpty()) {
@@ -413,8 +390,8 @@ fun FriendListItem(
                         .size(13.dp)
                         .scale(if (item.isOnline) pulseScale else 1f)
                         .clip(CircleShape)
-                        .background(if (item.isOnline) Color(0xFF1DB954) else Color.Gray)
-                        .border(2.dp, Color(0xFF121212), CircleShape)
+                        .background(if (item.isOnline) GratifyColors.Accent else GratifyColors.TextSecondary)
+                        .border(2.dp, GratifyColors.Background, CircleShape)
                 )
             }
 
@@ -433,7 +410,7 @@ fun FriendListItem(
                     Spacer(modifier = Modifier.height(4.dp))
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
+                            .clip(GratifyShapes.small)
                             .background(Color.White.copy(alpha = 0.08f))
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
@@ -451,7 +428,7 @@ fun FriendListItem(
                     Text(
                         text = item.lastActiveText,
                         style = typo().bodySmall,
-                        color = if (item.isOnline) Color(0xFF1DB954) else Color.Gray
+                        color = if (item.isOnline) GratifyColors.Accent else GratifyColors.TextSecondary
                     )
                 }
             }
@@ -465,7 +442,7 @@ fun FriendListItem(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(GratifyShapes.small)
                     .background(Color.White.copy(alpha = 0.05f))
                     .clickable { onSongClick() }
                     .padding(10.dp)
@@ -478,13 +455,13 @@ fun FriendListItem(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(RoundedCornerShape(6.dp))
-                            .background(Color(0xFF1DB954).copy(alpha = 0.2f)),
+                            .background(GratifyColors.Accent.copy(alpha = 0.2f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.PlayArrow,
                             contentDescription = "Putar",
-                            tint = Color(0xFF1DB954),
+                            tint = GratifyColors.Accent,
                             modifier = Modifier.size(22.dp)
                         )
                     }
@@ -502,7 +479,7 @@ fun FriendListItem(
                         Text(
                             text = item.artistName,
                             style = typo().bodySmall,
-                            color = Color.Gray,
+                            color = GratifyColors.TextSecondary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -514,7 +491,7 @@ fun FriendListItem(
                 Box(
                     modifier = Modifier
                         .clip(CircleShape)
-                        .background(Color(0xFF1DB954))
+                        .background(GratifyColors.Accent)
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Text(

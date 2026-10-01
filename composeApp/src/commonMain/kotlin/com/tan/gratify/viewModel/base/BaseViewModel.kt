@@ -9,6 +9,7 @@ import com.tan.logger.Logger
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -81,7 +82,7 @@ abstract class BaseViewModel :
         }
 
     // Loading dialog
-    private val _showLoadingDialog: MutableStateFlow<Pair<Boolean, String>> = MutableStateFlow(false to getString(Res.string.loading))
+    private val _showLoadingDialog: MutableStateFlow<Pair<Boolean, String>> = MutableStateFlow(false to "")
     val showLoadingDialog: StateFlow<Pair<Boolean, String>> get() = _showLoadingDialog
 
     fun showLoadingDialog(message: String? = null) {
@@ -89,7 +90,7 @@ abstract class BaseViewModel :
     }
 
     fun hideLoadingDialog() {
-        _showLoadingDialog.value = false to getString(Res.string.loading)
+        _showLoadingDialog.update { false to it.second }
     }
 
     private fun getNowPlayingVideoId() {

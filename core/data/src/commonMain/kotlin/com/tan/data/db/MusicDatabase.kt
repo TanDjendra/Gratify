@@ -1,6 +1,9 @@
 package com.tan.data.db
 
 import DatabaseDao
+import com.tan.domain.data.entities.AccountLibraryState
+import com.tan.domain.data.entities.AccountLibrarySnapshot
+import com.tan.domain.data.entities.LibraryRemoval
 import androidx.room.AutoMigration
 import androidx.room.ConstructedBy
 import androidx.room.Database
@@ -32,13 +35,14 @@ import com.tan.domain.data.entities.analytics.PlaybackEventEntity
 @ConstructedBy(MusicDatabaseConstructor::class)
 @Database(
     entities = [
+        AccountLibraryState::class, AccountLibrarySnapshot::class, LibraryRemoval::class,
         NewFormatEntity::class, SongInfoEntity::class, SearchHistory::class, SongEntity::class, ArtistEntity::class,
         AlbumEntity::class, PlaylistEntity::class, LocalPlaylistEntity::class, LyricsEntity::class, QueueEntity::class,
         SetVideoIdEntity::class, PairSongLocalPlaylist::class, GoogleAccountEntity::class, FollowedArtistSingleAndAlbum::class,
         NotificationEntity::class, TranslatedLyricsEntity::class, PodcastsEntity::class, EpisodeEntity::class,
         YourYouTubePlaylistList::class, PlaybackEventEntity::class, EventArtistEntity::class
     ],
-    version = 25,
+    version = 27,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 2, to = 3), AutoMigration(
@@ -78,6 +82,8 @@ import com.tan.domain.data.entities.analytics.PlaybackEventEntity
         AutoMigration(20, 23),
         AutoMigration(23, 24),
         AutoMigration(24, 25),
+        AutoMigration(25, 26),
+        AutoMigration(26, 27),
     ],
 )
 @TypeConverters(Converters::class)

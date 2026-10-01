@@ -1,15 +1,17 @@
 package com.tan.gratify.ui.screen
 
+import com.tan.gratify.ui.theme.GratifyShapes
+
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.zIndex
@@ -40,12 +42,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarDuration
@@ -53,7 +53,6 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.font.FontWeight
@@ -64,8 +63,6 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.window.core.layout.WindowSizeClass.Companion.WIDTH_DP_MEDIUM_LOWER_BOUND
@@ -74,60 +71,36 @@ import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.m3.markdownTypography
 import com.tan.domain.data.player.GenericMediaItem
 import com.tan.domain.manager.DataStoreManager
-import com.tan.domain.manager.DataStoreManager.Values.TRUE
 import com.tan.gratify.Platform
 import com.tan.gratify.expect.Orientation
 import com.tan.gratify.expect.currentOrientation
 import com.tan.gratify.expect.downloadAndInstallApk
-import com.tan.gratify.expect.ui.layerBackdrop
-import com.tan.gratify.expect.ui.rememberBackdrop
 import com.tan.gratify.extension.copy
 import com.tan.gratify.getPlatform
 import com.tan.gratify.ui.component.AppBottomNavigationBar
 import com.tan.gratify.ui.component.AppNavigationRail
 import com.tan.gratify.ui.component.ProfileDrawerContent
-import com.tan.gratify.ui.component.LiquidGlassAppBottomNavigationBar
-import com.tan.gratify.ui.navigation.destination.home.HomeDestination
 import com.tan.gratify.ui.navigation.destination.home.ProfileDestination
 import com.tan.gratify.ui.navigation.destination.home.SettingsDestination
 import com.tan.gratify.ui.navigation.destination.home.NotificationDestination
-import com.tan.gratify.ui.navigation.destination.friends.FriendsDestination
 import com.tan.gratify.ui.navigation.destination.home.RecentlySongsDestination
-import com.tan.gratify.ui.navigation.destination.library.LibraryDestination
 import com.tan.gratify.ui.navigation.destination.list.AlbumDestination
 import com.tan.gratify.ui.navigation.destination.list.ArtistDestination
 import com.tan.gratify.ui.navigation.destination.list.PlaylistDestination
-import com.tan.gratify.ui.navigation.destination.login.CreateProfileDestination
 import com.tan.gratify.ui.navigation.destination.player.FullscreenDestination
-import com.tan.gratify.ui.navigation.destination.search.SearchDestination
-import com.tan.gratify.ui.navigation.destination.list.LocalPlaylistDestination
-import com.tan.gratify.ui.navigation.destination.library.LibraryDynamicPlaylistDestination
 import com.tan.gratify.ui.navigation.destination.library.AddSongsToPlaylistDestination
 import com.tan.gratify.ui.navigation.destination.library.ArtistSelectionDestination
-import com.tan.gratify.ui.screen.friends.FriendsActivityScreen
 
-import com.tan.gratify.ui.navigation.graph.homeScreenGraph
-import com.tan.gratify.ui.navigation.graph.libraryScreenGraph
-import com.tan.gratify.ui.navigation.graph.listScreenGraph
-import com.tan.gratify.ui.navigation.graph.loginScreenGraph
-import com.tan.gratify.ui.screen.home.HomeScreen
-import com.tan.gratify.ui.screen.library.LibraryScreen
-import com.tan.gratify.ui.screen.search.SearchScreen
+import com.tan.gratify.ui.navigation.graph.AppNavigationGraph
 import com.tan.gratify.ui.screen.player.FullscreenPlayer
 import com.tan.gratify.ui.screen.player.NowPlayingScreen
 import com.tan.gratify.ui.screen.player.NowPlayingScreenContent
-import com.tan.gratify.ui.screen.home.ProfileScreen
-import com.tan.gratify.ui.theme.AppTheme
 import com.tan.gratify.ui.theme.fontFamily
 import com.tan.gratify.ui.theme.typo
 import com.tan.gratify.utils.VersionManager
 import com.tan.gratify.viewModel.SettingsViewModel
 import com.tan.gratify.viewModel.SharedViewModel
 import com.tan.logger.Logger
-import dev.chrisbanes.haze.hazeEffect
-import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.materials.HazeMaterials
-import dev.chrisbanes.haze.rememberHazeState
 import gratify.composeapp.generated.resources.Res
 import gratify.composeapp.generated.resources.cancel
 import gratify.composeapp.generated.resources.do_not_show_again
@@ -140,16 +113,13 @@ import gratify.composeapp.generated.resources.this_link_is_not_supported
 import gratify.composeapp.generated.resources.unknown
 import gratify.composeapp.generated.resources.update_available
 import gratify.composeapp.generated.resources.update_message
-import gratify.composeapp.generated.resources.version_format
 import gratify.composeapp.generated.resources.yes
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.format
 import kotlinx.datetime.format.MonthNames
 import kotlinx.datetime.format.char
-import com.tan.gratify.viewModel.SnackbarEvent
 import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
@@ -188,8 +158,6 @@ fun MainScreen(
     val showNotificationPermissionDialog by viewModel.showNotificationPermissionDialog.collectAsStateWithLifecycle()
 
     val updateResponse by viewModel.updateResponse.collectAsStateWithLifecycle()
-    val isLiquidGlassEnabled by viewModel.getEnableLiquidGlass().collectAsStateWithLifecycle(initialValue = DataStoreManager.FALSE)
-    val isTranslucentBottomBar by viewModel.getTranslucentBottomBar().collectAsStateWithLifecycle(initialValue = DataStoreManager.FALSE)
 
     LaunchedEffect(Unit) {
         viewModel.snackbarEvent.collect { event ->
@@ -212,7 +180,6 @@ fun MainScreen(
     var isNavBarVisible by rememberSaveable { mutableStateOf(true) }
     var shouldShowUpdateDialog by rememberSaveable { mutableStateOf(false) }
 
-    val hazeState = rememberHazeState(blurEnabled = true)
 
     LaunchedEffect(nowPlayingData) {
         isShowMiniPlayer = !(nowPlayingData?.mediaItem == null || nowPlayingData?.mediaItem == GenericMediaItem.EMPTY)
@@ -312,9 +279,10 @@ fun MainScreen(
         val response = updateData ?: return@LaunchedEffect
         val currentVersion = VersionManager.getVersionName()
         val minVersion = response.minVersion ?: "2.0.0"
-        val isForceUpdate = VersionManager.isVersionLower(currentVersion, minVersion)
-        if ((viewModel.showedUpdateDialog || isForceUpdate) &&
-            response.tagName != getString(Res.string.version_format, currentVersion)
+        val hasDownload = response.apkUrl.startsWith("https://")
+        val isForceUpdate = hasDownload && VersionManager.isVersionLower(currentVersion, minVersion)
+        if (hasDownload && (viewModel.showedUpdateDialog || isForceUpdate) &&
+            VersionManager.isVersionLower(currentVersion, response.tagName)
         ) {
             shouldShowUpdateDialog = true
         }
@@ -340,13 +308,9 @@ fun MainScreen(
         isNavBarVisible = !isInFullscreen && !isArtistSelection && !isAddSongsToPlaylist
     }
 
-    var isScrolledToTop by rememberSaveable { mutableStateOf(false) }
-    val isScrolledToTopCallback: (Boolean) -> Unit = { isScrolledToTop = it }
-
     val isTablet = windowSize.isWidthAtLeastBreakpoint(WIDTH_DP_MEDIUM_LOWER_BOUND)
     val isTabletLandscape = isTablet && currentOrientation() == Orientation.LANDSCAPE
 
-    val backdrop = rememberBackdrop()
     
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
@@ -390,7 +354,7 @@ fun MainScreen(
                         .zIndex(10f)
                 ) {
                     AnimatedVisibility(
-                        isShowMiniPlayer && isNavBarVisible && isLiquidGlassEnabled == DataStoreManager.FALSE,
+                        isShowMiniPlayer && isNavBarVisible,
                         enter = fadeIn() + slideInHorizontally(),
                         exit = fadeOut(),
                     ) {
@@ -400,7 +364,6 @@ fun MainScreen(
                                 .fillMaxWidth()
                                 .padding(horizontal = 12.dp)
                                 .padding(bottom = 4.dp),
-                            backdrop = backdrop,
                             onClick = { isShowNowPlaylistScreen = true },
                             onClose = {
                                 viewModel.stopPlayer()
@@ -409,44 +372,21 @@ fun MainScreen(
                         )
                     }
                     
-                    AnimatedVisibility(
-                        isNavBarVisible,
-                        enter = fadeIn() + slideInHorizontally(),
-                        exit = fadeOut(),
-                    ) {
-                        if (isLiquidGlassEnabled == TRUE) {
-                            LiquidGlassAppBottomNavigationBar(
-                                navController = navController,
-                                backdrop = backdrop,
-                                viewModel = viewModel,
-                                onOpenNowPlaying = { isShowNowPlaylistScreen = true },
-                                isScrolledToTop = isScrolledToTop,
-                            ) { klass ->
-                                viewModel.reloadDestination(klass)
-                            }
-                        } else {
-                            AppBottomNavigationBar(
-                                navController = navController,
-                                isTranslucentBackground = isTranslucentBottomBar == TRUE,
-                            ) { klass ->
-                                viewModel.reloadDestination(klass)
-                            }
+                    if (isNavBarVisible) {
+                        AppBottomNavigationBar(navController = navController) { destination ->
+                            viewModel.reloadDestination(destination)
                         }
                     }
                 }
             }
         },
         content = { innerPadding ->
+            val destinationPadding = if (isTablet && isShowMiniPlayer && isNavBarVisible) {
+                innerPadding.copy(bottom = innerPadding.calculateBottomPadding() + 84.dp)
+            } else innerPadding
             Box(
                 Modifier
-                    .fillMaxSize()
-                    .then(
-                        if (isLiquidGlassEnabled == TRUE && !isTablet) {
-                            Modifier.layerBackdrop(backdrop)
-                        } else {
-                            Modifier
-                        },
-                    ),
+                    .fillMaxSize(),
             ) {
                 Row(Modifier.fillMaxSize()) {
                     if (isTablet && isNavBarVisible) {
@@ -461,92 +401,18 @@ fun MainScreen(
                     ) {
                         Box(
                             Modifier
-                                .fillMaxSize()
-                                .then(
-                                    if (isLiquidGlassEnabled == TRUE && isTablet && !isInFullscreen) {
-                                        Modifier.layerBackdrop(backdrop)
-                                    } else {
-                                        Modifier
-                                    },
-                                ).hazeSource(hazeState),
+                                .fillMaxSize(),
                         ) {
-                            // Nested NavHost khusus untuk Main Flow (Home, Search, Library)
-                            NavHost(
+                            AppNavigationGraph(
+                                innerPadding = destinationPadding,
                                 navController = navController,
-                                startDestination = HomeDestination,
-                                enterTransition = { fadeIn(animationSpec = tween(300)) },
-                                exitTransition = { fadeOut(animationSpec = tween(300)) },
-                                popEnterTransition = { fadeIn(animationSpec = tween(300)) },
-                                popExitTransition = { fadeOut(animationSpec = tween(300)) },
-                            ) {
-                                composable<HomeDestination> {
-                                    HomeScreen(
-                                        innerPadding = innerPadding,
-                                        onScrolling = isScrolledToTopCallback,
-                                        onOpenDrawer = { coroutineScope.launch { drawerState.open() } },
-                                        navController = navController,
-                                    )
-                                }
-                                composable<ProfileDestination> {
-                                    ProfileScreen(navController = navController)
-                                }
-
-                                composable<SearchDestination> {
-                                    SearchScreen(
-                                        navController = navController,
-                                        onOpenDrawer = { coroutineScope.launch { drawerState.open() } }
-                                    )
-                                }
-                                composable<LibraryDestination> {
-                                    LibraryScreen(
-                                        innerPadding = innerPadding,
-                                        navController = navController,
-                                        onScrolling = isScrolledToTopCallback,
-                                        onOpenDrawer = { coroutineScope.launch { drawerState.open() } }
-                                    )
-                                }
-                                composable<FriendsDestination> {
-                                    FriendsActivityScreen(
-                                        innerPadding = innerPadding,
-                                        navController = navController,
-                                        onScrolling = isScrolledToTopCallback,
-                                        onOpenDrawer = { coroutineScope.launch { drawerState.open() } },
-                                        sharedViewModel = viewModel
-                                    )
-                                }
-                                composable<FullscreenDestination> {
-                                    FullscreenPlayer(
-                                        navController,
-                                        hideNavBar = { isNavBarVisible = false },
-                                        showNavBar = {
-                                            isNavBarVisible = true
-                                            isShowNowPlaylistScreen = true
-                                        },
-                                    )
-                                }
-                                // Home sub-graph
-                                homeScreenGraph(
-                                    innerPadding = innerPadding,
-                                    navController = navController,
-                                )
-                                // Library sub-graph
-                                libraryScreenGraph(
-                                    innerPadding = innerPadding,
-                                    navController = navController,
-                                )
-                                // List sub-graph
-                                listScreenGraph(
-                                    innerPadding = innerPadding,
-                                    navController = navController,
-                                )
-                                // Login sub-graph (Spotify, Discord, etc. reachable from Settings)
-                                loginScreenGraph(
-                                    innerPadding = innerPadding,
-                                    navController = navController,
-                                    hideBottomBar = { isNavBarVisible = false },
-                                    showBottomBar = { isNavBarVisible = true },
-                                )
-                            }
+                                onOpenDrawer = { coroutineScope.launch { drawerState.open() } },
+                                hideNavBar = { isNavBarVisible = false },
+                                showNavBar = { showPlayer ->
+                                    isNavBarVisible = true
+                                    if (showPlayer) isShowNowPlaylistScreen = true
+                                },
+                            )
                         }
                         this@Row.AnimatedVisibility(
                             modifier = Modifier
@@ -559,20 +425,16 @@ fun MainScreen(
                             MiniPlayer(
                                 if (getPlatform() == Platform.Android) {
                                     Modifier
-                                        .height(56.dp)
-                                        .fillMaxWidth(0.8f)
+                                        .height(84.dp)
+                                        .fillMaxWidth()
                                         .padding(horizontal = 12.dp)
                                         .padding(bottom = 4.dp)
                                 } else {
                                     Modifier
                                         .fillMaxWidth()
                                         .height(84.dp)
-                                        .background(Color.Transparent)
-                                        .hazeEffect(hazeState, style = HazeMaterials.ultraThin()) {
-                                            blurEnabled = true
-                                        }
+                                        .padding(horizontal = 12.dp, vertical = 4.dp)
                                 },
-                                backdrop = backdrop,
                                 onClick = { isShowNowPlaylistScreen = true },
                                 onClose = {
                                     viewModel.stopPlayer()
@@ -596,7 +458,7 @@ fun MainScreen(
                                 Box(
                                     Modifier
                                         .padding(innerPadding.copy(start = 0.dp, top = 0.dp, bottom = 0.dp))
-                                        .clip(RoundedCornerShape(12.dp)),
+                                        .clip(GratifyShapes.medium),
                                 ) {
                                     NowPlayingScreenContent(
                                         navController = navController,
@@ -646,7 +508,8 @@ fun MainScreen(
                 val response = updateData ?: return@Scaffold
                 val currentVersion = VersionManager.getVersionName()
                 val minVersion = response.minVersion ?: "2.0.0"
-                val isForceUpdate = VersionManager.isVersionLower(currentVersion, minVersion)
+                val isForceUpdate = response.apkUrl.startsWith("https://") &&
+                    VersionManager.isVersionLower(currentVersion, minVersion)
                 AlertDialog(
                     properties = DialogProperties(dismissOnBackPress = !isForceUpdate, dismissOnClickOutside = false),
                     onDismissRequest = {
@@ -708,9 +571,7 @@ fun MainScreen(
                             }
                         } ?: stringResource(Res.string.unknown)
 
-                        val updateMessage = runBlocking {
-                            getString(Res.string.update_message, response.tagName, formatted)
-                        }
+                        val updateMessage = stringResource(Res.string.update_message, response.tagName, formatted)
                         Column(
                             Modifier
                                 .heightIn(max = 400.dp)

@@ -285,43 +285,23 @@ internal class HomeRepositoryImpl(
             }
         }.flowOn(Dispatchers.IO)
 
-    override fun getMoodData(params: String): Flow<Resource<MoodsMomentObject>> =
-        flow {
-            runCatching {
-                youTube
-                    .customQuery(
-                        browseId = "FEmusic_moods_and_genres_category",
-                        params = params,
-                    ).onSuccess { result ->
-                        val data = parseMoodsMomentObject(result)
-                        if (data != null) {
-                            emit(Resource.Success<MoodsMomentObject>(data))
-                        } else {
-                            emit(Resource.Error<MoodsMomentObject>("Error"))
-                        }
-                    }.onFailure { e ->
-                        emit(Resource.Error<MoodsMomentObject>(e.message.toString()))
-                    }
-            }
-        }.flowOn(Dispatchers.IO)
+    override fun getMoodData(params: String): Flow<Resource<MoodsMomentObject>> = flow {
+        val result = try {
+            val response = youTube.customQuery(browseId = "FEmusic_moods_and_genres_category", params = params).getOrThrow()
+            val parsed = parseMoodsMomentObject(response)
+            if (parsed != null) Resource.Success(parsed) else Resource.Error<MoodsMomentObject>("Data suasana tidak tersedia")
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+        catch (_: Exception) { Resource.Error<MoodsMomentObject>("Gagal memuat suasana. Silakan coba lagi.") }
+        emit(result)
+    }.flowOn(Dispatchers.IO)
 
-    override fun getGenreData(params: String): Flow<Resource<GenreObject>> =
-        flow {
-            runCatching {
-                youTube
-                    .customQuery(
-                        browseId = "FEmusic_moods_and_genres_category",
-                        params = params,
-                    ).onSuccess { result ->
-                        val data = parseGenreObject(result)
-                        if (data != null) {
-                            emit(Resource.Success<GenreObject>(data))
-                        } else {
-                            emit(Resource.Error<GenreObject>("Error"))
-                        }
-                    }.onFailure { e ->
-                        emit(Resource.Error<GenreObject>(e.message.toString()))
-                    }
-            }
-        }.flowOn(Dispatchers.IO)
+    override fun getGenreData(params: String): Flow<Resource<GenreObject>> = flow {
+        val result = try {
+            val response = youTube.customQuery(browseId = "FEmusic_moods_and_genres_category", params = params).getOrThrow()
+            val parsed = parseGenreObject(response)
+            if (parsed != null) Resource.Success(parsed) else Resource.Error<GenreObject>("Data genre tidak tersedia")
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+        catch (_: Exception) { Resource.Error<GenreObject>("Gagal memuat genre. Silakan coba lagi.") }
+        emit(result)
+    }.flowOn(Dispatchers.IO)
 }

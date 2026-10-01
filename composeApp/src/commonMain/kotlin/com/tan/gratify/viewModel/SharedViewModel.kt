@@ -251,6 +251,8 @@ class SharedViewModel(
     }
 
     init {
+        com.tan.data.mediaservice.ProfileSyncManager.startSync(mediaPlayerHandler, userRepository, supabase, dataStoreManager, viewModelScope)
+
         initGuideFlags()
         observeTimelineAndLyrics()
         observeNowPlayingState()

@@ -18,7 +18,8 @@ data class SharedPlaylist(
     @SerialName("add_count")
     val addCount: Int = 0,
     @SerialName("created_at")
-    val createdAt: String? = null
+    val createdAt: String? = null,
+    @SerialName("client_sync_id") val clientSyncId: String? = null,
 )
 
 @Serializable

@@ -20,12 +20,12 @@ import gratify.composeapp.generated.resources.app_name
 import gratify.composeapp.generated.resources.version_format
 
 @Composable
-fun EndOfPage(withoutCredit: Boolean = false) {
+fun EndOfPage(withoutCredit: Boolean = true) {
     Box(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .height(280.dp),
+                .height(if (withoutCredit) 48.dp else 96.dp),
         contentAlignment = Alignment.TopCenter,
     ) {
         if (!withoutCredit) {

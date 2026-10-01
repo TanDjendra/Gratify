@@ -228,3 +228,15 @@
 -dontwarn io.sentry.okhttp.SentryOkHttpEventListener
 -dontwarn io.sentry.okhttp.SentryOkHttpInterceptor
 -dontwarn kotlinx.datetime.**
+
+# Pinned secure PipePipe adapter accesses only this field; do not rename it.
+-keepclassmembers class dev.maxrave.pipepipe.extractor.NewPipe {
+    private static dev.maxrave.pipepipe.extractor.downloader.Downloader downloader;
+}
+-assumenosideeffects class android.util.Log {
+    public static *** v(...);
+    public static *** d(...);
+    public static *** i(...);
+    public static *** w(...);
+    public static *** e(...);
+}

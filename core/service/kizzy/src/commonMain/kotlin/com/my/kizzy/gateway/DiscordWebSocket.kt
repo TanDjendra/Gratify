@@ -75,8 +75,8 @@ open class DiscordWebSocket(
     private var reconnectionJob: Job? = null
     private var currentReconnectDelay = INITIAL_RECONNECT_DELAY
 
-    override val coroutineContext: CoroutineContext
-        get() = SupervisorJob() + Dispatchers.Default
+    private val lifecycleJob = SupervisorJob()
+    override val coroutineContext: CoroutineContext = lifecycleJob + Dispatchers.Default
 
     fun connect() {
         if (connected) {
@@ -298,16 +298,18 @@ open class DiscordWebSocket(
         resumeGatewayUrl = null
         sessionId = null
         connected = false
-        runBlocking {
-            websocket?.close()
-            Logger.e(TAG, "Gateway: Connection to gateway closed")
+        val socket = websocket
+        websocket = null
+        kotlinx.coroutines.CoroutineScope(Dispatchers.Default).launch {
+            try { kotlinx.coroutines.withTimeout(2_000) { socket?.close() } }
+            finally { client.close() }
         }
     }
 
     suspend fun sendActivity(presence: Presence) {
-        // TODO : Figure out a better way to wait for socket to be connected to account
-        while (!isSocketConnectedToAccount()) {
-            delay(10.milliseconds)
+        check(lifecycleJob.isActive) { "Discord connection is closed" }
+        kotlinx.coroutines.withTimeout(10_000) {
+            while (!isSocketConnectedToAccount()) delay(50.milliseconds)
         }
         Logger.i(TAG, "Gateway: Sending $PRESENCE_UPDATE")
         send(

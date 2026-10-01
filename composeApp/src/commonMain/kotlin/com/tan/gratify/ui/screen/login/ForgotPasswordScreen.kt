@@ -1,14 +1,19 @@
 package com.tan.gratify.ui.screen.login
 
+import com.tan.gratify.ui.theme.GratifyColors
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -52,15 +57,17 @@ import com.tan.gratify.ui.component.RippleIconButton
 import com.tan.gratify.ui.theme.typo
 import com.tan.gratify.viewModel.ForgotPasswordViewModel
 import com.tan.gratify.viewModel.auth.AuthUiState
+import com.tan.gratify.viewModel.auth.PasswordRecoveryCoordinator
+import com.tan.gratify.ui.navigation.destination.login.LoginLandingDestination
 import gratify.composeapp.generated.resources.Res
 import gratify.composeapp.generated.resources.baseline_arrow_back_ios_new_24
 import org.koin.compose.viewmodel.koinViewModel
 
-private val AntigravityGreen = Color(0xFFE0E0E0)
-private val BackgroundBlack = Color(0xFF000000)
-private val LightGray = Color(0xFFE0E0E0)
-private val DarkGray = Color(0xFF2E2E2E)
-private val ErrorRed = Color(0xFFFF5252)
+private val GratifyAccent = GratifyColors.Accent
+private val BackgroundBlack = GratifyColors.Background
+private val LightGray = GratifyColors.Accent
+private val DarkGray = GratifyColors.SurfaceRaised
+private val ErrorRed = GratifyColors.Error
 
 /**
  * ForgotPasswordScreen — Layar untuk reset password via magic link.
@@ -83,6 +90,8 @@ fun ForgotPasswordScreen(
     val authState by viewModel.authState.collectAsState()
     val formState by viewModel.formState.collectAsState()
     val resetFormState by viewModel.resetFormState.collectAsState()
+    val recoveryUser by PasswordRecoveryCoordinator.verifiedUserId.collectAsState()
+    LaunchedEffect(recoveryUser) { if (recoveryUser != null) viewModel.markRecoveryReady() }
 
     LaunchedEffect(Unit) {
         hideBottomNavigation()
@@ -94,7 +103,7 @@ fun ForgotPasswordScreen(
             is AuthUiState.PasswordResetSuccess -> {
                 viewModel.makeToast("Password berhasil diubah! Silakan login.")
                 viewModel.resetToIdle()
-                navController.navigateUp()
+                navController.navigate(LoginLandingDestination) { popUpTo(0) { inclusive = true } }
             }
             else -> {}
         }
@@ -140,9 +149,22 @@ fun ForgotPasswordScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .imePadding()
                 .padding(horizontal = 24.dp),
         ) {
-            when (authState) {
+            if (recoveryUser != null && authState !is AuthUiState.PasswordResetSuccess) {
+                SetNewPasswordStep(
+                    newPassword = resetFormState.newPassword,
+                    confirmPassword = resetFormState.confirmPassword,
+                    isNewPasswordValid = resetFormState.isNewPasswordValid,
+                    isConfirmMatch = resetFormState.isConfirmPasswordMatch,
+                    isLoading = authState is AuthUiState.Loading,
+                    onNewPasswordChanged = { viewModel.updateNewPassword(it) },
+                    onConfirmPasswordChanged = { viewModel.updateConfirmPassword(it) },
+                    onSaveClick = { viewModel.setNewPassword() },
+                )
+                (authState as? AuthUiState.Error)?.message?.let { Text(it, color = ErrorRed) }
+            } else             when (authState) {
                 is AuthUiState.Idle,
                 is AuthUiState.Loading,
                 is AuthUiState.Error -> {
@@ -197,7 +219,7 @@ private fun SendResetLinkStep(
     onSendClick: () -> Unit,
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.Top
     ) {
         Spacer(Modifier.height(24.dp))
@@ -215,7 +237,7 @@ private fun SendResetLinkStep(
 
         Text(
             text = "Masukkan email yang terdaftar. Kami akan mengirim link untuk mengatur ulang password Anda.",
-            style = typo().bodyMedium.copy(color = Color.Gray)
+            style = typo().bodyMedium.copy(color = GratifyColors.TextSecondary)
         )
 
         Spacer(Modifier.height(24.dp))
@@ -226,14 +248,14 @@ private fun SendResetLinkStep(
             modifier = Modifier.fillMaxWidth(),
             maxLines = 1,
             placeholder = {
-                Text("Email", style = typo().bodyMedium.copy(color = Color.Gray))
+                Text("Email", style = typo().bodyMedium.copy(color = GratifyColors.TextSecondary))
             },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = LightGray,
                 unfocusedBorderColor = DarkGray,
                 focusedTextColor = Color.White,
                 unfocusedTextColor = Color.White,
-                cursorColor = AntigravityGreen,
+                cursorColor = GratifyAccent,
             ),
             isError = !isEmailValid && email.isNotEmpty() || errorMessage != null,
             keyboardOptions = KeyboardOptions(
@@ -266,13 +288,13 @@ private fun SendResetLinkStep(
             enabled = isEmailValid && !isLoading,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp),
+                .heightIn(min = 52.dp),
             shape = RoundedCornerShape(50),
             colors = ButtonDefaults.buttonColors(
-                containerColor = AntigravityGreen,
+                containerColor = GratifyAccent,
                 disabledContainerColor = DarkGray,
                 contentColor = Color.Black,
-                disabledContentColor = Color.Gray,
+                disabledContentColor = GratifyColors.TextSecondary,
             ),
         ) {
             if (isLoading) {
@@ -328,7 +350,7 @@ private fun ResetLinkSentStep(
 
         Text(
             text = "Kami telah mengirim link reset password ke",
-            style = typo().bodyMedium.copy(color = Color.Gray),
+            style = typo().bodyMedium.copy(color = GratifyColors.TextSecondary),
             textAlign = TextAlign.Center,
         )
 
@@ -337,7 +359,7 @@ private fun ResetLinkSentStep(
         Text(
             text = email,
             style = typo().bodyMedium.copy(
-                color = AntigravityGreen,
+                color = GratifyAccent,
                 fontWeight = FontWeight.SemiBold,
             ),
             textAlign = TextAlign.Center,
@@ -348,7 +370,7 @@ private fun ResetLinkSentStep(
         Text(
             text = "Klik link di email untuk mengatur ulang password Anda. Cek juga folder spam.",
             style = typo().bodySmall.copy(
-                color = Color.Gray.copy(alpha = 0.7f),
+                color = GratifyColors.TextSecondary.copy(alpha = 0.7f),
             ),
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 16.dp),
@@ -360,7 +382,7 @@ private fun ResetLinkSentStep(
             onClick = onResendClick,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp),
+                .heightIn(min = 52.dp),
             shape = RoundedCornerShape(50),
             colors = ButtonDefaults.buttonColors(
                 containerColor = DarkGray,
@@ -393,7 +415,7 @@ private fun SetNewPasswordStep(
     var confirmVisible by remember { mutableStateOf(false) }
 
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.Top,
     ) {
         Spacer(Modifier.height(24.dp))
@@ -411,7 +433,7 @@ private fun SetNewPasswordStep(
 
         Text(
             text = "Password baru harus berbeda dari password sebelumnya.",
-            style = typo().bodyMedium.copy(color = Color.Gray)
+            style = typo().bodyMedium.copy(color = GratifyColors.TextSecondary)
         )
 
         Spacer(Modifier.height(24.dp))
@@ -433,7 +455,7 @@ private fun SetNewPasswordStep(
                     Icon(
                         imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                         contentDescription = "Toggle password visibility",
-                        tint = Color.Gray,
+                        tint = GratifyColors.TextSecondary,
                     )
                 }
             },
@@ -442,7 +464,7 @@ private fun SetNewPasswordStep(
                 unfocusedBorderColor = DarkGray,
                 focusedTextColor = Color.White,
                 unfocusedTextColor = Color.White,
-                cursorColor = AntigravityGreen,
+                cursorColor = GratifyAccent,
             ),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password,
@@ -453,7 +475,7 @@ private fun SetNewPasswordStep(
         Text(
             text = "Minimal 8 karakter.",
             style = typo().bodySmall.copy(
-                color = if (!isNewPasswordValid && newPassword.isNotEmpty()) ErrorRed else Color.Gray
+                color = if (!isNewPasswordValid && newPassword.isNotEmpty()) ErrorRed else GratifyColors.TextSecondary
             )
         )
 
@@ -476,7 +498,7 @@ private fun SetNewPasswordStep(
                     Icon(
                         imageVector = if (confirmVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                         contentDescription = "Toggle password visibility",
-                        tint = Color.Gray,
+                        tint = GratifyColors.TextSecondary,
                     )
                 }
             },
@@ -485,7 +507,7 @@ private fun SetNewPasswordStep(
                 unfocusedBorderColor = DarkGray,
                 focusedTextColor = Color.White,
                 unfocusedTextColor = Color.White,
-                cursorColor = AntigravityGreen,
+                cursorColor = GratifyAccent,
             ),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password,
@@ -510,13 +532,13 @@ private fun SetNewPasswordStep(
             enabled = isConfirmMatch && !isLoading,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp),
+                .heightIn(min = 52.dp),
             shape = RoundedCornerShape(50),
             colors = ButtonDefaults.buttonColors(
-                containerColor = AntigravityGreen,
+                containerColor = GratifyAccent,
                 disabledContainerColor = DarkGray,
                 contentColor = Color.Black,
-                disabledContentColor = Color.Gray,
+                disabledContentColor = GratifyColors.TextSecondary,
             ),
         ) {
             if (isLoading) {

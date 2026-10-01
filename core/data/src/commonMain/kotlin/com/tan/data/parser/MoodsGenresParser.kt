@@ -18,13 +18,13 @@ internal fun parseMoodsMomentObject(data: BrowseResponse?): MoodsMomentObject? {
                 ?.musicHeaderRenderer
                 ?.title
                 ?.runs
-                ?.get(0)
+                ?.getOrNull(0)
                 ?.text ?: ""
         val items =
             data.contents
                 ?.singleColumnBrowseResultsRenderer
                 ?.tabs
-                ?.get(0)
+                ?.getOrNull(0)
                 ?.tabRenderer
                 ?.content
                 ?.sectionListRenderer
@@ -40,9 +40,7 @@ internal fun parseMoodsMomentObject(data: BrowseResponse?): MoodsMomentObject? {
                             ?.musicCarouselShelfBasicHeaderRenderer
                             ?.title
                             ?.runs
-                            ?.get(
-                                0,
-                            )?.text
+                            ?.getOrNull(0)?.text
                     val listContent: MutableList<Content> = mutableListOf()
                     if (!contents.isNullOrEmpty()) {
                         for (content in contents) {
@@ -68,7 +66,7 @@ internal fun parseMoodsMomentObject(data: BrowseResponse?): MoodsMomentObject? {
                                     content.musicTwoRowItemRenderer
                                         ?.title
                                         ?.runs
-                                        ?.get(0)
+                                        ?.getOrNull(0)
                                         ?.text
                                 val playlistBrowseId =
                                     content.musicTwoRowItemRenderer
@@ -95,7 +93,7 @@ internal fun parseMoodsMomentObject(data: BrowseResponse?): MoodsMomentObject? {
                             ?.gridHeaderRenderer
                             ?.title
                             ?.runs
-                            ?.get(0)
+                            ?.getOrNull(0)
                             ?.text
                     val listContent: MutableList<Content> = mutableListOf()
                     if (!contents.isNullOrEmpty()) {
@@ -120,7 +118,7 @@ internal fun parseMoodsMomentObject(data: BrowseResponse?): MoodsMomentObject? {
                                     content.musicTwoRowItemRenderer
                                         ?.title
                                         ?.runs
-                                        ?.get(0)
+                                        ?.getOrNull(0)
                                         ?.text
                                 val playlistBrowseId =
                                     content.musicTwoRowItemRenderer
@@ -155,13 +153,13 @@ internal fun parseGenreObject(data: BrowseResponse?): GenreObject? {
                 ?.musicHeaderRenderer
                 ?.title
                 ?.runs
-                ?.get(0)
+                ?.getOrNull(0)
                 ?.text ?: ""
         val items =
             data.contents
                 ?.singleColumnBrowseResultsRenderer
                 ?.tabs
-                ?.get(0)
+                ?.getOrNull(0)
                 ?.tabRenderer
                 ?.content
                 ?.sectionListRenderer
@@ -178,9 +176,7 @@ internal fun parseGenreObject(data: BrowseResponse?): GenreObject? {
                             ?.musicCarouselShelfBasicHeaderRenderer
                             ?.title
                             ?.runs
-                            ?.get(
-                                0,
-                            )?.text
+                            ?.getOrNull(0)?.text
                     val listContent: MutableList<GenreContent> = mutableListOf()
                     if (!contents.isNullOrEmpty()) {
                         for (content in contents) {
@@ -189,12 +185,10 @@ internal fun parseGenreObject(data: BrowseResponse?): GenreObject? {
                                 val songName =
                                     content.musicResponsiveListItemRenderer
                                         ?.flexColumns
-                                        ?.get(
-                                            0,
-                                        )?.musicResponsiveListItemFlexColumnRenderer
+                                        ?.getOrNull(0)?.musicResponsiveListItemFlexColumnRenderer
                                         ?.text
                                         ?.runs
-                                        ?.get(0)
+                                        ?.getOrNull(0)
                                         ?.text
                                 val songArtist =
                                     content.musicResponsiveListItemRenderer
@@ -204,17 +198,15 @@ internal fun parseGenreObject(data: BrowseResponse?): GenreObject? {
                                         )?.musicResponsiveListItemFlexColumnRenderer
                                         ?.text
                                         ?.runs
-                                        ?.get(0)
+                                        ?.getOrNull(0)
                                         ?.text
                                 val videoId =
                                     content.musicResponsiveListItemRenderer
                                         ?.flexColumns
-                                        ?.get(
-                                            0,
-                                        )?.musicResponsiveListItemFlexColumnRenderer
+                                        ?.getOrNull(0)?.musicResponsiveListItemFlexColumnRenderer
                                         ?.text
                                         ?.runs
-                                        ?.get(0)
+                                        ?.getOrNull(0)
                                         ?.navigationEndpoint
                                         ?.watchEndpoint
                                         ?.videoId
@@ -252,7 +244,7 @@ internal fun parseGenreObject(data: BrowseResponse?): GenreObject? {
                                     content.musicTwoRowItemRenderer
                                         ?.title
                                         ?.runs
-                                        ?.get(0)
+                                        ?.getOrNull(0)
                                         ?.text
                                 val playlistBrowseId =
                                     content.musicTwoRowItemRenderer
@@ -282,7 +274,7 @@ internal fun parseGenreObject(data: BrowseResponse?): GenreObject? {
                             ?.gridHeaderRenderer
                             ?.title
                             ?.runs
-                            ?.get(0)
+                            ?.getOrNull(0)
                             ?.text
                     val listContent: MutableList<GenreContent> = mutableListOf()
                     if (!contents.isNullOrEmpty()) {
@@ -307,7 +299,7 @@ internal fun parseGenreObject(data: BrowseResponse?): GenreObject? {
                                     content.musicTwoRowItemRenderer
                                         ?.title
                                         ?.runs
-                                        ?.get(0)
+                                        ?.getOrNull(0)
                                         ?.text
                                 val playlistBrowseId =
                                     content.musicTwoRowItemRenderer

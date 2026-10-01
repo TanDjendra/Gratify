@@ -1,5 +1,8 @@
 package com.tan.gratify.ui.screen.library
 
+import com.tan.gratify.ui.theme.GratifyColors
+import com.tan.gratify.ui.theme.GratifyShapes
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -61,7 +64,7 @@ fun ArtistSelectionScreen(
     }
 
     Scaffold(
-        containerColor = Color(0xFF121212), // Dark background mimicking the screenshot
+        containerColor = GratifyColors.Background, // Dark background mimicking the screenshot
         floatingActionButton = {
             if (followedArtistsIds.isNotEmpty()) {
                 Button(
@@ -138,7 +141,7 @@ fun ArtistSelectionScreen(
                     }
                 },
                 singleLine = true,
-                shape = RoundedCornerShape(8.dp),
+                shape = GratifyShapes.small,
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color.White,
                     unfocusedContainerColor = Color.White,
@@ -146,8 +149,8 @@ fun ArtistSelectionScreen(
                     unfocusedIndicatorColor = Color.Transparent,
                     focusedTextColor = Color.Black,
                     unfocusedTextColor = Color.Black,
-                    unfocusedPlaceholderColor = Color.DarkGray,
-                    focusedPlaceholderColor = Color.DarkGray
+                    unfocusedPlaceholderColor = GratifyColors.SurfaceHighest,
+                    focusedPlaceholderColor = GratifyColors.SurfaceHighest
                 ),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(
@@ -244,7 +247,7 @@ fun ArtistSelectionItem(
                 .aspectRatio(1f)
                 .clip(CircleShape)
                 .border(borderWidth, borderColor, CircleShape)
-                .background(Color.DarkGray)
+                .background(GratifyColors.SurfaceHighest)
         )
         
         Spacer(Modifier.height(12.dp))

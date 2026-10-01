@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import com.tan.domain.manager.DataStoreManager
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import com.tan.domain.data.model.browse.album.Track
 
@@ -44,9 +45,25 @@ class UserProfileViewModel(
 
     private val _state = MutableStateFlow(UserProfileState())
     val state: StateFlow<UserProfileState> = _state.asStateFlow()
+    private var profileJob: kotlinx.coroutines.Job? = null
+
+    suspend fun setProfilePrivacy(localKey: String, visible: Boolean) {
+        val setting = when (localKey) {
+            "privacy_show_followers" -> "show_followers"
+            "privacy_show_playlist" -> "show_playlists"
+            "privacy_show_recent_artists" -> "show_recent_artists"
+            else -> return
+        }
+        val owner = supabase.auth.currentUserOrNull()?.id ?: return
+        val result = userRepository.setProfilePrivacy(setting, visible)
+        if (supabase.auth.currentUserOrNull()?.id != owner) return
+        if (result.isSuccess) dataStoreManager.putString(localKey, if (visible) "TRUE" else "FALSE")
+        else makeToast("Privasi belum tersimpan di server. Periksa koneksi atau pembaruan server, lalu coba lagi.")
+    }
 
     fun loadProfile(userId: String) {
-        viewModelScope.launch {
+        profileJob?.cancel()
+        profileJob = viewModelScope.launch {
             val cachedFollowers = dataStoreManager.getString("FollowersCount_$userId").firstOrNull()?.toIntOrNull()
             val cachedFollowing = dataStoreManager.getString("FollowingCount_$userId").firstOrNull()?.toIntOrNull()
             
@@ -65,6 +82,7 @@ class UserProfileViewModel(
             // 2. Ambil profil user secara paralel
             launch {
                 userRepository.getUserProfile(userId).collectLatest { fetchedProfile ->
+                    if (isOwn && supabase.auth.currentUserOrNull()?.id != userId) return@collectLatest
                     val profile = if (fetchedProfile != null) {
                         if (isOwn) {
                             fetchedProfile.displayName?.takeIf { it.isNotBlank() }?.let {
@@ -94,10 +112,15 @@ class UserProfileViewModel(
                         )
                     }
                     
-                    if (isOwn && currentUserId != null) {
+                    if (isOwn && currentUserId != null && fetchedProfile != null) {
                         launch {
                             userRepository.upsertUserProfile(profile).collectLatest {}
                         }
+                    }
+                    if (isOwn && fetchedProfile != null) {
+                        dataStoreManager.putString("privacy_show_followers", if (profile.showFollowers) "TRUE" else "FALSE")
+                        dataStoreManager.putString("privacy_show_playlist", if (profile.showPlaylists) "TRUE" else "FALSE")
+                        dataStoreManager.putString("privacy_show_recent_artists", if (profile.showRecentArtists) "TRUE" else "FALSE")
                     }
                     _state.update { it.copy(profile = profile) }
                 }
@@ -133,22 +156,23 @@ class UserProfileViewModel(
                 sharedPlaylistRepository.getSharedPlaylists().collectLatest { result ->
                     val playlists = result.getOrNull() ?: emptyList()
                     val userPlaylists = playlists.filter { it.userId == userId }
-                    val existingTitles = userPlaylists.map { it.title.trim().lowercase() }.toSet()
+                    val existingSyncIds = userPlaylists.mapNotNull { it.clientSyncId }.toSet()
                     
                     socialRepository.getUserPublicPlaylists(userId).collectLatest { cloudRes ->
                         val cloudPlaylists = cloudRes.getOrNull() ?: emptyList()
                         val currentProfileName = _state.value.profile?.displayName ?: "User"
                         val mappedCloud = cloudPlaylists.mapNotNull { dto ->
-                            if (dto.title.trim().lowercase() in existingTitles) null
+                            if (dto.clientSyncId != null && dto.clientSyncId in existingSyncIds) null
                             else SharedPlaylist(
                                 id = dto.id?.toString(),
                                 userId = dto.userId ?: userId,
                                 title = dto.title,
                                 thumbnailUrl = dto.thumbnailUrl,
-                                creatorName = currentProfileName
+                                creatorName = currentProfileName,
+                                clientSyncId = dto.clientSyncId
                             )
                         }
-                        val combined = (userPlaylists + mappedCloud).distinctBy { it.title.trim().lowercase() }
+                        val combined = (userPlaylists + mappedCloud).distinctBy { it.id }
                         _state.update { it.copy(publicPlaylists = combined, isLoading = false) }
                     }
                 }
@@ -157,6 +181,10 @@ class UserProfileViewModel(
             // 7. Cek aktivitas terakhir / artis yg diputar
             launch {
                 userRepository.getUserProfile(userId).collectLatest { fetched ->
+                    if (fetched?.showRecentArtists == false && !_state.value.isOwnProfile) {
+                        _state.update { it.copy(recentActivityTitle = null, recentActivityArtist = null, recentActivityVideoId = null, isOnlinePlaying = false) }
+                        return@collectLatest
+                    }
                     val npTitle = fetched?.nowPlayingTitle
                     val npVideoId = fetched?.nowPlayingVideoId
                     val npArtist = fetched?.nowPlayingArtist
@@ -202,37 +230,22 @@ class UserProfileViewModel(
         }
     }
 
+    private var followPending = false
     fun toggleFollow(userId: String) {
+        if (followPending) return
+        followPending = true
         viewModelScope.launch {
-            val currentUserId = supabase.auth.currentUserOrNull()?.id ?: return@launch
-            val isCurrentlyFollowing = _state.value.isFollowing
-            val myCachedFollowing = dataStoreManager.getString("FollowingCount_$currentUserId").firstOrNull()?.toIntOrNull() ?: 0
-            
-            if (isCurrentlyFollowing) {
-                val newFollowers = maxOf(0, _state.value.followersCount - 1)
-                val newMyFollowing = maxOf(0, myCachedFollowing - 1)
-                _state.update { it.copy(isFollowing = false, followersCount = newFollowers) }
-                dataStoreManager.putString("FollowersCount_$userId", newFollowers.toString())
-                dataStoreManager.putString("FollowingCount_$currentUserId", newMyFollowing.toString())
-
-                userRepository.unfollowUser(currentUserId, userId).collectLatest { result ->
-                    if (result.isSuccess) {
-                        loadProfile(userId)
-                    }
-                }
-            } else {
-                val newFollowers = _state.value.followersCount + 1
-                val newMyFollowing = myCachedFollowing + 1
-                _state.update { it.copy(isFollowing = true, followersCount = newFollowers) }
-                dataStoreManager.putString("FollowersCount_$userId", newFollowers.toString())
-                dataStoreManager.putString("FollowingCount_$currentUserId", newMyFollowing.toString())
-
-                userRepository.followUser(currentUserId, userId).collectLatest { result ->
-                    if (result.isSuccess) {
-                        loadProfile(userId)
-                    }
-                }
-            }
+            try {
+                val currentUserId = supabase.auth.currentUserOrNull()?.id ?: return@launch
+                val following = _state.value.isFollowing
+                val result = if (following) userRepository.unfollowUser(currentUserId, userId).first()
+                    else userRepository.followUser(currentUserId, userId).first()
+                result.getOrThrow()
+                _state.update { it.copy(isFollowing = !following, followersCount = (it.followersCount + if (following) -1 else 1).coerceAtLeast(0)) }
+                loadProfile(userId)
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { makeToast("Perubahan belum tersimpan. Periksa koneksi dan coba lagi.") }
+            finally { followPending = false }
         }
     }
 

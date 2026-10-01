@@ -1,5 +1,9 @@
 package com.tan.gratify.ui.screen.home.analytics
 
+import androidx.compose.ui.text.style.TextOverflow
+
+import com.tan.gratify.ui.theme.GratifyColors
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -237,6 +241,7 @@ fun AnalyticsScreen(
                                     style = typo().titleLarge,
                                     color = Color.White,
                                     maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -251,11 +256,13 @@ fun AnalyticsScreen(
                                             style = typo().labelMedium,
                                             color = Color.White,
                                             maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
                                         )
                                         Text(
                                             topTrack.second.artistName?.connectArtists() ?: "",
                                             style = typo().bodyMedium,
                                             maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
                                         )
                                     }
                                     Column(
@@ -266,11 +273,13 @@ fun AnalyticsScreen(
                                             style = typo().bodyMedium,
                                             color = Color.White,
                                             maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
                                         )
                                         Text(
                                             "${topTrack.first.totalListeningTime} seconds",
                                             style = typo().bodyLarge,
                                             maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
                                         )
                                     }
                                 }
@@ -309,11 +318,13 @@ fun AnalyticsScreen(
                                     textDecoration = TextDecoration.Underline,
                                     color = Color.White,
                                     maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                                 Text(
                                     "${scrobblesCount.data ?: 0}",
                                     style = typo().bodyLarge,
                                     maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                             }
                         }
@@ -332,11 +343,13 @@ fun AnalyticsScreen(
                                     textDecoration = TextDecoration.Underline,
                                     color = Color.White,
                                     maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                                 Text(
                                     "${artistCount.data ?: 0}",
                                     style = typo().bodyLarge,
                                     maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                             }
                         }
@@ -355,11 +368,13 @@ fun AnalyticsScreen(
                                     textDecoration = TextDecoration.Underline,
                                     color = Color.White,
                                     maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                                 Text(
                                     "${totalPlayedTime.data ?: 0} ${stringResource(Res.string.seconds)}",
                                     style = typo().bodyLarge,
                                     maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                             }
                         }
@@ -689,7 +704,7 @@ fun AnalyticsScreen(
                                                             .wrapContentHeight()
                                                             .fillMaxWidth(pair.first.playCount.toFloat() / maxPlays)
                                                             .clip(CircleShape)
-                                                            .background(Color.DarkGray),
+                                                            .background(GratifyColors.SurfaceHighest),
                                                 ) {
                                                     Text(
                                                         text = "",
@@ -792,7 +807,7 @@ fun AnalyticsScreen(
                                                             .fillMaxWidth(playCount.toFloat() / maxPlays)
                                                             .padding(vertical = 4.dp)
                                                             .clip(CircleShape)
-                                                            .background(Color.DarkGray),
+                                                            .background(GratifyColors.SurfaceHighest),
                                                 ) {
                                                     Text(
                                                         text = "",
@@ -851,7 +866,7 @@ fun AnalyticsScreen(
                         colors =
                             IconButtonDefaults.iconButtonColors().copy(
                                 containerColor =
-                                    Color.DarkGray.copy(
+                                    GratifyColors.SurfaceHighest.copy(
                                         alpha = 0.8f,
                                     ),
                                 contentColor =
@@ -881,7 +896,7 @@ fun AnalyticsScreen(
                         colors =
                             IconButtonDefaults.iconButtonColors().copy(
                                 containerColor =
-                                    Color.DarkGray.copy(
+                                    GratifyColors.SurfaceHighest.copy(
                                         alpha = 0.8f,
                                     ),
                                 contentColor =
@@ -942,7 +957,7 @@ fun AnalyticsScreen(
             },
             colors =
                 TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
+                    containerColor = GratifyColors.Background,
                 ),
         )
     }

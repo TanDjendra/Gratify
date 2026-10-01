@@ -41,7 +41,7 @@ class AiService(
             customModelId
         } else {
             when (aiHost) {
-                AIHost.GEMINI -> "gemini-2.0-flash"
+                AIHost.GEMINI -> "gemini-3.8-flash"
                 AIHost.OPENAI -> "gpt-4o"
                 AIHost.CUSTOM_OPENAI -> "gpt-4o"
             }
@@ -49,7 +49,7 @@ class AiService(
 
     private val baseUrl: String
         get() = when (aiHost) {
-            AIHost.GEMINI -> "https://generativelanguage.googleapis.com/v1beta/"
+            AIHost.GEMINI -> "https://generativelanguage.googleapis.com/v1beta/openai/"
             AIHost.OPENAI -> "https://api.openai.com/v1/"
             AIHost.CUSTOM_OPENAI -> customBaseUrl ?: "https://api.openai.com/v1/"
         }

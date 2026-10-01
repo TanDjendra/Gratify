@@ -12,6 +12,22 @@ plugins {
 
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.google.services)
+    id("io.sentry.android.gradle") version "6.23.0"
+}
+
+sentry {
+    org.set("calestaan")
+    projectName.set("gratify-android")
+    authToken.set(providers.environmentVariable("SENTRY_AUTH_TOKEN"))
+    includeProguardMapping.set(isFullBuild)
+    autoUploadProguardMapping.set(isFullBuild && !System.getenv("SENTRY_AUTH_TOKEN").isNullOrBlank())
+    includeSourceContext.set(false)
+    uploadNativeSymbols.set(false)
+    telemetry.set(false)
+    autoInstallation { enabled.set(false) }
+    tracingInstrumentation { enabled.set(false) }
+    runtimeOptimizations { enabled.set(false) }
+    ignoredBuildTypes.set(if (isFullBuild) listOf("debug") else listOf("debug", "release"))
 }
 
 android {
@@ -176,7 +192,13 @@ dependencies {
     implementation(projects.composeApp)
     implementation(projects.data)
 
-    implementation(projects.crashlyticsEmpty)
+    // Existing shared UI libraries, scoped to the debug visual smoke-test activity.
+    debugImplementation(libs.compose.material3)
+    debugImplementation(libs.compose.material.icons.extended)
+    debugImplementation(libs.navigation.compose)
+    debugImplementation(libs.components.resources)
+
+    if (isFullBuild) implementation(projects.crashlytics) else implementation(projects.crashlyticsEmpty)
 
     // Supabase
     implementation(platform(libs.supabase.bom))

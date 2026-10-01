@@ -5,6 +5,7 @@ import com.tan.domain.data.model.social.CloudPlaylistItemDto
 import kotlinx.coroutines.flow.Flow
 
 interface SocialRepository {
+    suspend fun flushPlaylistRemovals(userId: String)
     /**
      * Mengunggah (Push) playlist lokal ke Supabase agar bisa diakses di cloud atau dibagikan ke publik.
      */

@@ -1,11 +1,14 @@
 package com.tan.gratify.viewModel
 
 import androidx.lifecycle.viewModelScope
+import com.tan.gratify.viewModel.auth.isValidEmailAddress
 import com.tan.domain.manager.DataStoreManager
 import com.tan.gratify.viewModel.auth.AuthUiState
 import com.tan.gratify.viewModel.auth.ForgotPasswordFormState
 import com.tan.gratify.viewModel.auth.PasswordStrength
 import com.tan.gratify.viewModel.auth.ResetPasswordFormState
+import com.tan.gratify.viewModel.auth.PasswordRecoveryCoordinator
+import kotlinx.coroutines.CancellationException
 import com.tan.gratify.viewModel.base.BaseViewModel
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
@@ -86,10 +89,7 @@ class ForgotPasswordViewModel(
 
     // ── Validation Helpers ───────────────────────────────────────────────────
 
-    private fun isValidEmail(email: String): Boolean {
-        val emailRegex = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$".toRegex()
-        return email.matches(emailRegex)
-    }
+    private fun isValidEmail(email: String): Boolean = isValidEmailAddress(email)
 
     // ── Core Actions ─────────────────────────────────────────────────────────
 
@@ -106,13 +106,14 @@ class ForgotPasswordViewModel(
         viewModelScope.launch {
             _authState.value = AuthUiState.Loading("Mengirim link reset...")
             try {
-                supabase.auth.resetPasswordForEmail(email)
+                supabase.auth.resetPasswordForEmail(email, redirectUrl = "com.tan.gratify://login-callback?flow=recovery")
 
                 // Magic link berhasil dikirim
                 _authState.value = AuthUiState.PasswordResetSent(email)
 
             } catch (e: Throwable) {
-                log("sendResetLink failed: ${e.message}", com.tan.logger.LogLevel.ERROR)
+                if (e is CancellationException) throw e
+                log("Reset link request failed", com.tan.logger.LogLevel.ERROR)
                 _authState.value = AuthUiState.Error(mapResetError(e))
             }
         }
@@ -123,7 +124,8 @@ class ForgotPasswordViewModel(
      * Dipanggil dari navigation handler saat mendeteksi recovery session.
      */
     fun markRecoveryReady() {
-        _authState.value = AuthUiState.PasswordResetReady
+        if (PasswordRecoveryCoordinator.verifiedUserId.value == supabase.auth.currentUserOrNull()?.id &&
+            PasswordRecoveryCoordinator.verifiedUserId.value != null) _authState.value = AuthUiState.PasswordResetReady
     }
 
     /**
@@ -140,7 +142,12 @@ class ForgotPasswordViewModel(
      */
     fun setNewPassword() {
         val form = _resetFormState.value
-        if (!form.isValid()) return
+        if (!form.isValid() || _authState.value is AuthUiState.Loading) return
+        if (PasswordRecoveryCoordinator.verifiedUserId.value == null ||
+            PasswordRecoveryCoordinator.verifiedUserId.value != supabase.auth.currentUserOrNull()?.id) {
+            _authState.value = AuthUiState.Error("Sesi reset tidak valid. Silakan kirim ulang link reset.")
+            return
+        }
 
         viewModelScope.launch {
             _authState.value = AuthUiState.Loading("Menyimpan password baru...")
@@ -149,11 +156,14 @@ class ForgotPasswordViewModel(
                     password = form.newPassword
                 }
 
-                // Password berhasil diubah
+                supabase.auth.clearSession()
+                dataStoreManager.setLoggedIn(false)
+                PasswordRecoveryCoordinator.clear()
                 _authState.value = AuthUiState.PasswordResetSuccess
 
             } catch (e: Throwable) {
-                log("setNewPassword failed: ${e.message}", com.tan.logger.LogLevel.ERROR)
+                if (e is CancellationException) throw e
+                log("Password update failed", com.tan.logger.LogLevel.ERROR)
                 val errorMsg = e.message ?: e.toString()
                 val userMsg = when {
                     errorMsg.contains("same_password", ignoreCase = true) ||

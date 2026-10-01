@@ -2,6 +2,11 @@
 
 package com.tan.gratify.ui.screen.player
 
+import androidx.compose.ui.text.style.TextOverflow
+
+import com.tan.gratify.ui.theme.GratifyColors
+import com.tan.gratify.ui.theme.GratifyShapes
+
 import androidx.compose.animation.Animatable
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -247,7 +252,7 @@ fun NowPlayingScreen(
         onDismissRequest = {
             onDismiss()
         },
-        containerColor = Color.Black,
+        containerColor = GratifyColors.Background,
         dragHandle = {},
         scrimColor = Color.Black,
         sheetState = sheetState,
@@ -777,6 +782,7 @@ fun NowPlayingScreenContent(
                 contentScale = ContentScale.FillHeight,
                 placeholder = painterResource(Res.drawable.holder),
                 error = painterResource(Res.drawable.holder),
+                fallback = painterResource(Res.drawable.holder),
                 modifier =
                     Modifier
                         .align(Alignment.Center)
@@ -916,6 +922,7 @@ fun NowPlayingScreenContent(
                                     contentScale = ContentScale.Crop,
                                     placeholder = painterResource(Res.drawable.holder),
                                     error = painterResource(Res.drawable.holder),
+                                    fallback = painterResource(Res.drawable.holder),
                                     modifier =
                                         Modifier
                                             .fillMaxSize()
@@ -1072,7 +1079,7 @@ fun NowPlayingScreenContent(
                                                 .background(Color.Transparent)
                                                 .shadow(
                                                     elevation = 3.dp,
-                                                    shape = RoundedCornerShape(8.dp),
+                                                    shape = GratifyShapes.small,
                                                     spotColor =
                                                         spotShadowColor.copy(
                                                             alpha = 0.6f,
@@ -1098,6 +1105,7 @@ fun NowPlayingScreenContent(
                                             contentScale = ContentScale.Crop,
                                             placeholder = painterResource(Res.drawable.holder),
                                             error = painterResource(Res.drawable.holder),
+                                            fallback = painterResource(Res.drawable.holder),
                                             modifier =
                                                 Modifier
                                                     .align(Alignment.Center)
@@ -1107,7 +1115,7 @@ fun NowPlayingScreenContent(
                                                     .aspectRatio(
                                                         if (!screenDataState.isVideo) 1f else 16f / 9,
                                                     ).clip(
-                                                        RoundedCornerShape(8.dp),
+                                                        GratifyShapes.small,
                                                     ).alpha(
                                                         if (!screenDataState.isVideo || !shouldShowVideo) 1f else 0f,
                                                     ),
@@ -1127,7 +1135,7 @@ fun NowPlayingScreenContent(
                                                 Modifier
                                                     .fillMaxWidth()
                                                     .aspectRatio(16f / 9)
-                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .clip(GratifyShapes.small)
                                                     .background(md_theme_dark_background),
                                         ) {
                                             Box(Modifier.fillMaxSize()) {
@@ -1283,7 +1291,7 @@ fun NowPlayingScreenContent(
                                                 .background(Color.Transparent)
                                                 .shadow(
                                                     elevation = 3.dp,
-                                                    shape = RoundedCornerShape(8.dp),
+                                                    shape = GratifyShapes.small,
                                                     spotColor = Color.Black.copy(alpha = 0.4f),
                                                     ambientColor = Color.Transparent,
                                                 ),
@@ -1301,6 +1309,7 @@ fun NowPlayingScreenContent(
                                             contentScale = ContentScale.Crop,
                                             placeholder = painterResource(Res.drawable.holder),
                                             error = painterResource(Res.drawable.holder),
+                                            fallback = painterResource(Res.drawable.holder),
                                             // Feed the per-page palette using the SAME bitmap
                                             // we just rendered so the Layer 0 gradient backdrop
                                             // matches what the user sees on screen.
@@ -1317,7 +1326,7 @@ fun NowPlayingScreenContent(
                                                     .padding(3.dp)
                                                     .fillMaxWidth()
                                                     .aspectRatio(1f)
-                                                    .clip(RoundedCornerShape(8.dp)),
+                                                    .clip(GratifyShapes.small),
                                         )
                                     }
                                 }
@@ -1365,6 +1374,7 @@ fun NowPlayingScreenContent(
                                 color = Color.White,
                                 textAlign = TextAlign.Center,
                                 maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
@@ -1493,6 +1503,7 @@ fun NowPlayingScreenContent(
                                                         .build(),
                                                 placeholder = painterResource(Res.drawable.holder),
                                                 error = painterResource(Res.drawable.holder),
+                                                fallback = painterResource(Res.drawable.holder),
                                                 contentDescription = null,
                                                 contentScale = ContentScale.FillWidth,
                                                 modifier =
@@ -1501,7 +1512,7 @@ fun NowPlayingScreenContent(
                                                         .width(55.dp)
                                                         .padding(end = 10.dp)
                                                         .clip(
-                                                            RoundedCornerShape(4.dp),
+                                                            GratifyShapes.extraSmall,
                                                         ).align(Alignment.CenterVertically),
                                             )
                                         }
@@ -1511,6 +1522,7 @@ fun NowPlayingScreenContent(
                                                 text = screenDataState.nowPlayingTitle,
                                                 style = typo().titleMedium,
                                                 maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
                                                 color = Color.White,
                                                 modifier =
                                                     Modifier
@@ -1542,6 +1554,7 @@ fun NowPlayingScreenContent(
                                                         text = screenDataState.artistName,
                                                         style = typo().bodyMedium,
                                                         maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis,
                                                         modifier =
                                                             Modifier
                                                                 .fillMaxWidth()
@@ -1586,7 +1599,7 @@ fun NowPlayingScreenContent(
                                                             sharedViewModel.addToYouTubeLiked()
                                                         },
                                                     ) {
-                                                        Icon(imageVector = Icons.Rounded.CheckCircle, tint = Color.White, contentDescription = "")
+                                                        Icon(imageVector = Icons.Rounded.CheckCircle, tint = GratifyColors.Accent, contentDescription = "")
                                                     }
                                                 } else {
                                                     IconButton(
@@ -1644,10 +1657,10 @@ fun NowPlayingScreenContent(
                                                                         .padding(
                                                                             horizontal = 3.dp,
                                                                         ).clip(
-                                                                            RoundedCornerShape(8.dp),
+                                                                            GratifyShapes.small,
                                                                         ),
-                                                                color = Color.Gray,
-                                                                trackColor = Color.DarkGray,
+                                                                color = GratifyColors.TextSecondary,
+                                                                trackColor = GratifyColors.SurfaceHighest,
                                                                 strokeCap = StrokeCap.Round,
                                                             )
                                                         }
@@ -1662,11 +1675,11 @@ fun NowPlayingScreenContent(
                                                                         .padding(
                                                                             horizontal = 3.dp,
                                                                         ).clip(
-                                                                            RoundedCornerShape(8.dp),
+                                                                            GratifyShapes.small,
                                                                         ),
-                                                                color = Color.Gray,
+                                                                color = GratifyColors.TextSecondary,
                                                                 trackColor =
-                                                                    Color.Gray.copy(
+                                                                    GratifyColors.TextSecondary.copy(
                                                                         alpha = 0.6f,
                                                                     ),
                                                                 strokeCap = StrokeCap.Round,
@@ -1936,6 +1949,7 @@ fun NowPlayingScreenContent(
                                                             style = typo().bodyMedium,
                                                             color = Color.White,
                                                             maxLines = 1,
+                                                            overflow = TextOverflow.Ellipsis,
                                                         )
                                                         val translatedLineText =
                                                             screenDataState.lyricsData
@@ -1961,6 +1975,7 @@ fun NowPlayingScreenContent(
                                                                 style = typo().bodyMedium,
                                                                 color = Color.Yellow,
                                                                 maxLines = 1,
+                                                                overflow = TextOverflow.Ellipsis,
                                                             )
                                                         }
                                                     }
@@ -1985,6 +2000,7 @@ fun NowPlayingScreenContent(
                                                                 .build(),
                                                         placeholder = painterResource(Res.drawable.holder),
                                                         error = painterResource(Res.drawable.holder),
+                                                        fallback = painterResource(Res.drawable.holder),
                                                         contentDescription = null,
                                                         contentScale = ContentScale.FillWidth,
                                                         modifier =
@@ -1993,7 +2009,7 @@ fun NowPlayingScreenContent(
                                                                 .width(55.dp)
                                                                 .padding(end = 10.dp)
                                                                 .clip(
-                                                                    RoundedCornerShape(4.dp),
+                                                                    GratifyShapes.extraSmall,
                                                                 ).align(Alignment.CenterVertically),
                                                     )
                                                 }
@@ -2003,6 +2019,7 @@ fun NowPlayingScreenContent(
                                                         text = screenDataState.nowPlayingTitle,
                                                         style = typo().titleMedium,
                                                         maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis,
                                                         color = Color.White,
                                                         modifier =
                                                             Modifier
@@ -2034,6 +2051,7 @@ fun NowPlayingScreenContent(
                                                                 text = screenDataState.artistName,
                                                                 style = typo().bodyMedium,
                                                                 maxLines = 1,
+                                                                overflow = TextOverflow.Ellipsis,
                                                                 modifier =
                                                                     Modifier
                                                                         .fillMaxWidth()
@@ -2129,7 +2147,7 @@ fun NowPlayingScreenContent(
                         ) {
                             ElevatedCard(
                                 onClick = {},
-                                shape = RoundedCornerShape(8.dp),
+                                shape = GratifyShapes.small,
                                 colors =
                                     CardDefaults.elevatedCardColors().copy(
                                         containerColor = startColor.value,
@@ -2284,7 +2302,7 @@ fun NowPlayingScreenContent(
                                         )
                                     }
                                 },
-                                shape = RoundedCornerShape(8.dp),
+                                shape = GratifyShapes.small,
                                 colors =
                                     CardDefaults.elevatedCardColors().copy(
                                         containerColor = startColor.value,
@@ -2308,6 +2326,7 @@ fun NowPlayingScreenContent(
                                                 .build(),
                                         placeholder = painterResource(Res.drawable.holder_video),
                                         error = painterResource(Res.drawable.holder_video),
+                                        fallback = painterResource(Res.drawable.holder_video),
                                         contentDescription = null,
                                         contentScale = ContentScale.Crop,
                                         modifier =
@@ -2315,7 +2334,7 @@ fun NowPlayingScreenContent(
                                                 .fillMaxSize()
                                                 .alpha(0.8f)
                                                 .clip(
-                                                    RoundedCornerShape(8.dp),
+                                                    GratifyShapes.small,
                                                 ),
                                     )
                                     Box(
@@ -2354,7 +2373,7 @@ fun NowPlayingScreenContent(
                         AnimatedVisibility(visible = screenDataState.songInfoData != null) {
                             ElevatedCard(
                                 onClick = {},
-                                shape = RoundedCornerShape(8.dp),
+                                shape = GratifyShapes.small,
                                 colors =
                                     CardDefaults.elevatedCardColors().copy(
                                         containerColor = startColor.value,
@@ -2481,6 +2500,7 @@ fun NowPlayingScreenContent(
                                     style = typo().bodyMedium,
                                     color = Color.White,
                                     maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                     modifier =
                                         Modifier
                                             .fillMaxWidth()
@@ -2510,6 +2530,7 @@ fun NowPlayingScreenContent(
                                             text = screenDataState.artistName,
                                             style = typo().bodySmall,
                                             maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
                                             modifier =
                                                 Modifier
                                                     .fillMaxWidth()
@@ -2534,7 +2555,7 @@ fun NowPlayingScreenContent(
                                 Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
                                     CircularProgressIndicator(
                                         modifier = Modifier.size(18.dp),
-                                        color = Color.LightGray,
+                                        color = GratifyColors.TextSecondary,
                                         strokeWidth = 3.dp,
                                     )
                                 }
@@ -2559,10 +2580,10 @@ fun NowPlayingScreenContent(
                                     .height(1.dp)
                                     .background(
                                         color = Color.Transparent,
-                                        shape = RoundedCornerShape(4.dp),
+                                        shape = GratifyShapes.extraSmall,
                                     ),
                             color = Color.White,
-                            trackColor = Color.Gray.copy(alpha = 0.4f),
+                            trackColor = GratifyColors.TextSecondary.copy(alpha = 0.4f),
                             strokeCap = StrokeCap.Round,
                             drawStopIndicator = {},
                         )

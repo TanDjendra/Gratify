@@ -96,7 +96,9 @@ kotlin {
                 implementation(libs.ffmpeg.kit.audio)
                 implementation(libs.gson)
 
-                implementation(libs.pipepipe.extractor)
+                implementation("com.github.maxrave-dev:PipePipeExtractor:${libs.versions.pipepipe.get()}") {
+                    exclude(group = "com.google.protobuf", module = "protobuf-java")
+                }
                 implementation(libs.brave.extractor)
                 implementation(libs.okhttp3.okhttp)
             }
@@ -114,7 +116,9 @@ kotlin {
 
         jvmMain {
             dependencies {
-                implementation(libs.pipepipe.extractor)
+                implementation("com.github.maxrave-dev:PipePipeExtractor:${libs.versions.pipepipe.get()}") {
+                    exclude(group = "com.google.protobuf", module = "protobuf-java")
+                }
                 implementation(libs.brave.extractor)
                 implementation(libs.okhttp3.okhttp)
             }
@@ -122,13 +126,8 @@ kotlin {
     }
 }
 
-// PipePipe brings com.google.protobuf:protobuf-java (full) while Brave brings
-// com.google.protobuf:protobuf-javalite. Both occupy the com.google.protobuf.* namespace and
-// trigger DEX duplicate-class failures. Drop the full variant globally so Brave's javalite wins.
-// nanojson force is in the root build.gradle.kts so it propagates to the final APK classpath.
-configurations.all {
-    exclude(group = "com.google.protobuf", module = "protobuf-java")
-}
+// PipePipe brings protobuf-java while Brave brings protobuf-javalite. Exclude
+// the full variant only from PipePipe so lint retains its own protobuf-java.
 
 tasks.withType<CompileArtProfileTask> {
     enabled = false

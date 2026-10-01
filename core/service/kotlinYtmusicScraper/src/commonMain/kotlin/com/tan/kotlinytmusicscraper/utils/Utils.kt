@@ -22,14 +22,13 @@ fun ByteArray.toHex(): String {
 fun sha1(str: String): String = Buffer().writeUtf8(str).sha1().hex()
 
 
-fun parseCookieString(cookie: String): Map<String, String> =
-    cookie
-        .split("; ")
-        .filter { it.isNotEmpty() }
-        .associate {
-            val (key, value) = it.split("=")
-            key to value
-        }
+fun parseCookieString(cookie: String): Map<String, String> = cookie.split(';').mapNotNull { part ->
+    val separator = part.indexOf('=')
+    if (separator <= 0) null else {
+        val name = part.substring(0, separator).trim()
+        if (name.isEmpty()) null else name to part.substring(separator + 1).trim()
+    }
+}.toMap()
 
 fun String.parseTime(): Int? {
     try {

@@ -3,7 +3,9 @@ package com.tan.gratify.service.backup
 import android.content.ContentValues
 import android.content.Context
 import android.os.Build
+import android.os.Environment
 import android.provider.MediaStore
+import androidx.annotation.RequiresApi
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.tan.common.DB_NAME
@@ -83,6 +85,9 @@ class AutoBackupWorker(
     private suspend fun createBackupFile(backupDownloaded: Boolean): File {
         val tempFile = File(context.cacheDir, "temp_backup.zip")
 
+        val exported = File(context.cacheDir, "active-library-${java.util.UUID.randomUUID()}.db")
+        try {
+        commonRepository.exportActiveAccountDatabase(exported.absolutePath)
         FileOutputStream(tempFile).buffered().use { bufferedOutput ->
             ZipOutputStream(bufferedOutput).use { zipOutputStream ->
                 // Backup DataStore preferences
@@ -96,9 +101,7 @@ class AutoBackupWorker(
                 }
 
                 // Checkpoint and backup database
-                commonRepository.databaseDaoCheckpoint()
-                val dbPath = commonRepository.getDatabasePath()
-                FileInputStream(dbPath).use { inputStream ->
+                FileInputStream(exported).use { inputStream ->
                     zipOutputStream.putNextEntry(ZipEntry(DB_NAME))
                     inputStream.copyTo(zipOutputStream)
                     zipOutputStream.closeEntry()
@@ -126,6 +129,7 @@ class AutoBackupWorker(
         }
 
         return tempFile
+        } finally { exported.delete() }
     }
 
     private fun backupFolder(
@@ -154,12 +158,35 @@ class AutoBackupWorker(
         val fileName = "gratify_backup_$timestamp.zip"
 
         return try {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                val backupDirectory = legacyBackupDirectory()
+                backupFile.copyTo(File(backupDirectory, fileName), overwrite = false)
+                Logger.i(TAG, "Backup saved to app Downloads/Gratify/$fileName")
+                return true
+            }
+
+            saveModernBackup(backupFile, fileName)
+        } catch (e: Exception) {
+            Logger.e(TAG, "Error saving to Downloads: ${e.message}")
+            false
+        }
+    }
+
+    private fun legacyBackupDirectory(): File {
+        val downloads = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+            ?: error("App downloads directory is unavailable")
+        val directory = File(downloads, "Gratify")
+        check(directory.isDirectory || directory.mkdirs()) { "Backup directory is unavailable" }
+        return directory
+    }
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun saveModernBackup(backupFile: File, fileName: String): Boolean {
+        return try {
             val contentValues = ContentValues().apply {
                 put(MediaStore.Downloads.DISPLAY_NAME, fileName)
                 put(MediaStore.Downloads.MIME_TYPE, "application/zip")
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    put(MediaStore.Downloads.RELATIVE_PATH, "Download/Gratify")
-                }
+                put(MediaStore.Downloads.RELATIVE_PATH, "Download/Gratify")
             }
 
             val uri = context.contentResolver.insert(
@@ -168,13 +195,15 @@ class AutoBackupWorker(
             )
 
             uri?.let { outputUri ->
-                context.contentResolver.openOutputStream(outputUri)?.use { output ->
+                val saved = context.contentResolver.openOutputStream(outputUri)?.use { output ->
                     backupFile.inputStream().use { input ->
                         input.copyTo(output)
                     }
-                }
-                Logger.i(TAG, "Backup saved to Downloads/Gratify/$fileName")
-                true
+                    true
+                } ?: false
+                if (saved) Logger.i(TAG, "Backup saved to Downloads/Gratify/$fileName")
+                else context.contentResolver.delete(outputUri, null, null)
+                saved
             } ?: false
         } catch (e: Exception) {
             Logger.e(TAG, "Error saving to Downloads: ${e.message}")
@@ -184,23 +213,32 @@ class AutoBackupWorker(
 
     private fun cleanupOldBackups(maxFiles: Int) {
         try {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                legacyBackupDirectory().listFiles()
+                    ?.filter { it.isFile && it.name.startsWith("gratify_backup_") && it.name.endsWith(".zip") }
+                    ?.sortedByDescending { it.lastModified() }
+                    ?.drop(maxFiles.coerceAtLeast(0))
+                    ?.forEach { if (!it.delete()) Logger.e(TAG, "Could not remove old backup: ${it.name}") }
+                return
+            }
+
+            cleanupModernBackups(maxFiles)
+        } catch (e: Exception) {
+            Logger.e(TAG, "Error cleaning up old backups: ${e.message}")
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun cleanupModernBackups(maxFiles: Int) {
+        try {
             val projection = arrayOf(
                 MediaStore.Downloads._ID,
                 MediaStore.Downloads.DISPLAY_NAME,
                 MediaStore.Downloads.DATE_ADDED
             )
 
-            val selection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                "${MediaStore.Downloads.RELATIVE_PATH} = ? AND ${MediaStore.Downloads.DISPLAY_NAME} LIKE ?"
-            } else {
-                "${MediaStore.Downloads.DISPLAY_NAME} LIKE ?"
-            }
-
-            val selectionArgs = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                arrayOf("Download/Gratify/", "gratify_backup_%.zip")
-            } else {
-                arrayOf("gratify_backup_%.zip")
-            }
+            val selection = "${MediaStore.Downloads.RELATIVE_PATH} = ? AND ${MediaStore.Downloads.DISPLAY_NAME} LIKE ?"
+            val selectionArgs = arrayOf("Download/Gratify/", "gratify_backup_%.zip")
 
             val sortOrder = "${MediaStore.Downloads.DATE_ADDED} DESC"
 

@@ -1,13 +1,12 @@
 package com.tan.gratify.ui.screen.search
 
-import androidx.compose.animation.AnimatedContent
+import com.tan.gratify.ui.theme.GratifyColors
+import com.tan.gratify.ui.theme.GratifyShapes
+
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -17,19 +16,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -51,13 +43,11 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -100,7 +90,6 @@ import com.tan.gratify.ui.component.Chip
 import com.tan.gratify.ui.component.EndOfPage
 import com.tan.gratify.ui.component.NowPlayingBottomSheet
 import com.tan.gratify.ui.component.PlaylistFullWidthItems
-import com.tan.gratify.ui.component.ShimmerSearchItem
 import com.tan.gratify.ui.component.CenterLoadingBox
 import com.tan.gratify.ui.component.GratifyChartButton
 import com.tan.gratify.ui.component.SongFullWidthItems
@@ -128,6 +117,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.layout.Arrangement
+import gratify.composeapp.generated.resources.search
 import gratify.composeapp.generated.resources.Res
 import gratify.composeapp.generated.resources.albums
 import gratify.composeapp.generated.resources.artists
@@ -137,7 +127,6 @@ import gratify.composeapp.generated.resources.baseline_history_24
 import gratify.composeapp.generated.resources.baseline_search_24
 import gratify.composeapp.generated.resources.clear_search_history
 import gratify.composeapp.generated.resources.error_occurred
-import gratify.composeapp.generated.resources.everything_you_need
 import gratify.composeapp.generated.resources.holder
 import gratify.composeapp.generated.resources.in_search
 import gratify.composeapp.generated.resources.no_results_found
@@ -145,7 +134,6 @@ import gratify.composeapp.generated.resources.playlists
 import gratify.composeapp.generated.resources.podcasts
 import gratify.composeapp.generated.resources.retry
 import gratify.composeapp.generated.resources.search_for
-import gratify.composeapp.generated.resources.search_for_songs_artists_albums_playlists_and_more
 import gratify.composeapp.generated.resources.song
 import gratify.composeapp.generated.resources.videos
 import gratify.composeapp.generated.resources.what_do_you_want_to_listen_to
@@ -153,6 +141,7 @@ import gratify.composeapp.generated.resources.what_do_you_want_to_listen_to
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
+    innerPadding: androidx.compose.foundation.layout.PaddingValues = androidx.compose.foundation.layout.PaddingValues(0.dp),
     searchViewModel: SearchViewModel = koinInject(),
     sharedViewModel: SharedViewModel = koinInject(),
     homeViewModel: HomeViewModel = koinInject(),
@@ -179,37 +168,6 @@ fun SearchScreen(
 
     var isFocused by rememberSaveable { mutableStateOf(false) }
 
-    val searchForString = stringResource(Res.string.search_for)
-    val songString = stringResource(Res.string.song).lowercase()
-    val artistString = stringResource(Res.string.artists).lowercase()
-    val albumString = stringResource(Res.string.albums).lowercase()
-    val playlistString = stringResource(Res.string.playlists).lowercase()
-    val videoString = stringResource(Res.string.videos).lowercase()
-    val podcastString = stringResource(Res.string.podcasts).lowercase()
-
-    // Animated Placeholder
-    val placeholderTexts =
-        remember {
-            listOf(
-                "$searchForString $songString...",
-                "$searchForString $artistString...",
-                "$searchForString $albumString...",
-                "$searchForString $playlistString...",
-                "$searchForString $videoString...",
-                "$searchForString $podcastString...",
-            )
-        }
-
-    var currentPlaceholderIndex by remember { mutableIntStateOf(0) }
-
-    // Animate placeholder - pause when focused
-    LaunchedEffect(isFocused) {
-        while (!isFocused) {
-            delay(3000) // Change every 3 seconds
-            currentPlaceholderIndex = (currentPlaceholderIndex + 1) % placeholderTexts.size
-        }
-    }
-
     var sheetSong by remember { mutableStateOf<SongEntity?>(null) }
     var showBottomSheet by remember { mutableStateOf(false) }
     val currentVideoId by searchViewModel.nowPlayingVideoId.collectAsStateWithLifecycle()
@@ -228,7 +186,7 @@ fun SearchScreen(
             isSearchSubmitted = false
             isExpanded = true
         }
-        if (searchText.isNotEmpty() && isFocused) {
+        if (isFocused) {
             searchViewModel.suggestQuery(searchText)
         }
     }
@@ -275,28 +233,24 @@ fun SearchScreen(
                 .fillMaxSize()
                 .background(Color.Transparent)
     ) {
+        com.tan.gratify.ui.component.ScreenHeader(
+            title = stringResource(Res.string.search), profileName = appProfileName,
+            profileImage = appProfileImage, onOpenProfile = onOpenDrawer,
+        )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .windowInsetsPadding(WindowInsets.statusBars)
                 .padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 4.dp)
                 .height(56.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            UserAvatar(
-                imageUrl = appProfileImage,
-                name = appProfileName,
-                modifier = Modifier
-                    .size(36.dp)
-                    .clickable { onOpenDrawer() }
-            )
-            Spacer(modifier = Modifier.width(16.dp))
             Box(modifier = Modifier.weight(1f)) {
                 SearchBar(
                     inputField = {
                         SearchBarDefaults.InputField(
                             query = searchText,
                             onQueryChange = { newText ->
+                                searchViewModel.cancelSearch()
                                 searchText = newText
                             },
                             onSearch = { query ->
@@ -307,17 +261,7 @@ fun SearchScreen(
                                     if (query.startsWith("@")) {
                                         searchViewModel.searchUsers(query)
                                     } else {
-                                        when (searchScreenState.searchType) {
-                                            SearchType.ALL -> searchViewModel.searchAll(query)
-                                            SearchType.SONGS -> searchViewModel.searchSongs(query)
-                                            SearchType.VIDEOS -> searchViewModel.searchVideos(query)
-                                            SearchType.ALBUMS -> searchViewModel.searchAlbums(query)
-                                            SearchType.ARTISTS -> searchViewModel.searchArtists(query)
-                                            SearchType.PLAYLISTS -> searchViewModel.searchPlaylists(query)
-                                            SearchType.FEATURED_PLAYLISTS -> searchViewModel.searchFeaturedPlaylist(query)
-                                            SearchType.PODCASTS -> searchViewModel.searchPodcast(query)
-                                            SearchType.USERS -> searchViewModel.searchUsers(query)
-                                        }
+                                        searchViewModel.search(query)
                                     }
                                 }
                             },
@@ -325,24 +269,10 @@ fun SearchScreen(
                             onExpandedChange = {},
                             enabled = true,
                             placeholder = {
-                                AnimatedContent(
-                                    targetState = currentPlaceholderIndex,
-                                    transitionSpec = {
-                                        (
-                                            fadeIn(animationSpec = tween(500)) +
-                                                slideInVertically { height -> height }
-                                        ).togetherWith(
-                                            fadeOut(animationSpec = tween(500)) +
-                                                slideOutVertically { height -> -height },
-                                        )
-                                    },
-                                    label = "placeholder_animation",
-                                ) { index ->
-                                    Text(
-                                        text = placeholderTexts[index],
-                                        style = typo().labelMedium,
-                                    )
-                                }
+                                Text(
+                                    text = stringResource(Res.string.what_do_you_want_to_listen_to),
+                                    style = typo().bodyMedium,
+                                )
                             },
                             leadingIcon = {
                                 Icon(
@@ -377,7 +307,7 @@ fun SearchScreen(
                             .onFocusChanged {
                                 isFocused = it.isFocused
                             },
-                    shape = RoundedCornerShape(24.dp),
+                    shape = GratifyShapes.large,
                     content = {},
                 )
             }
@@ -404,17 +334,7 @@ fun SearchScreen(
                         if (searchText.startsWith("@")) {
                             searchViewModel.searchUsers(searchText)
                         } else {
-                            when (id) {
-                                SearchType.ALL -> searchViewModel.searchAll(searchText)
-                                SearchType.SONGS -> searchViewModel.searchSongs(searchText)
-                                SearchType.VIDEOS -> searchViewModel.searchVideos(searchText)
-                                SearchType.ALBUMS -> searchViewModel.searchAlbums(searchText)
-                                SearchType.ARTISTS -> searchViewModel.searchArtists(searchText)
-                                SearchType.PLAYLISTS -> searchViewModel.searchPlaylists(searchText)
-                                SearchType.FEATURED_PLAYLISTS -> searchViewModel.searchFeaturedPlaylist(searchText)
-                                SearchType.PODCASTS -> searchViewModel.searchPodcast(searchText)
-                                SearchType.USERS -> searchViewModel.searchUsers(searchText)
-                            }
+                            searchViewModel.search(searchText, id)
                         }
                     }
                 }
@@ -422,7 +342,11 @@ fun SearchScreen(
             }
         }
 
-        Crossfade(targetState = searchUIType) {
+        if (searchScreenState.isSearching && uiState is SearchScreenUIState.Success) {
+            androidx.compose.material3.LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
+
+        Crossfade(targetState = searchUIType, modifier = Modifier.weight(1f).padding(bottom = innerPadding.calculateBottomPadding())) {
             when (it) {
                 SearchUIType.SEARCH_SUGGESTIONS -> {
                     LazyColumn(
@@ -490,21 +414,11 @@ fun SearchScreen(
                                                 if (suggestion.startsWith("@")) {
                                                     searchViewModel.searchUsers(suggestion)
                                                 } else {
-                                                    when (searchScreenState.searchType) {
-                                                        SearchType.ALL -> searchViewModel.searchAll(suggestion)
-                                                        SearchType.SONGS -> searchViewModel.searchSongs(suggestion)
-                                                        SearchType.VIDEOS -> searchViewModel.searchVideos(suggestion)
-                                                        SearchType.ALBUMS -> searchViewModel.searchAlbums(suggestion)
-                                                        SearchType.ARTISTS -> searchViewModel.searchArtists(suggestion)
-                                                        SearchType.PLAYLISTS -> searchViewModel.searchPlaylists(suggestion)
-                                                        SearchType.FEATURED_PLAYLISTS -> searchViewModel.searchFeaturedPlaylist(suggestion)
-                                                        SearchType.PODCASTS -> searchViewModel.searchPodcast(suggestion)
-                                                        SearchType.USERS -> searchViewModel.searchUsers(suggestion)
-                                                    }
+                                                    searchViewModel.search(suggestion)
                                                 }
                                             },
                                         ).padding(horizontal = 12.dp, vertical = 2.dp)
-                                        .clip(RoundedCornerShape(8.dp)),
+                                        .clip(GratifyShapes.small),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(
@@ -555,7 +469,7 @@ fun SearchScreen(
                                             modifier =
                                                 Modifier
                                                     .fillMaxWidth()
-                                                    .background(Color.Black),
+                                                    .background(GratifyColors.Background),
                                         ) {
                                             TextButton(
                                                 onClick = { searchViewModel.deleteSearchHistory() },
@@ -582,17 +496,7 @@ fun SearchScreen(
                                                 if (historyItem.startsWith("@")) {
                                                     searchViewModel.searchUsers(historyItem)
                                                 } else {
-                                                    when (searchScreenState.searchType) {
-                                                        SearchType.ALL -> searchViewModel.searchAll(historyItem)
-                                                        SearchType.SONGS -> searchViewModel.searchSongs(historyItem)
-                                                        SearchType.VIDEOS -> searchViewModel.searchVideos(historyItem)
-                                                        SearchType.ALBUMS -> searchViewModel.searchAlbums(historyItem)
-                                                        SearchType.ARTISTS -> searchViewModel.searchArtists(historyItem)
-                                                        SearchType.PLAYLISTS -> searchViewModel.searchPlaylists(historyItem)
-                                                        SearchType.FEATURED_PLAYLISTS -> searchViewModel.searchFeaturedPlaylist(historyItem)
-                                                        SearchType.PODCASTS -> searchViewModel.searchPodcast(historyItem)
-                                                        SearchType.USERS -> searchViewModel.searchUsers(historyItem)
-                                                    }
+                                                    searchViewModel.search(historyItem)
                                                 }
                                             }.padding(horizontal = 12.dp),
                                     verticalAlignment = Alignment.CenterVertically,
@@ -633,19 +537,9 @@ fun SearchScreen(
 
                 SearchUIType.EMPTY -> {
                     val curatedGradients = remember {
-                        listOf(
-                            Brush.linearGradient(listOf(Color(0xFFE91E63), Color(0xFF9C27B0))), // Pink -> Purple
-                            Brush.linearGradient(listOf(Color(0xFF009688), Color(0xFF00796B))), // Teal
-                            Brush.linearGradient(listOf(Color(0xFF673AB7), Color(0xFF512DA8))), // Purple
-                            Brush.linearGradient(listOf(Color(0xFF3F51B5), Color(0xFF303F9F))), // Indigo
-                            Brush.linearGradient(listOf(Color(0xFFFF5722), Color(0xFFE64A19))), // Orange
-                            Brush.linearGradient(listOf(Color(0xFFFF9800), Color(0xFFF57C00))), // Amber
-                            Brush.linearGradient(listOf(Color(0xFF4CAF50), Color(0xFF388E3C))), // Green
-                            Brush.linearGradient(listOf(Color(0xFF03A9F4), Color(0xFF0288D1))), // Light Blue
-                            Brush.linearGradient(listOf(Color(0xFF9C27B0), Color(0xFFE040FB))), // Purple -> Magenta
-                            Brush.linearGradient(listOf(Color(0xFF00BCD4), Color(0xFF0097A7))), // Cyan
-                            Brush.linearGradient(listOf(Color(0xFF607D8B), Color(0xFF455A64)))  // Blue Grey
-                        )
+                        GratifyColors.BrowseArtwork.map { color ->
+                            Brush.linearGradient(listOf(color, color.copy(alpha = 0.8f)))
+                        }
                     }
 
 
@@ -681,7 +575,7 @@ fun SearchScreen(
                             item {
                                 Text(
                                     text = "Belum ada playlist publik",
-                                    style = typo().bodyMedium.copy(color = Color.Gray),
+                                    style = typo().bodyMedium.copy(color = GratifyColors.TextSecondary),
                                     modifier = Modifier.padding(bottom = 12.dp)
                                 )
                             }
@@ -805,17 +699,7 @@ fun SearchScreen(
                                 if (query.isNotEmpty()) {
                                     isSearchSubmitted = true
                                     searchViewModel.insertSearchHistory(query)
-                                    when (searchScreenState.searchType) {
-                                        SearchType.ALL -> searchViewModel.searchAll(query)
-                                        SearchType.SONGS -> searchViewModel.searchSongs(query)
-                                        SearchType.VIDEOS -> searchViewModel.searchVideos(query)
-                                        SearchType.ALBUMS -> searchViewModel.searchAlbums(query)
-                                        SearchType.ARTISTS -> searchViewModel.searchArtists(query)
-                                        SearchType.PLAYLISTS -> searchViewModel.searchPlaylists(query)
-                                        SearchType.FEATURED_PLAYLISTS -> searchViewModel.searchFeaturedPlaylist(query)
-                                        SearchType.PODCASTS -> searchViewModel.searchPodcast(query)
-                                        SearchType.USERS -> searchViewModel.searchUsers(query)
-                                    }
+                                    searchViewModel.search(query)
                                 }
                             },
                             isRefreshing = uiState is SearchScreenUIState.Loading,
@@ -1027,7 +911,7 @@ fun SearchScreen(
                                     }
 
                                     is SearchScreenUIState.Error -> {
-                                        Box {
+                                        Box(Modifier.fillMaxSize()) {
                                             // Error state
                                             Column(
                                                 modifier = Modifier.align(Alignment.Center),
@@ -1043,7 +927,7 @@ fun SearchScreen(
                                                 Spacer(modifier = Modifier.height(10.dp))
                                                 Button(onClick = {
                                                     if (searchText.isNotEmpty()) {
-                                                        searchViewModel.searchAll(searchText)
+                                                        searchViewModel.search(searchText)
                                                     }
                                                 }) {
                                                     Text(text = stringResource(Res.string.retry))
@@ -1120,7 +1004,7 @@ fun SuggestItemRow(
             modifier =
                 Modifier
                     .size(40.dp)
-                    .clip(RoundedCornerShape(4.dp)),
+                    .clip(GratifyShapes.extraSmall),
         ) {
             AsyncImage(
                 model =
@@ -1133,6 +1017,7 @@ fun SuggestItemRow(
                         .build(),
                 placeholder = painterResource(Res.drawable.holder),
                 error = painterResource(Res.drawable.holder),
+                fallback = painterResource(Res.drawable.holder),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier =
@@ -1142,7 +1027,7 @@ fun SuggestItemRow(
                             if (searchResult is ArtistsResult) {
                                 CircleShape
                             } else {
-                                RoundedCornerShape(4.dp)
+                                GratifyShapes.extraSmall
                             },
                         ),
             )
@@ -1227,7 +1112,7 @@ fun ExploreCard(
     Box(
         modifier = modifier
             .height(110.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(GratifyShapes.medium)
             .background(gradient)
             .clickable(onClick = onClick)
             .padding(12.dp)
@@ -1246,7 +1131,7 @@ fun ExploreCard(
                     translationX = 15f
                     translationY = 15f
                 }
-                .clip(RoundedCornerShape(8.dp))
+                .clip(GratifyShapes.small)
         ) {
             AsyncImage(
                 model = ImageRequest.Builder(LocalPlatformContext.current)
@@ -1256,6 +1141,7 @@ fun ExploreCard(
                     .build(),
                 placeholder = painterResource(Res.drawable.holder),
                 error = painterResource(Res.drawable.holder),
+                fallback = painterResource(Res.drawable.holder),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
@@ -1276,7 +1162,7 @@ fun MoodMomentRowItem(
         modifier = Modifier
             .width(130.dp)
             .height(180.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(GratifyShapes.medium)
             .background(gradient)
             .clickable {
                 navController.navigate(MoodDestination(params))
@@ -1290,6 +1176,7 @@ fun MoodMomentRowItem(
                 .build(),
             placeholder = painterResource(Res.drawable.holder),
             error = painterResource(Res.drawable.holder),
+            fallback = painterResource(Res.drawable.holder),
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),

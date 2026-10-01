@@ -1,5 +1,7 @@
 package com.tan.gratify.ui.screen.social
 
+import com.tan.gratify.ui.theme.GratifyColors
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -141,7 +143,7 @@ fun FollowListScreen(
                             style = typo().bodyLarge.copy(
                                 fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal
                             ),
-                            color = if (selectedTabIndex == index) Color.White else Color.Gray
+                            color = if (selectedTabIndex == index) Color.White else GratifyColors.TextSecondary
                         )
                     }
                 )
@@ -161,7 +163,7 @@ fun FollowListScreen(
                     Text(
                         text = "Belum ada ${tabs[selectedTabIndex].lowercase()}",
                         style = typo().bodyMedium,
-                        color = Color.Gray
+                        color = GratifyColors.TextSecondary
                     )
                 }
             } else {
@@ -193,7 +195,7 @@ fun FollowListScreen(
                                 Text(
                                     text = "Pengguna",
                                     style = typo().bodySmall,
-                                    color = Color.Gray
+                                    color = GratifyColors.TextSecondary
                                 )
                             }
                         }

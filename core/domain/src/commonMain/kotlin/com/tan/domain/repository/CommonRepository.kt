@@ -18,6 +18,8 @@ interface CommonRepository {
 
     suspend fun databaseDaoCheckpoint()
 
+    suspend fun exportActiveAccountDatabase(destination: String)
+
     // Recently data
     fun getAllRecentData(): Flow<List<RecentlyType>>
 

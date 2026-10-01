@@ -298,7 +298,6 @@ actual fun LiquidGlassAppBottomNavigationBar(
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp)
                     .height(56.dp),
-                backdrop = backdrop,
                 onClick = {
                     onOpenNowPlaying()
                 },

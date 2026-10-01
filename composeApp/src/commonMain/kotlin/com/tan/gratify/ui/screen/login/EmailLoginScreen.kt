@@ -1,14 +1,19 @@
 package com.tan.gratify.ui.screen.login
 
+import com.tan.gratify.ui.theme.GratifyColors
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
@@ -64,11 +69,11 @@ import gratify.composeapp.generated.resources.baseline_arrow_back_ios_new_24
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
-private val AntigravityGreen = Color(0xFFE0E0E0)
-private val BackgroundBlack = Color(0xFF000000)
-private val LightGray = Color(0xFFE0E0E0)
-private val DarkGray = Color(0xFF2E2E2E)
-private val ErrorRed = Color(0xFFFF5252)
+private val GratifyAccent = GratifyColors.Accent
+private val BackgroundBlack = GratifyColors.Background
+private val LightGray = GratifyColors.Accent
+private val DarkGray = GratifyColors.SurfaceRaised
+private val ErrorRed = GratifyColors.Error
 
 /**
  * EmailLoginScreen — Layar login menggunakan email + password.
@@ -170,6 +175,7 @@ fun EmailLoginScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .imePadding()
                 .padding(horizontal = 24.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
@@ -237,7 +243,7 @@ private fun LoginCredentialsStep(
     val isFormValid = isEmailValid && isPasswordValid
 
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.Top
     ) {
         Spacer(Modifier.height(24.dp))
@@ -269,14 +275,14 @@ private fun LoginCredentialsStep(
             modifier = Modifier.fillMaxWidth(),
             maxLines = 1,
             placeholder = {
-                Text("Email", style = typo().bodyMedium.copy(color = Color.Gray))
+                Text("Email", style = typo().bodyMedium.copy(color = GratifyColors.TextSecondary))
             },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = LightGray,
                 unfocusedBorderColor = DarkGray,
                 focusedTextColor = Color.White,
                 unfocusedTextColor = Color.White,
-                cursorColor = AntigravityGreen
+                cursorColor = GratifyAccent
             ),
             isError = !isEmailValid && email.isNotEmpty(),
             keyboardOptions = KeyboardOptions(
@@ -310,7 +316,7 @@ private fun LoginCredentialsStep(
             modifier = Modifier.fillMaxWidth(),
             maxLines = 1,
             placeholder = {
-                Text("Password", style = typo().bodyMedium.copy(color = Color.Gray))
+                Text("Password", style = typo().bodyMedium.copy(color = GratifyColors.TextSecondary))
             },
             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             trailingIcon = {
@@ -318,7 +324,7 @@ private fun LoginCredentialsStep(
                     Icon(
                         imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                         contentDescription = "Toggle password visibility",
-                        tint = Color.Gray
+                        tint = GratifyColors.TextSecondary
                     )
                 }
             },
@@ -327,7 +333,7 @@ private fun LoginCredentialsStep(
                 unfocusedBorderColor = DarkGray,
                 focusedTextColor = Color.White,
                 unfocusedTextColor = Color.White,
-                cursorColor = AntigravityGreen
+                cursorColor = GratifyAccent
             ),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password,
@@ -357,7 +363,7 @@ private fun LoginCredentialsStep(
             Text(
                 text = "Lupa password?",
                 style = typo().bodySmall.copy(
-                    color = AntigravityGreen,
+                    color = GratifyAccent,
                     fontWeight = FontWeight.SemiBold,
                 )
             )
@@ -371,13 +377,13 @@ private fun LoginCredentialsStep(
             enabled = isFormValid && !isLoading,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp),
+                .heightIn(min = 52.dp),
             shape = RoundedCornerShape(50),
             colors = ButtonDefaults.buttonColors(
-                containerColor = AntigravityGreen,
+                containerColor = GratifyAccent,
                 disabledContainerColor = DarkGray,
                 contentColor = Color.Black,
-                disabledContentColor = Color.Gray
+                disabledContentColor = GratifyColors.TextSecondary
             ),
         ) {
             if (isLoading) {

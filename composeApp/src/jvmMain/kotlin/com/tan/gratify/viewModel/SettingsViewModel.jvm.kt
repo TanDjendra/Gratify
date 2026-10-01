@@ -33,42 +33,36 @@ actual suspend fun restoreNative(
     uri: Uri,
     getData: () -> Unit,
 ) {
-    ZipInputStream(
-        FileInputStream(File(uri.toString())),
-    ).use { inputStream ->
-        var entry =
-            try {
-                inputStream.nextEntry
-            } catch (e: Exception) {
-                null
-            }
-        while (entry != null) {
-            Logger.d("BackupRestore", "Processing entry: ${entry.name}")
-            when {
-                entry.name == "$SETTINGS_FILENAME.preferences_pb" -> {
-                    File(getHomeFolderPath(listOf(".gratify")), "$SETTINGS_FILENAME.preferences_pb")
-                        .outputStream()
-                        .use { outputStream ->
-                            inputStream.copyTo(outputStream)
-                        }
-                }
-
-                entry.name == DB_NAME -> {
-                    runBlocking(Dispatchers.IO) {
-                        commonRepository.databaseDaoCheckpoint()
-                        commonRepository.closeDatabase()
-                    }
-                    FileOutputStream(commonRepository.getDatabasePath()).use { outputStream ->
-                        inputStream.copyTo(outputStream)
+    val stage = java.nio.file.Files.createTempDirectory("gratify-restore-").toFile()
+    var databaseClosed = false
+    var success = false
+    try {
+        withContext(Dispatchers.IO) {
+            val parsed = java.net.URI(uri.toString())
+            val source = if (parsed.scheme == "file") File(parsed) else File(uri.toString())
+            val files = stageRestoreArchive(source.inputStream(), stage, setOf(DB_NAME, "$SETTINGS_FILENAME.preferences_pb"), "downloads")
+            files.filter { it.first == "$SETTINGS_FILENAME.preferences_pb" }.forEach { validateRestorePreferences(it.second) }
+            files.filter { it.first == DB_NAME }.forEach { (_, file) ->
+                androidx.sqlite.driver.bundled.BundledSQLiteDriver().open(file.absolutePath).use { db ->
+                    db.prepare("PRAGMA quick_check").use { statement ->
+                        check(statement.step() && statement.getText(0) == "ok") { "Invalid backup database" }
                     }
                 }
             }
-            entry = inputStream.nextEntry
+            require(files.none { it.first.startsWith("downloads/") }) { "Desktop backup contains unsupported download data" }
+            val replacements = files.map { (name, staged) -> staged to if (name == DB_NAME)
+                File(requireNotNull(commonRepository.getDatabasePath())) else File(getHomeFolderPath(listOf(".gratify")), name) }
+            commonRepository.databaseDaoCheckpoint(); commonRepository.closeDatabase(); databaseClosed = true
+            replaceRestoreFiles(replacements, File(stage,"rollback"))
+            replacements.map { it.second }.filter { it.name == DB_NAME }.forEach { db ->
+                File(db.path + "-wal").delete(); File(db.path + "-shm").delete()
+            }
+            success = true
         }
-        withContext(Dispatchers.Main) {
-            showToast(getString(Res.string.restore_success), ToastGravity.Bottom)
-            showToast("App will restart to apply changes", ToastGravity.Bottom)
-            delay(2000)
+    } finally {
+        if (!databaseClosed || success) stage.deleteRecursively()
+        if (databaseClosed) withContext(Dispatchers.Main) {
+            showToast(if (success) "Restore complete. Reopen Gratify." else "Restore failed. Original data was preserved; reopen Gratify.", ToastGravity.Bottom)
             exitProcess(0)
         }
     }
@@ -78,28 +72,24 @@ actual suspend fun backupNative(
     commonRepository: CommonRepository,
     uri: Uri,
     backupDownloaded: Boolean,
-) {
-    ZipOutputStream(
-        FileOutputStream(File(uri.toString()))
-    ).use {
-        it.buffered().zipOutputStream().use { outputStream ->
-            File(getHomeFolderPath(listOf(".gratify")), "$SETTINGS_FILENAME.preferences_pb")
-                .inputStream()
-                .buffered()
-                .use { inputStream ->
-                    outputStream.putNextEntry(ZipEntry("$SETTINGS_FILENAME.preferences_pb"))
-                    inputStream.copyTo(outputStream)
-                }
-            runBlocking(Dispatchers.IO) {
-                commonRepository.databaseDaoCheckpoint()
+) = kotlinx.coroutines.withContext(Dispatchers.IO) {
+    val exported = File.createTempFile("gratify-active-library-", ".db")
+    check(exported.delete()) // VACUUM INTO requires a destination that does not exist.
+    try {
+        commonRepository.exportActiveAccountDatabase(exported.absolutePath)
+        val parsed = java.net.URI(uri.toString())
+        val destination = if (parsed.scheme == "file") File(parsed) else File(uri.toString())
+        ZipOutputStream(FileOutputStream(destination).buffered()).use { output ->
+            fun append(file: File, name: String) {
+                if (!file.isFile) return
+                output.putNextEntry(ZipEntry(name))
+                file.inputStream().buffered().use { it.copyTo(output) }
+                output.closeEntry()
             }
-            FileInputStream(commonRepository.getDatabasePath()).use { inputStream ->
-                outputStream.putNextEntry(ZipEntry(DB_NAME))
-                inputStream.copyTo(outputStream)
-            }
+            append(File(getHomeFolderPath(listOf(".gratify")), "$SETTINGS_FILENAME.preferences_pb"), "$SETTINGS_FILENAME.preferences_pb")
+            append(exported, DB_NAME)
         }
-
-    }
+    } finally { exported.delete() }
 }
 
 actual fun getPackageName(): String = ""

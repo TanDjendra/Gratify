@@ -14,7 +14,10 @@ internal class LocalPlaylistPagingSource(
     private val filter: FilterState,
     private val localDataSource: LocalDataSource,
 ) : PagingSource<Int, Pair<SongEntity, PairSongLocalPlaylist>>() {
-    override fun getRefreshKey(state: PagingState<Int, Pair<SongEntity, PairSongLocalPlaylist>>): Int? = state.anchorPosition
+    override fun getRefreshKey(state: PagingState<Int, Pair<SongEntity, PairSongLocalPlaylist>>): Int? =
+        state.anchorPosition?.let { anchor ->
+            state.closestPageToPosition(anchor)?.let { page -> page.prevKey?.plus(1) ?: page.nextKey?.minus(1) }
+        }
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Pair<SongEntity, PairSongLocalPlaylist>> {
         return try {
@@ -44,88 +47,35 @@ internal class LocalPlaylistPagingSource(
                 prevKey = if (currentPage == 0) null else currentPage - 1,
                 nextKey = if (songs.isEmpty()) null else currentPage + 1,
             )
-        } catch (e: Exception) {
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+        catch (e: Exception) {
             Logger.e("LocalPlaylistPagingSource", "load: ${e.printStackTrace()}")
             LoadResult.Error(e)
         }
     }
 }
 
+internal data class PlaylistTimeCursor(val timestamp: kotlinx.datetime.LocalDateTime, val songId: String)
+
 internal class LocalPlaylistTimeBasedPagingSource(
     private val playlistId: Long,
     private val filter: FilterState,
     private val localDataSource: LocalDataSource,
-) : PagingSource<Long, Pair<SongEntity, PairSongLocalPlaylist>>() {
-    val converter = Converters()
+) : PagingSource<PlaylistTimeCursor, Pair<SongEntity, PairSongLocalPlaylist>>() {
+    // Reload from the beginning; timestamp alone cannot identify a position among equal timestamps.
+    override fun getRefreshKey(state: PagingState<PlaylistTimeCursor, Pair<SongEntity, PairSongLocalPlaylist>>): PlaylistTimeCursor? = null
 
-    override fun getRefreshKey(state: PagingState<Long, Pair<SongEntity, PairSongLocalPlaylist>>): Long? =
-        state.anchorPosition?.let { anchor ->
-            state.closestItemToPosition(anchor)?.let { (_, pair) ->
-                converter.dateToTimestamp(pair.inPlaylist)
-            }
-        }
-
-    override suspend fun load(params: LoadParams<Long>): LoadResult<Long, Pair<SongEntity, PairSongLocalPlaylist>> {
+    override suspend fun load(params: LoadParams<PlaylistTimeCursor>): LoadResult<PlaylistTimeCursor, Pair<SongEntity, PairSongLocalPlaylist>> {
         return try {
-            val currentPage = params.key ?: 0L
-            val timestamp =
-                if (currentPage == 0L && filter == FilterState.NewerFirst) {
-                    val newestPair =
-                        localDataSource.getNewestPlaylistPairSong(playlistId = playlistId)
-                    newestPair?.inPlaylist
-                } else {
-                    converter.fromTimestamp(currentPage)
-                }
-            val pairs =
-                localDataSource
-                    .getPlaylistPairSongByTime(
-                        playlistId = playlistId,
-                        filterState = filter,
-                        localDateTime = timestamp ?: throw Exception("Invalid timestamp"),
-                    ).let {
-                        if (currentPage == 0L && filter == FilterState.NewerFirst) {
-                            val newestPair =
-                                listOfNotNull(
-                                    localDataSource.getNewestPlaylistPairSong(playlistId = playlistId),
-                                )
-                            newestPair + (it ?: emptyList())
-                        } else {
-                            it
-                        }
-                    }
-            Logger.d("LocalPlaylistPagingSource", "load: $pairs")
-            val songs =
-                localDataSource
-                    .getSongByListVideoIdFull(
-                        pairs?.map { it.songId } ?: emptyList(),
-                    )
-            val idValue = songs.associateBy { it.videoId }
-            val sorted =
-                (pairs ?: mutableListOf<PairSongLocalPlaylist>()).mapNotNull {
-                    idValue[it.songId]?.let { songEntity ->
-                        Pair(songEntity, it)
-                    }
-                }
-            Logger.d("LocalPlaylistPagingSource", "load: $songs")
-            val nextKey =
-                pairs?.lastOrNull()?.inPlaylist.let {
-                    converter.dateToTimestamp(it)
-                }
-            return LoadResult.Page(
-                data = sorted,
+            val cursor = params.key
+            val pairs = localDataSource.getPlaylistTimePage(playlistId, filter, cursor?.timestamp, cursor?.songId.orEmpty())
+            val songs = localDataSource.getSongByListVideoIdFull(pairs.map { it.songId }).associateBy { it.videoId }
+            LoadResult.Page(
+                data = pairs.mapNotNull { pair -> songs[pair.songId]?.let { it to pair } },
                 prevKey = null,
-                nextKey =
-                    if (songs.isEmpty()) {
-                        null
-                    } else if (nextKey == currentPage) {
-                        null
-                    } else {
-                        nextKey
-                    },
+                nextKey = if (pairs.size < 50) null else pairs.last().let { PlaylistTimeCursor(it.inPlaylist, it.songId) },
             )
-        } catch (e: Exception) {
-            Logger.e("LocalPlaylistPagingSource", "load: ${e.printStackTrace()}")
-            LoadResult.Error(e)
-        }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+        catch (e: Exception) { LoadResult.Error(e) }
     }
 }

@@ -19,12 +19,8 @@ object VersionManager {
     fun getVersionName(): String = removeDevSuffix(versionName ?: String())
 
     fun isVersionLower(current: String, target: String): Boolean {
-        val cleanCurrent = current.removePrefix("v").split("-")[0]
-        val cleanTarget = target.removePrefix("v").split("-")[0]
-        
-        val currentParts = cleanCurrent.split(".").mapNotNull { it.toIntOrNull() }
-        val targetParts = cleanTarget.split(".").mapNotNull { it.toIntOrNull() }
-        
+        val currentParts = parseVersion(current) ?: return false
+        val targetParts = parseVersion(target) ?: return false
         val maxLength = maxOf(currentParts.size, targetParts.size)
         for (i in 0 until maxLength) {
             val currVal = currentParts.getOrNull(i) ?: 0
@@ -33,6 +29,14 @@ object VersionManager {
             if (currVal > targetVal) return false
         }
         return false
+    }
+
+    private fun parseVersion(value: String): List<Int>? {
+        val numericPart = value.removePrefix("v").substringBefore('-')
+        if (numericPart.isEmpty()) return null
+        val parts = numericPart.split('.').map { it.toIntOrNull() }
+        if (parts.any { it == null }) return null
+        return parts.filterNotNull()
     }
 
     private fun removeDevSuffix(versionName: String): String {

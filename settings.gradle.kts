@@ -71,6 +71,7 @@ include(
     ":media3",
     ":media3-ui",
     ":crashlytics-empty",
+    ":crashlytics",
     ":kizzy",
     ":jmtc",
     ":nowplayingcenter",

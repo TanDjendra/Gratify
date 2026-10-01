@@ -118,7 +118,7 @@ class NewPipeUtils(
     downloader: Downloader,
 ) {
     init {
-        NewPipe.init(downloader)
+        initializePipePipeSecurely(downloader)
     }
 
     fun getSignatureTimestamp(videoId: String): Result<Int> =

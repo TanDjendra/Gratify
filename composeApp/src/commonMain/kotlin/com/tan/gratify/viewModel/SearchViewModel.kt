@@ -17,7 +17,6 @@ import com.tan.domain.data.entities.UserProfile
 import com.tan.domain.repository.UserRepository
 import com.tan.domain.utils.Resource
 import com.tan.domain.utils.toQueryList
-import com.tan.logger.LogLevel
 import com.tan.logger.Logger
 import com.tan.gratify.viewModel.base.BaseViewModel
 import kotlinx.coroutines.async
@@ -30,7 +29,15 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.flow.Flow
 import org.jetbrains.compose.resources.StringResource
 import gratify.composeapp.generated.resources.Res
 import gratify.composeapp.generated.resources.albums
@@ -46,6 +53,7 @@ import gratify.composeapp.generated.resources.users
 // State cho tìm kiếm
 data class SearchScreenState(
     val searchType: SearchType = SearchType.ALL,
+    val isSearching: Boolean = false,
     val searchAllResult: List<SearchResultType> = emptyList(),
     val searchSongsResult: List<SongsResult> = emptyList(),
     val searchVideosResult: List<VideosResult> = emptyList(),
@@ -115,436 +123,205 @@ class SearchViewModel(
     var regionCode: String? = null
     var language: String? = null
 
-    init {
-        regionCode = runBlocking { dataStoreManager.location.first() }
-        language = runBlocking { dataStoreManager.getString(SELECTED_LANGUAGE).first() }
-        getSearchHistory()
-        getPublicPlaylists()
-    }
-    
-    fun getPublicPlaylists() {
-        viewModelScope.launch {
-            try {
-                sharedPlaylistRepository.getSharedPlaylists().collectLatest { result ->
-                    val playlists = result.getOrNull() ?: emptyList()
-                    _searchScreenState.update { it.copy(publicPlaylists = playlists) }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
+    private var searchJob: Job? = null
+    private var suggestionJob: Job? = null
+    private var publicPlaylistsJob: Job? = null
+    private var requestId = 0
 
-    private fun getSearchHistory() {
+    init {
+        viewModelScope.launch {
+            regionCode = dataStoreManager.location.first()
+            language = dataStoreManager.getString(SELECTED_LANGUAGE).first()
+        }
         viewModelScope.launch {
             searchRepository.getSearchHistory().collect { values ->
-                if (values.isNotEmpty()) {
-                    values.toQueryList().reversed().let { list ->
-                        _searchHistory.value = list
-                        log("Search history updated: $list")
+                _searchHistory.value = values.toQueryList().reversed()
+            }
+        }
+        getPublicPlaylists()
+    }
+
+    fun getPublicPlaylists() {
+        if (publicPlaylistsJob?.isActive == true) return
+        publicPlaylistsJob = viewModelScope.launch {
+            try {
+                sharedPlaylistRepository.getSharedPlaylists().collectLatest { result ->
+                    result.getOrNull()?.let { playlists ->
+                        _searchScreenState.update { it.copy(publicPlaylists = playlists) }
                     }
-                } else {
-                    _searchHistory.value = emptyList()
-                    log("Search history is empty")
                 }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Logger.w(tag, "Public playlists could not load")
             }
         }
     }
 
     fun insertSearchHistory(query: String) {
+        if (query.isBlank()) return
         viewModelScope.launch {
-            searchRepository.insertSearchHistory(SearchHistory(query = query)).collectLatest {
-                Logger.d(tag, "Inserted search history: $query, $it")
-                getSearchHistory()
-            }
+            searchRepository.insertSearchHistory(SearchHistory(query = query.trim())).collect {}
         }
     }
 
     fun deleteSearchHistory() {
-        viewModelScope.launch {
-            searchRepository.deleteSearchHistory()
-            delay(1000)
-            getSearchHistory()
-        }
+        viewModelScope.launch { searchRepository.deleteSearchHistory() }
     }
 
-    fun searchSongs(query: String) {
+    /** Only the latest query/filter may publish results; each request has a deadline. */
+    private fun runSearch(type: SearchType, block: suspend () -> Unit) {
+        val request = ++requestId
+        searchJob?.cancel()
         _searchScreenUIState.value = SearchScreenUIState.Loading
-        viewModelScope.launch {
-            searchRepository.getSearchDataSong(query).collect { values ->
-                when (values) {
-                    is Resource.Success -> {
-                        values.data?.let { songsList ->
-                            _searchScreenState.update { state ->
-                                state.copy(searchSongsResult = songsList)
-                            }
-                        }
-                        _searchScreenUIState.value = SearchScreenUIState.Success
-                    }
-
-                    is Resource.Error -> {
-                        _searchScreenUIState.value = SearchScreenUIState.Error
-                    }
-                }
-            }
-        }
-    }
-
-    fun searchUsers(query: String) {
-        _searchScreenUIState.value = SearchScreenUIState.Loading
-        viewModelScope.launch {
-            userRepository.searchUsers(query.removePrefix("@").trim()).collect { users ->
-                _searchScreenState.update { state ->
-                    state.copy(
-                        searchType = SearchType.USERS,
-                        searchUsersResult = users
-                    )
-                }
-                _searchScreenUIState.value = SearchScreenUIState.Success
-            }
-        }
-    }
-
-    fun searchAll(query: String) {
-        _searchScreenUIState.value = SearchScreenUIState.Loading
-        viewModelScope.launch {
-            var song = ArrayList<SongsResult>()
-            val video = ArrayList<VideosResult>()
-            var album = ArrayList<AlbumsResult>()
-            var artist = ArrayList<ArtistsResult>()
-            var playlist = ArrayList<PlaylistsResult>()
-            var featuredPlaylist = ArrayList<PlaylistsResult>()
-            var podcast = ArrayList<PlaylistsResult>()
-            val temp: ArrayList<SearchResultType> = ArrayList()
-
-            val job1 =
-                launch {
-                    searchRepository.getSearchDataSong(query).collect { values ->
-                        when (values) {
-                            is Resource.Success -> values.data?.let { song = it }
-                            is Resource.Error -> {}
-                        }
-                    }
-                }
-            val job2 =
-                launch {
-                    searchRepository.getSearchDataArtist(query).collect { values ->
-                        when (values) {
-                            is Resource.Success -> values.data?.let { artist = it }
-                            is Resource.Error -> {}
-                        }
-                    }
-                }
-            val job3 =
-                launch {
-                    searchRepository
-                        .getSearchDataAlbum(query)
-                        .collect { values ->
-                            when (values) {
-                                is Resource.Success -> values.data?.let { album = it }
-                                is Resource.Error -> {}
-                            }
-                        }
-                }
-            val job4 =
-                launch {
-                    searchRepository.getSearchDataPlaylist(query).collect { values ->
-                        when (values) {
-                            is Resource.Success -> values.data?.let { playlist = it }
-                            is Resource.Error -> {}
-                        }
-                    }
-                }
-            val job5 =
-                launch {
-                    searchRepository.getSearchDataVideo(query).collect { values ->
-                        when (values) {
-                            is Resource.Success -> values.data?.let { video.addAll(it) }
-                            is Resource.Error -> {}
-                        }
-                    }
-                }
-            val job6 =
-                launch {
-                    searchRepository.getSearchDataFeaturedPlaylist(query).collect { values ->
-                        when (values) {
-                            is Resource.Success -> values.data?.let { featuredPlaylist = it }
-                            is Resource.Error -> {}
-                        }
-                    }
-                }
-            val job7 =
-                launch {
-                    searchRepository.getSearchDataPodcast(query).collect { values ->
-                        when (values) {
-                            is Resource.Success -> values.data?.let { podcast = it }
-                            is Resource.Error -> {}
-                        }
-                    }
-                }
-            job1.join()
-            job2.join()
-            job3.join()
-            job4.join()
-            job5.join()
-            job6.join()
-            job7.join()
-
+        _searchScreenState.update { SearchScreenState(
+            searchType = type, isSearching = true, publicPlaylists = it.publicPlaylists,
+        ) }
+        searchJob = viewModelScope.launch {
             try {
-                if (artist.size >= 3) {
-                    for (i in 0..2) {
-                        temp += artist[i]
-                    }
-                    temp.addAll(song)
-                    temp.addAll(video)
-                    temp.addAll(album)
-                    temp.addAll(playlist)
-                    temp.addAll(featuredPlaylist)
-                    temp.addAll(podcast)
-                } else {
-                    temp.addAll(artist)
-                    temp.addAll(song)
-                    temp.addAll(video)
-                    temp.addAll(album)
-                    temp.addAll(playlist)
-                    temp.addAll(featuredPlaylist)
-                    temp.addAll(podcast)
-                }
-
-                _searchScreenState.update { state ->
-                    state.copy(
-                        searchType = SearchType.ALL,
-                        searchAllResult = temp,
-                        searchSongsResult = song,
-                        searchArtistsResult = artist,
-                        searchAlbumsResult = album,
-                        searchPlaylistsResult = playlist,
-                        searchVideosResult = video,
-                        searchFeaturedPlaylistsResult = featuredPlaylist,
-                        searchPodcastsResult = podcast,
-                    )
-                }
-                _searchScreenUIState.value = SearchScreenUIState.Success
-            } catch (e: Exception) {
-                e.printStackTrace()
-                _searchScreenUIState.value = SearchScreenUIState.Error
+                withTimeout(20_000) { block() }
+                if (request == requestId && _searchScreenUIState.value is SearchScreenUIState.Loading)
+                    _searchScreenUIState.value = SearchScreenUIState.Success
+            } catch (error: TimeoutCancellationException) {
+                if (request == requestId && _searchScreenUIState.value !is SearchScreenUIState.Success)
+                    _searchScreenUIState.value = SearchScreenUIState.Error
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                if (request == requestId) _searchScreenUIState.value = SearchScreenUIState.Error
+            } finally {
+                if (request == requestId) _searchScreenState.update { it.copy(isSearching = false) }
             }
+        }
+    }
+
+    private suspend fun <T> collectCategory(
+        flow: Flow<Resource<ArrayList<T>>>,
+        update: (SearchScreenState, List<T>) -> SearchScreenState,
+        optional: Boolean = false,
+    ): Boolean {
+        val result = try {
+            withTimeoutOrNull(12_000) { flow.first() }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            null
+        }
+        currentCoroutineContext().ensureActive()
+        if (result is Resource.Success) {
+            _searchScreenState.update { state -> update(state, result.data.orEmpty()).withAllResults() }
+            _searchScreenUIState.value = SearchScreenUIState.Success
+            return true
+        }
+        if (!optional) _searchScreenUIState.value = SearchScreenUIState.Error
+        return false
+    }
+
+    private fun SearchScreenState.withAllResults() = copy(
+        searchAllResult = searchSongsResult.take(3) + searchArtistsResult.take(3) +
+            searchAlbumsResult.take(3) + searchPlaylistsResult + searchVideosResult +
+            searchFeaturedPlaylistsResult + searchPodcastsResult + searchSongsResult.drop(3) +
+            searchArtistsResult.drop(3) + searchAlbumsResult.drop(3),
+    )
+
+    fun search(query: String, type: SearchType = _searchScreenState.value.searchType) {
+        val text = query.trim()
+        if (text.isEmpty()) { cancelSearch(); return }
+        if (text.startsWith("@")) { searchUsers(text); return }
+        when (type) {
+            SearchType.ALL -> searchAll(text)
+            SearchType.SONGS -> searchSongs(text)
+            SearchType.VIDEOS -> searchVideos(text)
+            SearchType.ALBUMS -> searchAlbums(text)
+            SearchType.ARTISTS -> searchArtists(text)
+            SearchType.PLAYLISTS -> searchPlaylists(text)
+            SearchType.FEATURED_PLAYLISTS -> searchFeaturedPlaylist(text)
+            SearchType.PODCASTS -> searchPodcast(text)
+            SearchType.USERS -> searchUsers(text)
+        }
+    }
+
+    fun searchSongs(query: String) = runSearch(SearchType.SONGS) {
+        collectCategory(searchRepository.getSearchDataSong(query), { state, items -> state.copy(searchSongsResult = items) })
+    }
+    fun searchVideos(query: String) = runSearch(SearchType.VIDEOS) {
+        collectCategory(searchRepository.getSearchDataVideo(query), { state, items -> state.copy(searchVideosResult = items) })
+    }
+    fun searchAlbums(query: String) = runSearch(SearchType.ALBUMS) {
+        collectCategory(searchRepository.getSearchDataAlbum(query), { state, items -> state.copy(searchAlbumsResult = items) })
+    }
+    fun searchArtists(query: String) = runSearch(SearchType.ARTISTS) {
+        collectCategory(searchRepository.getSearchDataArtist(query), { state, items -> state.copy(searchArtistsResult = items) })
+    }
+    fun searchPlaylists(query: String) = runSearch(SearchType.PLAYLISTS) {
+        collectCategory(searchRepository.getSearchDataPlaylist(query), { state, items -> state.copy(searchPlaylistsResult = items) })
+    }
+    fun searchFeaturedPlaylist(query: String) = runSearch(SearchType.FEATURED_PLAYLISTS) {
+        collectCategory(searchRepository.getSearchDataFeaturedPlaylist(query), { state, items -> state.copy(searchFeaturedPlaylistsResult = items) })
+    }
+    fun searchPodcast(query: String) = runSearch(SearchType.PODCASTS) {
+        collectCategory(searchRepository.getSearchDataPodcast(query), { state, items -> state.copy(searchPodcastsResult = items) })
+    }
+    fun searchUsers(query: String) = runSearch(SearchType.USERS) {
+        val users = userRepository.searchUsers(query.removePrefix("@").trim()).first()
+        currentCoroutineContext().ensureActive()
+        _searchScreenState.update { it.copy(searchUsersResult = users) }
+    }
+
+    fun searchAll(query: String) = runSearch(SearchType.ALL) {
+        coroutineScope {
+            val jobs = listOf(
+                async { collectCategory(searchRepository.getSearchDataSong(query), { s, v -> s.copy(searchSongsResult = v) }, true) },
+                async { collectCategory(searchRepository.getSearchDataArtist(query), { s, v -> s.copy(searchArtistsResult = v) }, true) },
+                async { collectCategory(searchRepository.getSearchDataAlbum(query), { s, v -> s.copy(searchAlbumsResult = v) }, true) },
+                async { collectCategory(searchRepository.getSearchDataPlaylist(query), { s, v -> s.copy(searchPlaylistsResult = v) }, true) },
+                async { collectCategory(searchRepository.getSearchDataVideo(query), { s, v -> s.copy(searchVideosResult = v) }, true) },
+                async { collectCategory(searchRepository.getSearchDataFeaturedPlaylist(query), { s, v -> s.copy(searchFeaturedPlaylistsResult = v) }, true) },
+                async { collectCategory(searchRepository.getSearchDataPodcast(query), { s, v -> s.copy(searchPodcastsResult = v) }, true) },
+            )
+            if (jobs.awaitAll().none { it }) _searchScreenUIState.value = SearchScreenUIState.Error
         }
     }
 
     fun suggestQuery(query: String) {
-        viewModelScope.launch {
-            searchRepository.getSuggestQuery(query).collect { values ->
-                when (values) {
-                    is Resource.Success -> {
-                        values.data?.let { suggestData ->
-                            _searchScreenState.update { state ->
-                                state.copy(
-                                    suggestQueries = suggestData.queries,
-                                    suggestYTItems = suggestData.recommendedItems,
-                                )
-                            }
-                        }
-                    }
-
-                    is Resource.Error -> {
-                        // Không cần xử lý lỗi đặc biệt cho gợi ý
-                        log("Error fetching suggest queries: ${values.message}", LogLevel.ERROR)
-                    }
+        suggestionJob?.cancel()
+        _searchScreenState.update { it.copy(suggestQueries = emptyList(), suggestYTItems = emptyList()) }
+        if (query.isBlank()) return
+        suggestionJob = viewModelScope.launch {
+            delay(300)
+            try {
+                val result = withTimeoutOrNull(5_000) { searchRepository.getSuggestQuery(query).first() }
+                currentCoroutineContext().ensureActive()
+                if (result is Resource.Success) result.data?.let { suggestions ->
+                    _searchScreenState.update { it.copy(suggestQueries = suggestions.queries, suggestYTItems = suggestions.recommendedItems) }
                 }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Logger.w(tag, "Search suggestions could not load")
             }
         }
     }
 
-    fun searchAlbums(query: String) {
-        _searchScreenUIState.value = SearchScreenUIState.Loading
-        viewModelScope.launch {
-            searchRepository.getSearchDataAlbum(query).collect { values ->
-                when (values) {
-                    is Resource.Success -> {
-                        values.data?.let { albumsList ->
-                            _searchScreenState.update { state ->
-                                state.copy(
-                                    searchType = SearchType.ALBUMS,
-                                    searchAlbumsResult = albumsList,
-                                )
-                            }
-                        }
-                        _searchScreenUIState.value = SearchScreenUIState.Success
-                    }
-
-                    is Resource.Error -> {
-                        _searchScreenUIState.value = SearchScreenUIState.Error
-                    }
-                }
+    fun fetchRecommendedArtists() = runSearch(SearchType.ARTISTS) {
+        coroutineScope {
+            listOf("Pop Indonesia", "Indie Indonesia", "Band Indonesia").map { query -> async {
+                collectCategory(searchRepository.getSearchDataArtist(query), { state, artists ->
+                    state.copy(searchArtistsResult = (state.searchArtistsResult + artists).distinctBy { it.browseId })
+                }, true)
+            } }.awaitAll().let { success ->
+                if (success.none { it }) _searchScreenUIState.value = SearchScreenUIState.Error
             }
         }
     }
 
-    fun searchFeaturedPlaylist(query: String) {
-        _searchScreenUIState.value = SearchScreenUIState.Loading
-        viewModelScope.launch {
-            searchRepository.getSearchDataFeaturedPlaylist(query).collect { values ->
-                when (values) {
-                    is Resource.Success -> {
-                        values.data?.let { featuredPlaylistList ->
-                            _searchScreenState.update { state ->
-                                state.copy(
-                                    searchType = SearchType.FEATURED_PLAYLISTS,
-                                    searchFeaturedPlaylistsResult = featuredPlaylistList,
-                                )
-                            }
-                        }
-                        _searchScreenUIState.value = SearchScreenUIState.Success
-                    }
-
-                    is Resource.Error -> {
-                        _searchScreenUIState.value = SearchScreenUIState.Error
-                    }
-                }
-            }
-        }
-    }
-
-    fun searchPodcast(query: String) {
-        _searchScreenUIState.value = SearchScreenUIState.Loading
-        viewModelScope.launch {
-            searchRepository.getSearchDataPodcast(query).collect { values ->
-                when (values) {
-                    is Resource.Success -> {
-                        values.data?.let { podcastList ->
-                            _searchScreenState.update { state ->
-                                state.copy(
-                                    searchType = SearchType.PODCASTS,
-                                    searchPodcastsResult = podcastList,
-                                )
-                            }
-                        }
-                        _searchScreenUIState.value = SearchScreenUIState.Success
-                    }
-
-                    is Resource.Error -> {
-                        _searchScreenUIState.value = SearchScreenUIState.Error
-                    }
-                }
-            }
-        }
-    }
-
-    fun searchArtists(query: String) {
-        _searchScreenUIState.value = SearchScreenUIState.Loading
-        viewModelScope.launch {
-            searchRepository.getSearchDataArtist(query).collect { values ->
-                when (values) {
-                    is Resource.Success -> {
-                        values.data?.let { artistsList ->
-                            _searchScreenState.update { state ->
-                                state.copy(
-                                    searchType = SearchType.ARTISTS,
-                                    searchArtistsResult = artistsList,
-                                )
-                            }
-                        }
-                        _searchScreenUIState.value = SearchScreenUIState.Success
-                    }
-
-                    is Resource.Error -> {
-                        _searchScreenUIState.value = SearchScreenUIState.Error
-                    }
-                }
-            }
-        }
-    }
-
-    fun fetchRecommendedArtists() {
-        _searchScreenUIState.value = SearchScreenUIState.Loading
-        viewModelScope.launch {
-            val recommendationQueries = listOf(
-                "Pop Indonesia", "Indie Indonesia", "Band Indonesia", "Top Artis Indonesia",
-                "Mahalini", "Hindia", "Juicy Luicy", "Bernadya", "Tulus", "Nadin Amizah",
-                "Sheila on 7", "Dewa 19", "Noah", "Tiara Andini", "Lyodra", "Yura Yunita",
-                "Taylor Swift", "Bruno Mars", "Coldplay", "The Weeknd", "Billie Eilish",
-                "Pamungkas", "Kunto Aji", "Sal Priadi", "Rizky Febian", "Payung Teduh"
-            ).shuffled().take(6)
-
-            val deferredResults = recommendationQueries.map { query ->
-                async {
-                    var resultList = emptyList<ArtistsResult>()
-                    searchRepository.getSearchDataArtist(query).collect { values ->
-                        if (values is Resource.Success) {
-                            values.data?.let { resultList = it }
-                        }
-                    }
-                    resultList
-                }
-            }
-
-            val combined = deferredResults.awaitAll().flatten()
-            val uniqueArtists = combined.distinctBy { it.browseId }.shuffled()
-
-            _searchScreenState.update { state ->
-                state.copy(
-                    searchType = SearchType.ARTISTS,
-                    searchArtistsResult = uniqueArtists,
-                )
-            }
-            _searchScreenUIState.value = SearchScreenUIState.Success
-        }
-    }
-
-    fun searchPlaylists(query: String) {
-        _searchScreenUIState.value = SearchScreenUIState.Loading
-        viewModelScope.launch {
-            searchRepository.getSearchDataPlaylist(query).collect { values ->
-                when (values) {
-                    is Resource.Success -> {
-                        values.data?.let { playlistsList ->
-                            _searchScreenState.update { state ->
-                                state.copy(
-                                    searchType = SearchType.PLAYLISTS,
-                                    searchPlaylistsResult = playlistsList,
-                                )
-                            }
-                        }
-                        _searchScreenUIState.value = SearchScreenUIState.Success
-                    }
-
-                    is Resource.Error -> {
-                        _searchScreenUIState.value = SearchScreenUIState.Error
-                    }
-                }
-            }
-        }
-    }
-
-    fun searchVideos(query: String) {
-        _searchScreenUIState.value = SearchScreenUIState.Loading
-        viewModelScope.launch {
-            searchRepository.getSearchDataVideo(query).collect { values ->
-                when (values) {
-                    is Resource.Success -> {
-                        values.data?.let { videosList ->
-                            _searchScreenState.update { state ->
-                                state.copy(
-                                    searchType = SearchType.VIDEOS,
-                                    searchVideosResult = videosList,
-                                )
-                            }
-                        }
-                        _searchScreenUIState.value = SearchScreenUIState.Success
-                    }
-
-                    is Resource.Error -> {
-                        _searchScreenUIState.value = SearchScreenUIState.Error
-                    }
-                }
-            }
-        }
+    fun cancelSearch() {
+        ++requestId
+        searchJob?.cancel()
+        _searchScreenState.update { it.copy(isSearching = false) }
     }
 
     fun setSearchType(searchType: SearchType) {
-        _searchScreenState.update { state ->
-            state.copy(searchType = searchType)
-        }
+        _searchScreenState.update { it.copy(searchType = searchType) }
     }
 }

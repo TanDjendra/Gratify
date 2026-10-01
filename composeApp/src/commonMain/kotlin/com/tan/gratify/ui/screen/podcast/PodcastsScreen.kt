@@ -1,5 +1,10 @@
 package com.tan.gratify.ui.screen.podcast
 
+import androidx.compose.ui.text.style.TextOverflow
+
+import com.tan.gratify.ui.theme.GratifyColors
+import com.tan.gratify.ui.theme.GratifyShapes
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.fadeIn
@@ -164,7 +169,7 @@ fun PodcastScreen(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .background(Color.Black),
+                            .background(GratifyColors.Background),
                     state = lazyState,
                 ) {
                     item(contentType = "header") {
@@ -185,7 +190,7 @@ fun PodcastScreen(
                                         Modifier
                                             .fillMaxWidth()
                                             .height(260.dp)
-                                            .clip(RoundedCornerShape(8.dp))
+                                            .clip(GratifyShapes.small)
                                             .angledGradientBackground(gradientColors, 25f),
                                 )
                                 Box(
@@ -236,6 +241,7 @@ fun PodcastScreen(
                                                 .build(),
                                         placeholder = painterResource(Res.drawable.holder),
                                         error = painterResource(Res.drawable.holder),
+                                        fallback = painterResource(Res.drawable.holder),
                                         contentDescription = null,
                                         contentScale = ContentScale.FillHeight,
                                         onSuccess = {
@@ -246,7 +252,7 @@ fun PodcastScreen(
                                                 .height(250.dp)
                                                 .wrapContentWidth()
                                                 .align(Alignment.CenterHorizontally)
-                                                .clip(RoundedCornerShape(8.dp)),
+                                                .clip(GratifyShapes.small),
                                     )
                                     Box(
                                         modifier =
@@ -261,6 +267,7 @@ fun PodcastScreen(
                                                 style = typo().titleLarge,
                                                 color = Color.White,
                                                 maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis,
                                             )
                                             Column(
                                                 modifier = Modifier.padding(vertical = 8.dp),
@@ -277,6 +284,7 @@ fun PodcastScreen(
                                                                 .build(),
                                                         placeholder = painterResource(Res.drawable.holder),
                                                         error = painterResource(Res.drawable.holder),
+                                                        fallback = painterResource(Res.drawable.holder),
                                                         contentDescription = null,
                                                         modifier =
                                                             Modifier
@@ -441,14 +449,12 @@ fun PodcastScreen(
                                 text = data.title,
                                 style = typo().titleMedium,
                                 maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
                                         .wrapContentHeight(align = Alignment.CenterVertically)
-                                        .basicMarquee(
-                                            iterations = Int.MAX_VALUE,
-                                            animationMode = MarqueeAnimationMode.Immediately,
-                                        ).focusable(),
+                                        .focusable(),
                             )
                         },
                         navigationIcon = {
@@ -464,7 +470,7 @@ fun PodcastScreen(
                         },
                         colors =
                             TopAppBarDefaults.topAppBarColors(
-                                containerColor = Color.Transparent,
+                                containerColor = GratifyColors.Background,
                             ),
                         modifier = Modifier.angledGradientBackground(gradientColors, 90f),
                     )

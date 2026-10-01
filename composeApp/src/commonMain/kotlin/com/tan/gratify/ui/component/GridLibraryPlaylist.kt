@@ -1,5 +1,9 @@
 package com.tan.gratify.ui.component
 
+import androidx.compose.ui.text.style.TextOverflow
+
+import com.tan.gratify.ui.theme.GratifyShapes
+
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.MarqueeAnimationMode
 import androidx.compose.foundation.basicMarquee
@@ -154,7 +158,7 @@ internal inline fun <reified T> GridLibraryPlaylist(
                                         Modifier
                                             .size(132.dp)
                                             .aspectRatio(1f)
-                                            .clip(RoundedCornerShape(10.dp))
+                                            .clip(GratifyShapes.small)
                                             .angledGradientBackground(
                                                 colors =
                                                     listOf(
@@ -177,15 +181,13 @@ internal inline fun <reified T> GridLibraryPlaylist(
                                         style = typo().titleSmall,
                                         color = Color.White,
                                         maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
                                         modifier =
                                             Modifier
                                                 .width(132.dp)
                                                 .wrapContentHeight(align = Alignment.CenterVertically)
                                                 .padding(top = 8.dp)
-                                                .basicMarquee(
-                                                    iterations = Int.MAX_VALUE,
-                                                    animationMode = MarqueeAnimationMode.Immediately,
-                                                ).focusable(),
+                                                .focusable(),
                                     )
                                 }
                             }

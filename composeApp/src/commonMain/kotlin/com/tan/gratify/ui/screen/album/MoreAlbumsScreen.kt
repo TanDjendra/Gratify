@@ -1,5 +1,7 @@
 package com.tan.gratify.ui.screen.album
 
+import androidx.compose.ui.text.style.TextOverflow
+
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.MarqueeAnimationMode
 import androidx.compose.foundation.basicMarquee
@@ -87,7 +89,7 @@ fun MoreAlbumsScreen(
                     modifier =
                         Modifier
                             .fillMaxSize()
-                            .hazeSource(state = hazeState),
+                            ,
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
@@ -123,22 +125,18 @@ fun MoreAlbumsScreen(
                 TopAppBar(
                     modifier =
                         Modifier
-                            .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin()) {
-                                blurEnabled = true
-                            },
+                            ,
                     title = {
                         Text(
                             text = state.title,
                             style = typo().titleMedium,
                             maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
                                     .wrapContentHeight(
                                         align = Alignment.CenterVertically,
-                                    ).basicMarquee(
-                                        iterations = Int.MAX_VALUE,
-                                        animationMode = MarqueeAnimationMode.Immediately,
                                     ).focusable(),
                         )
                     },

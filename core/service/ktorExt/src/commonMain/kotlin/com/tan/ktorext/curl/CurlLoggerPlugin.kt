@@ -17,17 +17,17 @@ import kotlin.coroutines.cancellation.CancellationException
  */
 class CurlLoggerConfig {
     /**
-     * Sink for the built curl command. Defaults to [println]; each service overrides this
-     * with its own logger, e.g. `logger = { Logger.d(TAG, it) }`.
+     * Opt-in diagnostic sink. Disabled and silent by default.
      */
-    var logger: (String) -> Unit = { println(it) }
+    var enabled: Boolean = false
+    var logger: (String) -> Unit = {}
 
     /**
      * Header names (case-insensitive) whose value is replaced with `<redacted>`.
-     * Empty by default so the printed command stays copy-paste runnable.
+     * Sensitive headers are redacted by default; logging itself is disabled.
      * Set e.g. `setOf("Authorization", "Cookie")` to avoid leaking secrets to logs.
      */
-    var redactHeaders: Set<String> = emptySet()
+    var redactHeaders: Set<String> = setOf("Authorization", "Cookie", "Set-Cookie", "X-Api-Key", "apikey", "X-Goog-Api-Key", "X-Client-Token")
 
     /**
      * When true, drops the `Accept-Encoding` request header and appends `--compressed`
@@ -37,10 +37,8 @@ class CurlLoggerConfig {
 }
 
 /**
- * Logs every outgoing Ktor request as a shell-safe `curl` command that can be pasted into a
- * terminal and run as-is. Every dynamic value is wrapped in single quotes, with embedded single
- * quotes escaped via the POSIX `'\''` trick, so bodies containing `"`, `$`, backticks or newlines
- * never break the shell.
+ * Emits a redacted request summary only when explicitly enabled. Query strings and
+ * bodies are omitted; sensitive headers are replaced. This is not a request replay.
  *
  * The whole command is emitted as a single line in one [logger] call, so it stays one log entry
  * (no line continuations, no splitting into separate entries).
@@ -58,6 +56,7 @@ val CurlLogger = createClientPlugin("CurlLogger", ::CurlLoggerConfig) {
     val handleCompression = pluginConfig.handleCompression
 
     on(SendingRequest) { request, content ->
+        if (!pluginConfig.enabled) return@on
         try {
             log(buildCurlCommand(request, content, redactHeaders, handleCompression))
         } catch (e: CancellationException) {
@@ -69,7 +68,7 @@ val CurlLogger = createClientPlugin("CurlLogger", ::CurlLoggerConfig) {
 }
 
 /** Builds the full curl command on a single line. */
-private suspend fun buildCurlCommand(
+internal suspend fun buildCurlCommand(
     request: HttpRequestBuilder,
     content: OutgoingContent,
     redactHeaders: Set<String>,
@@ -80,7 +79,7 @@ private suspend fun buildCurlCommand(
 
     val parts = mutableListOf<String>()
     parts += "curl -X ${request.method.value}"
-    parts += request.url.buildString().shellQuote()
+    parts += "${request.url.protocol.name}://${request.url.host}${request.url.build().encodedPath}".shellQuote()
 
     val seenHeaders = mutableSetOf<String>()
     request.headers.entries().forEach { (name, values) ->
@@ -99,39 +98,10 @@ private suspend fun buildCurlCommand(
 
     if (handleCompression) parts += "--compressed"
 
-    content.readBodyOrNull()?.takeIf { it.isNotEmpty() }?.let {
-        parts += "--data-raw " + it.shellQuote()
-    }
+    // Request bodies can contain passwords, OTPs, signed URLs or tokens: never print them.
 
     return parts.joinToString(" ")
 }
 
 /** POSIX shell single-quoting: safe even when the value itself contains single quotes. */
 private fun String.shellQuote(): String = "'" + replace("'", "'\\''") + "'"
-
-/** Best-effort read of the request body without consuming a one-shot channel. */
-private suspend fun OutgoingContent.readBodyOrNull(): String? =
-    when (this) {
-        is OutgoingContent.ByteArrayContent -> bytes().decodeToString()
-        is OutgoingContent.WriteChannelContent -> readWriteChannelBody()
-        else -> null // ReadChannelContent / ProtocolUpgrade / NoContent: skip
-    }
-
-private suspend fun OutgoingContent.WriteChannelContent.readWriteChannelBody(): String? =
-    try {
-        coroutineScope {
-            val channel = ByteChannel()
-            launch {
-                try {
-                    writeTo(channel)
-                } finally {
-                    channel.flushAndClose()
-                }
-            }
-            channel.readRemaining().readByteArray().decodeToString()
-        }
-    } catch (e: CancellationException) {
-        throw e
-    } catch (_: Throwable) {
-        null
-    }

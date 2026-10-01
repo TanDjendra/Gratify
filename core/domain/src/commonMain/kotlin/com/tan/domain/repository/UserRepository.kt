@@ -6,6 +6,8 @@ import com.tan.domain.data.entities.UserFollow
 import kotlinx.coroutines.flow.Flow
 
 interface UserRepository {
+    suspend fun setProfilePrivacy(setting: String, visible: Boolean): Result<Unit>
+
     fun getUserProfile(userId: String): Flow<UserProfile?>
     fun searchUsers(query: String): Flow<List<UserProfile>>
     fun followUser(followerId: String, followingId: String): Flow<Result<Unit>>

@@ -1,0 +1,58 @@
+name: Launch verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['codex/launch-audit-completion']
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: launch-verification-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: microsoft
+          cache: gradle
+      - name: Configure full Android build
+        if: github.event_name != 'pull_request'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        run: |
+          test -n "$SUPABASE_URL" && test -n "$SUPABASE_KEY" && test -n "$SENTRY_DSN"
+          printf 'SUPABASE_URL=%s\nSUPABASE_KEY=%s\nSENTRY_DSN=%s\n' "$SUPABASE_URL" "$SUPABASE_KEY" "$SENTRY_DSN" > local.properties
+      - name: Verify shared behavior and Android lint
+        run: ./gradlew exportLibraryDefinitions :domain:jvmTest :data:jvmTest :ktorExt:jvmTest :kotlinYtmusicScraper:jvmTest :lyricsService:jvmTest :composeApp:jvmTest :androidApp:lintDebug --max-workers=2 --console=plain
+      - name: Build full Android release and upload crash mapping
+        if: github.event_name != 'pull_request'
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          test -n "$SENTRY_AUTH_TOKEN"
+          ./gradlew :androidApp:assembleRelease -PisFullBuild=true --max-workers=2 --console=plain
+      - name: Keep verification reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: launch-verification-reports
+          path: |
+            **/build/reports/tests/
+            androidApp/build/reports/lint-results-debug.*
+            androidApp/build/outputs/apk/release/*.apk
+            androidApp/build/outputs/mapping/release/mapping.txt
+          if-no-files-found: warn

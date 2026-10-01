@@ -38,6 +38,13 @@ val DarkColors =
         surfaceTint = md_theme_dark_surfaceTint,
         outlineVariant = md_theme_dark_outlineVariant,
         scrim = md_theme_dark_scrim,
+        surfaceDim = GratifyColors.Background,
+        surfaceBright = GratifyColors.SurfaceHighest,
+        surfaceContainerLowest = GratifyColors.Navigation,
+        surfaceContainerLow = GratifyColors.Surface,
+        surfaceContainer = GratifyColors.SurfaceRaised,
+        surfaceContainerHigh = GratifyColors.SurfaceRaised,
+        surfaceContainerHighest = GratifyColors.SurfaceHighest,
     )
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -51,10 +58,11 @@ fun AppTheme(
         colorScheme = DarkColors,
         content = {
             CompositionLocalProvider(
-                LocalContentColor provides DarkColors.onSurfaceVariant, // replace this with needed color from your pallete
+                LocalContentColor provides DarkColors.onSurface,
                 content,
             )
         },
         typography = typo(),
+        shapes = GratifyShapes,
     )
 }

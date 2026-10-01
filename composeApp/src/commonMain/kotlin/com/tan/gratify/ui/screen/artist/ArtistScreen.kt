@@ -1,5 +1,8 @@
 package com.tan.gratify.ui.screen.artist
 
+import com.tan.gratify.ui.theme.GratifyColors
+import com.tan.gratify.ui.theme.GratifyShapes
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
@@ -186,7 +189,7 @@ fun ArtistScreen(
                                             backgroundColor = Color.Transparent,
                                             contentPadding = 2.dp,
                                             borderWidth = 1.dp,
-                                            shape = RoundedCornerShape(4.dp),
+                                            shape = GratifyShapes.extraSmall,
                                             oneCircleDurationMillis = 3000,
                                             interactionNumber = 1,
                                         ) {
@@ -203,8 +206,8 @@ fun ArtistScreen(
                                                                 Color.White.copy(
                                                                     alpha = 0.8f,
                                                                 ),
-                                                            shape = RoundedCornerShape(4.dp),
-                                                        ).clip(RoundedCornerShape(4.dp))
+                                                            shape = GratifyShapes.extraSmall,
+                                                        ).clip(GratifyShapes.extraSmall)
                                                         .clickable {
                                                             val firstQueue: Track = canvas.second.toTrack()
                                                             viewModel.setQueueData(
@@ -232,8 +235,8 @@ fun ArtistScreen(
                                     }
                                 }
                                 LimitedBorderAnimationView(
-                                    isAnimated = !isFollowed,
-                                    brush = Brush.sweepGradient(listOf(Color.Gray, Color.White)),
+                                    isAnimated = false,
+                                    brush = Brush.sweepGradient(listOf(GratifyColors.TextSecondary, Color.White)),
                                     backgroundColor = Color.Transparent,
                                     contentPadding = 0.dp,
                                     borderWidth = 2.dp,
@@ -723,7 +726,7 @@ fun ArtistScreen(
                         val urlHandler = LocalUriHandler.current
                         ElevatedCard(
                             modifier = Modifier.padding(horizontal = 20.dp),
-                            shape = RoundedCornerShape(8.dp),
+                            shape = GratifyShapes.small,
                             colors =
                                 CardDefaults.elevatedCardColors().copy(
                                     containerColor = color.rgbFactor(0.5f),

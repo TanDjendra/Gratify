@@ -1,10 +1,7 @@
 package com.tan.gratify.viewModel
 
 import androidx.lifecycle.viewModelScope
-import com.tan.common.SELECTED_LANGUAGE
-import com.tan.common.SUPPORTED_LANGUAGE
 import com.tan.domain.data.entities.SongEntity
-import com.tan.domain.data.model.home.HomeDataCombine
 import com.tan.domain.data.model.home.HomeItem
 import com.tan.domain.data.model.home.chart.Chart
 import com.tan.domain.data.model.mood.Mood
@@ -15,11 +12,17 @@ import com.tan.domain.repository.ArtistRepository
 import com.tan.domain.utils.Resource
 import com.tan.logger.Logger
 import com.tan.gratify.viewModel.base.BaseViewModel
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -38,6 +41,7 @@ import gratify.composeapp.generated.resources.new_release
 import gratify.composeapp.generated.resources.song
 import gratify.composeapp.generated.resources.view_count
 
+@OptIn(FlowPreview::class)
 class HomeViewModel(
     private val dataStoreManager: DataStoreManager,
     private val homeRepository: HomeRepository,
@@ -59,6 +63,10 @@ class HomeViewModel(
     val accountInfo: StateFlow<Pair<String?, String?>?> = _accountInfo
 
     private var homeJob: Job? = null
+    private var paginationJob: Job? = null
+    private var chartJob: Job? = null
+    private var homeRequest = 0
+    private var chartRequest = 0
 
     val showSnackBarErrorState = MutableSharedFlow<String>()
 
@@ -92,81 +100,30 @@ class HomeViewModel(
     val mainHomeThumbnail: StateFlow<String?> = _mainHomeThumbnail
 
     init {
-        homeJob = Job()
-        Logger.d("PLAYER_DEBUG", "HomeViewModel init: hash=${this@HomeViewModel.hashCode()}")
         viewModelScope.launch {
             if (dataStoreManager.cookie.first().isEmpty() &&
                 dataStoreManager.shouldShowLogInRequiredAlert.first() == TRUE
-            ) {
-                _showLogInAlert.update { true }
+            ) _showLogInAlert.value = true
+        }
+        viewModelScope.launch {
+            // One combined preference stream avoids five competing startup refreshes.
+            combine(dataStoreManager.location, dataStoreManager.language,
+                dataStoreManager.loggedIn, params, dataStoreManager.cookie
+            ) { region, locale, loggedIn, filter, cookie ->
+                listOf(region, locale, loggedIn, filter, cookie)
+            }.debounce(150).distinctUntilChanged().collect {
+                getHomeItemList(params.value)
+                emitAccountInfo()
             }
-
-            regionCodeChart.value = dataStoreManager.chartKey.first()
-            exploreChart(regionCodeChart.value ?: "ZZ")
-            language = dataStoreManager.getString(SELECTED_LANGUAGE).first()
-                ?: SUPPORTED_LANGUAGE.codes.first()
-            //  refresh when region change
-            val job1 =
-                launch {
-                    dataStoreManager.location.distinctUntilChanged().collect {
-                        regionCode = it
-                        getHomeItemList(params.value)
-                    }
-                }
-            //  refresh when language change
-            val job2 =
-                launch {
-                    dataStoreManager.language.distinctUntilChanged().collect {
-                        language = it
-                        getHomeItemList(params.value)
-                    }
-                }
-            val job3 =
-                launch {
-                    dataStoreManager.loggedIn.distinctUntilChanged().collect {
-                        getHomeItemList(params.value)
-                        emitAccountInfo()
-                    }
-                }
-            val job4 =
-                launch {
-                    params.collectLatest {
-                        getHomeItemList(it)
-                    }
-                }
-            val job5 =
-                launch {
-                    dataStoreManager
-                        .cookie
-                        .distinctUntilChanged()
-                        .collectLatest {
-                            if (it.isNotEmpty()) {
-                                Logger.w(tag, "Cookie changed, refreshing home")
-                                loading.value = true
-                                delay(1000) // To wait for the cookie to be saved properly
-                                getHomeItemList(params.value)
-                            }
-                        }
-                }
-            val job6 =
-                launch {
-                    homeItemList.collectLatest { list ->
-                        _mainHomeThumbnail.value =
-                            list
-                                .firstOrNull()
-                                ?.contents
-                                ?.firstOrNull()
-                                ?.thumbnails
-                                ?.lastOrNull()
-                                ?.url
-                    }
-                }
-            job1.join()
-            job2.join()
-            job3.join()
-            job4.join()
-            job5.join()
-            job6.join()
+        }
+        viewModelScope.launch {
+            dataStoreManager.chartKey.distinctUntilChanged().collect { loadChart(it) }
+        }
+        viewModelScope.launch {
+            homeItemList.collectLatest { list ->
+                _mainHomeThumbnail.value = list.firstOrNull()?.contents?.firstOrNull()
+                    ?.thumbnails?.lastOrNull()?.url
+            }
         }
     }
 
@@ -180,212 +137,158 @@ class HomeViewModel(
     }
 
     fun getHomeItemList(params: String? = null) {
+        val request = ++homeRequest
+        homeJob?.cancel()
+        paginationJob?.cancel()
+        _continuation.value = null
+        if (chartJob?.isActive != true) regionCodeChart.value?.let(::loadChart)
         loading.value = true
         _homeListState.value = ListState.LOADING
-
-        homeJob?.cancel()
-        homeJob =
-            viewModelScope.launch {
-                language =
-                    dataStoreManager.getString(SELECTED_LANGUAGE).first()
-                        ?: SUPPORTED_LANGUAGE.codes.first()
-                
-                regionCode = dataStoreManager.location.first()
-                
-                combine(
-                    homeRepository.getHomeData(
-                        params,
-                        org.jetbrains.compose.resources.getString(Res.string.view_count),
-                        org.jetbrains.compose.resources.getString(Res.string.song),
-                    ),
-                    homeRepository.getMoodAndMomentsData(),
-                    homeRepository.getChartData(dataStoreManager.chartKey.first()),
-                    homeRepository.getNewRelease(
-                        org.jetbrains.compose.resources.getString(Res.string.new_release),
-                        org.jetbrains.compose.resources.getString(Res.string.music_video),
-                    ),
-                ) { home, exploreMood, exploreChart, newRelease ->
-                    HomeDataCombine(home, exploreMood, exploreChart, newRelease)
-                }.collect { result ->
-                    Logger.d("PLAYER_DEBUG", "Home track starts? HomeDataCombine collected")
-                    val home = result.home
-                    Logger.d("home size", "${home.data?.second?.size}")
-                    val exploreMoodItem = result.mood
-                    val chart = result.chart
-                    val newRelease = result.newRelease
-                    when (home) {
+        homeJob = viewModelScope.launch {
+            supervisorScope {
+                launch {
+                    optionalData {
+                        homeRepository.getMoodAndMomentsData().first().let {
+                            if (request == homeRequest && it is Resource.Success) _exploreMoodItem.value = it.data
+                        }
+                    }
+                }
+                launch {
+                    optionalData {
+                        homeRepository.getNewRelease(
+                            org.jetbrains.compose.resources.getString(Res.string.new_release),
+                            org.jetbrains.compose.resources.getString(Res.string.music_video),
+                        ).first().let {
+                            if (request == homeRequest && it is Resource.Success) _newRelease.value = it.data.orEmpty()
+                        }
+                    }
+                }
+                try {
+                    val result = withTimeout(20_000) {
+                        homeRepository.getHomeData(
+                            params,
+                            org.jetbrains.compose.resources.getString(Res.string.view_count),
+                            org.jetbrains.compose.resources.getString(Res.string.song),
+                        ).first()
+                    }
+                    if (request != homeRequest) return@supervisorScope
+                    when (result) {
                         is Resource.Success -> {
-                            _continuation.value = home.data?.first
-                            val currentList = home.data?.second?.toMutableList() ?: mutableListOf()
-                            
-                            // Inject custom artist recommendation
-                            try {
-                                val followedArtists = artistRepository.getFollowedArtists().firstOrNull() ?: emptyList()
-                                if (followedArtists.isNotEmpty()) {
-                                    val shuffledArtists = followedArtists.shuffled().take(6)
-                                    val customArtistItems = kotlinx.coroutines.coroutineScope {
-                                        shuffledArtists.map { artist ->
-                                            async {
-                                                val artistDataRes = artistRepository.getArtistData(artist.channelId).firstOrNull()
-                                                if (artistDataRes is Resource.Success<*> && artistDataRes.data != null) {
-                                                    val artistData = artistDataRes.data as com.tan.domain.data.model.browse.artist.ArtistBrowse
-                                                    val songs = artistData.songs?.results?.map { song ->
-                                                        com.tan.domain.data.model.home.Content(
-                                                            album = song.album,
-                                                            artists = song.artists,
-                                                            description = null,
-                                                            isExplicit = song.isExplicit,
-                                                            playlistId = null,
-                                                            browseId = null,
-                                                            thumbnails = song.thumbnails ?: emptyList(),
-                                                            title = song.title ?: "",
-                                                            videoId = song.videoId,
-                                                            views = null
-                                                        )
-                                                    } ?: emptyList()
-                                                    
-                                                    if (songs.isNotEmpty()) {
-                                                        HomeItem(
-                                                            contents = songs,
-                                                            title = "Karena kamu suka ${artist.name}",
-                                                            subtitle = "Berdasarkan artis favoritmu"
-                                                        )
-                                                    } else null
-                                                } else null
-                                            }
-                                        }
-                                    }.mapNotNull { it.await() }
-                                    
-                                    customArtistItems.forEach { customArtistHomeItem ->
-                                        if (currentList.size > 1) {
-                                            val insertIndex = (1..currentList.size).random()
-                                            currentList.add(insertIndex, customArtistHomeItem)
-                                        } else {
-                                            currentList.add(customArtistHomeItem)
-                                        }
-                                    }
-                                }
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                            }
-                            
-                            _homeItemList.value = currentList
+                            _homeItemList.value = result.data?.second.orEmpty()
+                            _continuation.value = result.data?.first
+                            // Publish core content before loading personalized recommendations.
+                            launch { loadArtistRecommendations(request) }
                         }
-
-                        else -> {
-                            _continuation.value = null
-                            _homeItemList.value = listOf()
-                        }
+                        is Resource.Error -> showSnackBarErrorState.emit(result.message ?: "Unable to load music")
                     }
-                    if (continuation.value.isNullOrEmpty()) {
-                        _homeListState.value = ListState.PAGINATION_EXHAUST
-                    } else {
-                        _homeListState.value = ListState.IDLE
+                } catch (error: TimeoutCancellationException) {
+                    showSnackBarErrorState.emit("Koneksi terlalu lama. Silakan coba lagi.")
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    showSnackBarErrorState.emit(error.message ?: "Unable to load music")
+                } finally {
+                    if (request == homeRequest) {
+                        loading.value = false
+                        _homeListState.value = if (_continuation.value.isNullOrEmpty())
+                            ListState.PAGINATION_EXHAUST else ListState.IDLE
                     }
-                    when (chart) {
-                        is Resource.Success -> {
-                            _chart.value = chart.data
-                        }
-
-                        else -> {
-                            _chart.value = null
-                        }
-                    }
-                    when (newRelease) {
-                        is Resource.Success -> {
-                            _newRelease.value = newRelease.data ?: arrayListOf()
-                        }
-
-                        else -> {
-                            _newRelease.value = arrayListOf()
-                        }
-                    }
-                    when (exploreMoodItem) {
-                        is Resource.Success -> {
-                            _exploreMoodItem.value = exploreMoodItem.data
-                        }
-
-                        else -> {
-                            _exploreMoodItem.value = null
-                        }
-                    }
-                    regionCodeChart.value = dataStoreManager.chartKey.first()
-                    Logger.d("HomeViewModel", "getHomeItemList: $result")
-                    emitAccountInfo()
-                    when {
-                        home is Resource.Error -> home.message
-                        exploreMoodItem is Resource.Error -> exploreMoodItem.message
-                        chart is Resource.Error -> chart.message
-                        else -> null
-                    }?.let {
-                        showSnackBarErrorState.emit(it)
-                        Logger.w("Error", "getHomeItemList: ${home.message}")
-                        Logger.w("Error", "getHomeItemList: ${exploreMoodItem.message}")
-                        Logger.w("Error", "getHomeItemList: ${chart.message}")
-                    }
-                    loading.value = false
                 }
             }
+        }
+    }
+
+    private suspend fun optionalData(block: suspend () -> Unit) {
+        try {
+            withTimeoutOrNull(10_000) { block() }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            Logger.w(tag, "Optional home section could not load")
+        }
+    }
+
+    private suspend fun loadArtistRecommendations(request: Int) = optionalData {
+        val artists = artistRepository.getFollowedArtists().first().take(3)
+        val items = coroutineScope {
+            artists.map { artist -> async {
+                val result = artistRepository.getArtistData(artist.channelId).first()
+                val songs = (result as? Resource.Success)?.data?.songs?.results.orEmpty().map { song ->
+                    com.tan.domain.data.model.home.Content(
+                        album = song.album, artists = song.artists, description = null,
+                        isExplicit = song.isExplicit, playlistId = null, browseId = null,
+                        thumbnails = song.thumbnails.orEmpty(), title = song.title.orEmpty(),
+                        videoId = song.videoId, views = null,
+                    )
+                }
+                songs.takeIf { it.isNotEmpty() }?.let {
+                    HomeItem(contents = it, title = "Karena kamu suka ${artist.name}", subtitle = "Berdasarkan artis favoritmu")
+                }
+            } }.awaitAll().filterNotNull()
+        }
+        if (request == homeRequest) _homeItemList.update { it + items }
     }
 
     fun getContinueHomeItem(continuation: String?) {
-        viewModelScope.launch {
-            if (continuation.isNullOrEmpty()) {
-                _homeListState.value = ListState.PAGINATION_EXHAUST
-                return@launch
-            } else {
-                log("Get more home item with continuation: $continuation")
-                _homeListState.value = ListState.PAGINATING
-                homeRepository
-                    .getHomeDataContinue(
+        if (loading.value || paginationJob?.isActive == true || continuation.isNullOrEmpty() ||
+            continuation != _continuation.value) return
+        val request = homeRequest
+        _homeListState.value = ListState.PAGINATING
+        paginationJob = viewModelScope.launch {
+            try {
+                val result = withTimeout(20_000) {
+                    homeRepository.getHomeDataContinue(
                         continuation,
-                        getString(Res.string.view_count),
-                        getString(Res.string.song),
-                    ).collect { home ->
-                        when (home) {
-                            is Resource.Success -> {
-                                _continuation.value = home.data?.first
-                                val newItems = home.data?.second ?: listOf()
-                                _homeItemList.update { it + newItems }
-                                if (home.data?.first.isNullOrEmpty()) {
-                                    _homeListState.value = ListState.PAGINATION_EXHAUST
-                                } else {
-                                    _homeListState.value = ListState.IDLE
-                                }
-                            }
-
-                            is Resource.Error -> {
-                                _continuation.value = null
-                                Logger.w(tag, "getContinueHomeItem: ${home.message}")
-                                showSnackBarErrorState.emit(home.message ?: "Unknown error")
-                                _homeListState.value = ListState.PAGINATION_EXHAUST
-                            }
-                        }
+                        org.jetbrains.compose.resources.getString(Res.string.view_count),
+                        org.jetbrains.compose.resources.getString(Res.string.song),
+                    ).first()
+                }
+                if (request != homeRequest) return@launch
+                when (result) {
+                    is Resource.Success -> {
+                        _continuation.value = result.data?.first
+                        _homeItemList.update { it + result.data?.second.orEmpty() }
                     }
+                    is Resource.Error -> {
+                        _continuation.value = null
+                        showSnackBarErrorState.emit(result.message ?: "Unable to load more music")
+                    }
+                }
+            } catch (error: TimeoutCancellationException) {
+                _continuation.value = null
+                showSnackBarErrorState.emit("Koneksi terlalu lama. Tarik untuk memuat ulang.")
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                _continuation.value = null
+                showSnackBarErrorState.emit(error.message ?: "Unable to load more music")
+            } finally {
+                if (request == homeRequest) _homeListState.value = if (_continuation.value.isNullOrEmpty())
+                    ListState.PAGINATION_EXHAUST else ListState.IDLE
             }
         }
     }
 
     fun exploreChart(region: String) {
-        viewModelScope.launch {
-            loadingChart.value = true
-            homeRepository
-                .getChartData(
-                    region,
-                ).collect { values ->
-                    regionCodeChart.value = region
-                    dataStoreManager.setChartKey(region)
-                    when (values) {
-                        is Resource.Success -> {
-                            _chart.value = values.data
-                        }
+        viewModelScope.launch { dataStoreManager.setChartKey(region) }
+        // Refresh the same region too; the preference collector handles actual changes.
+        if (regionCodeChart.value == region) loadChart(region)
+    }
 
-                        else -> {
-                            _chart.value = null
-                        }
-                    }
-                    loadingChart.value = false
+    private fun loadChart(region: String) {
+        val request = ++chartRequest
+        chartJob?.cancel()
+        regionCodeChart.value = region
+        loadingChart.value = true
+        chartJob = viewModelScope.launch {
+            try {
+                optionalData {
+                    val result = homeRepository.getChartData(region).first()
+                    if (request == chartRequest && result is Resource.Success) _chart.value = result.data
                 }
+            } finally {
+                if (request == chartRequest) loadingChart.value = false
+            }
         }
     }
 

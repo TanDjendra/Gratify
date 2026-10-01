@@ -1,0 +1,18 @@
+{
+  "status": "APPLIED",
+  "project_ref": "bnabldxsqpvkyqpjcsdv",
+  "schema_owner_id_type": "uuid",
+  "deployment_method": "Authenticated Supabase SQL Editor; single transaction after rollback rehearsal",
+  "bundle_sha256": "5043887c6307bea0af8e037242aae260ef5816247e7310cc1638b82d88e7b98d",
+  "verified_rpc_count": 14,
+  "checked_open_policies_remaining": 0,
+  "original_auth_accounts_preserved": 13,
+  "live_sql_rls_test": "PASS; synthetic SQL records rolled back",
+  "live_auth_postgrest_test": "PASS; six checks, two temporary accounts",
+  "evidence": [
+    "supabase-deployment-proof.jpg",
+    "supabase-rls-proof.jpg",
+    "live-api-verification.json"
+  ],
+  "storage_email_recovery_and_two_device_uat_verified": false
+}

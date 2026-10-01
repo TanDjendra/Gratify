@@ -54,6 +54,7 @@ data class CloudPlayHistoryDto(
     @SerialName("duration") val duration: Int? = null,
     @SerialName("thumbnail_url") val thumbnailUrl: String? = null,
     @SerialName("played_at") val playedAt: String? = null,
+    @SerialName("listen_count") val listenCount: Long = 1,
 )
 
 @Serializable

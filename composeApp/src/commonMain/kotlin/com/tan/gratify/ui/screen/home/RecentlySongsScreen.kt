@@ -1,5 +1,7 @@
 package com.tan.gratify.ui.screen.home
 
+import com.tan.gratify.ui.theme.GratifyColors
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -75,7 +77,7 @@ fun RecentlySongsScreen(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .hazeSource(state = hazeState),
+                    ,
         ) {
             item {
                 Spacer(
@@ -214,9 +216,7 @@ fun RecentlySongsScreen(
             modifier =
                 Modifier
                     .align(Alignment.TopCenter)
-                    .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin()) {
-                        blurEnabled = true
-                    },
+                    ,
             title = {
                 Text(
                     text = stringResource(Res.string.recently_added),
@@ -237,7 +237,7 @@ fun RecentlySongsScreen(
             actions = {},
             colors =
                 TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
+                    containerColor = GratifyColors.Background,
                 ),
         )
     }

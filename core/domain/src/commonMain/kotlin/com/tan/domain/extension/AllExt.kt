@@ -83,7 +83,7 @@ fun SongEntity.toGenericMediaItem(): GenericMediaItem {
 fun Track.toGenericMediaItem(): GenericMediaItem {
     var thumbUrl =
         this.thumbnails?.last()?.url
-            ?: "http://i.ytimg.com/vi/${this.videoId}/maxresdefault.jpg"
+            ?: "https://i.ytimg.com/vi/${this.videoId}/maxresdefault.jpg"
     if (thumbUrl.contains("w120")) {
         thumbUrl = Regex("([wh])120").replace(thumbUrl, "$1544")
     }
@@ -150,6 +150,15 @@ fun CookieItem.toNetScapeString(): String =
  * Decodes HTML entities in a string to their corresponding characters.
  * Handles both named entities (e.g. &amp;) and numeric entities (e.g. &#39; &#x27;).
  */
+private fun unicodeScalar(point: Int): String? = when {
+    point !in 0..0x10FFFF || point in 0xD800..0xDFFF -> null
+    point <= 0xFFFF -> point.toChar().toString()
+    else -> {
+        val value = point - 0x10000
+        "${(0xD800 + (value shr 10)).toChar()}${(0xDC00 + (value and 0x3FF)).toChar()}"
+    }
+}
+
 fun decodeHtmlEntities(text: String): String {
     // Named HTML entities
     val namedEntities =
@@ -178,7 +187,7 @@ fun decodeHtmlEntities(text: String): String {
         Regex("""&#x([0-9a-fA-F]+);?""").replace(result) { match ->
             val codePoint = match.groupValues[1].toIntOrNull(16)
             if (codePoint != null) {
-                Char(codePoint).toString()
+                unicodeScalar(codePoint) ?: match.value
             } else {
                 match.value
             }
@@ -189,7 +198,7 @@ fun decodeHtmlEntities(text: String): String {
         Regex("""&#(\d+);?""").replace(result) { match ->
             val codePoint = match.groupValues[1].toIntOrNull()
             if (codePoint != null) {
-                Char(codePoint).toString()
+                unicodeScalar(codePoint) ?: match.value
             } else {
                 match.value
             }

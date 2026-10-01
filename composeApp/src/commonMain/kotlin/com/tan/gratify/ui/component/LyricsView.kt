@@ -1,5 +1,10 @@
 package com.tan.gratify.ui.component
 
+import androidx.compose.ui.text.style.TextOverflow
+
+import com.tan.gratify.ui.theme.GratifyColors
+import com.tan.gratify.ui.theme.GratifyShapes
+
 import androidx.compose.animation.Animatable
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -130,9 +135,9 @@ private const val MIN_WIPE_MS = 150
 
 // Repeated lyrics palette tokens hoisted to file scope: avoids re-allocating
 // the same Color() objects on every recomposition of every line item.
-private val DimOriginalColor = Color.LightGray.copy(alpha = 0.35f)
+private val DimOriginalColor = GratifyColors.TextSecondary.copy(alpha = 0.35f)
 private val DimTranslatedColor = Color(0xFF97971A).copy(alpha = 0.3f)
-private val DimRichPendingColor = Color.LightGray.copy(alpha = 0.6f)
+private val DimRichPendingColor = GratifyColors.TextSecondary.copy(alpha = 0.6f)
 
 private data class TimedLineIndex(
     val index: Int,
@@ -246,7 +251,7 @@ fun LyricsView(
     onLineClick: (Float) -> Unit,
     modifier: Modifier = Modifier,
     showScrollShadows: Boolean = false,
-    backgroundColor: Color = Color(0xFF242424),
+    backgroundColor: Color = GratifyColors.SurfaceRaised,
     hasBlurBackground: Boolean = false,
 ) {
     val listState = rememberLazyListState()
@@ -574,7 +579,7 @@ private fun AnimatedWord(
 fun FullscreenLyricsSheet(
     sharedViewModel: SharedViewModel,
     navController: NavController,
-    color: Color = Color(0xFF242424),
+    color: Color = GratifyColors.SurfaceRaised,
     shouldHaze: Boolean,
     onDismiss: () -> Unit,
 ) {
@@ -766,7 +771,7 @@ fun FullscreenLyricsSheet(
                     modifier =
                         Modifier
                             .fillMaxSize()
-                            .hazeSource(hazeState),
+                            ,
                 ) {
                     AsyncImage(
                         model =
@@ -821,12 +826,7 @@ fun FullscreenLyricsSheet(
                         // Apply frosted glass haze effect over the poster when enabled
                         .then(
                             if (shouldHaze) {
-                                Modifier.hazeEffect(
-                                    hazeState,
-                                    style = CupertinoMaterials.regular(),
-                                ) {
-                                    blurEnabled = true
-                                }
+                                Modifier
                             } else {
                                 Modifier
                             },
@@ -864,7 +864,7 @@ fun FullscreenLyricsSheet(
                         modifier =
                             Modifier
                                 .size(45.dp)
-                                .clip(RoundedCornerShape(8.dp)),
+                                .clip(GratifyShapes.small),
                     )
 
                     Spacer(modifier = Modifier.width(12.dp))
@@ -879,12 +879,10 @@ fun FullscreenLyricsSheet(
                             style = typo().labelSmall,
                             color = Color.White,
                             maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             modifier =
                                 Modifier
-                                    .basicMarquee(
-                                        iterations = Int.MAX_VALUE,
-                                        animationMode = MarqueeAnimationMode.Immediately,
-                                    ).focusable(),
+                                    .focusable(),
                         )
 
                         Spacer(modifier = Modifier.height(2.dp))
@@ -924,12 +922,10 @@ fun FullscreenLyricsSheet(
                                 style = typo().bodySmall,
                                 color = Color.White.copy(alpha = 0.7f),
                                 maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                                 modifier =
                                     Modifier
-                                        .basicMarquee(
-                                            iterations = Int.MAX_VALUE,
-                                            animationMode = MarqueeAnimationMode.Immediately,
-                                        ).focusable(),
+                                        .focusable(),
                             )
                         }
                     }
@@ -1027,10 +1023,10 @@ fun FullscreenLyricsSheet(
                                                     .padding(
                                                         horizontal = 3.dp,
                                                     ).clip(
-                                                        RoundedCornerShape(8.dp),
+                                                        GratifyShapes.small,
                                                     ),
-                                            color = Color.Gray,
-                                            trackColor = Color.DarkGray,
+                                            color = GratifyColors.TextSecondary,
+                                            trackColor = GratifyColors.SurfaceHighest,
                                             strokeCap = StrokeCap.Round,
                                         )
                                     }
@@ -1045,10 +1041,10 @@ fun FullscreenLyricsSheet(
                                                     .padding(
                                                         horizontal = 3.dp,
                                                     ).clip(
-                                                        RoundedCornerShape(8.dp),
+                                                        GratifyShapes.small,
                                                     ),
-                                            color = Color.Gray,
-                                            trackColor = Color.DarkGray,
+                                            color = GratifyColors.TextSecondary,
+                                            trackColor = GratifyColors.SurfaceHighest,
                                             strokeCap = StrokeCap.Round,
                                             drawStopIndicator = {},
                                         )

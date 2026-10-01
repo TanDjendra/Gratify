@@ -69,8 +69,12 @@ internal class DownloadUtils(
             val mediaId = dataSpec.key ?: error("No media id")
             Logger.w("Stream", mediaId)
             Logger.w("Stream", mediaId.startsWith(MERGING_DATA_TYPE.VIDEO).toString())
-            val length = if (dataSpec.length >= 0) dataSpec.length else 1
-            if (downloadCache.isCached(mediaId, dataSpec.position, length) || playerCache.isCached(mediaId, dataSpec.position, length)) {
+            fun cachedEntireRequest(cache: androidx.media3.datasource.cache.Cache): Boolean {
+                val contentLength = androidx.media3.datasource.cache.ContentMetadata.getContentLength(cache.getContentMetadata(mediaId))
+                val length = if (dataSpec.length >= 0) dataSpec.length else if (contentLength > dataSpec.position) contentLength - dataSpec.position else return false
+                return length > 0 && cache.isCached(mediaId, dataSpec.position, length)
+            }
+            if (cachedEntireRequest(downloadCache) || cachedEntireRequest(playerCache)) {
                 return@Factory dataSpec
             }
             var dataSpecReturn: DataSpec = dataSpec

@@ -1,5 +1,13 @@
 package com.tan.gratify.ui.component
 
+import androidx.compose.material.icons.rounded.MoreHoriz
+import gratify.composeapp.generated.resources.detail_options
+
+import androidx.compose.ui.text.style.TextOverflow
+
+import com.tan.gratify.ui.theme.GratifyColors
+import com.tan.gratify.ui.theme.GratifyShapes
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateContentSize
@@ -115,6 +123,7 @@ fun SongFullWidthItems(
     onAddToQueue: ((videoId: String) -> Unit)? = null,
     modifier: Modifier,
     rightView: @Composable (() -> Unit)? = null,
+    collectionStyle: Boolean = false,
 ) {
     val maxOffset = 360f
     val coroutineScope = rememberCoroutineScope()
@@ -164,7 +173,7 @@ fun SongFullWidthItems(
                     .clickable {
                         onClickListener?.invoke(track?.videoId ?: songEntity?.videoId ?: "")
                     }.animateContentSize()
-                    .pointerInput(Unit) {
+                    .pointerInput(onAddToQueue, isPlaying) {
                         if (!isPlaying && onAddToQueue != null) {
                             detectHorizontalDragGestures(
                                 onHorizontalDrag = { change, dragAmount ->
@@ -201,9 +210,9 @@ fun SongFullWidthItems(
                     .fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Spacer(modifier = Modifier.width(8.dp))
+                if (!collectionStyle) Spacer(modifier = Modifier.width(8.dp))
                 Box(
-                    modifier = Modifier.size(48.dp),
+                    modifier = Modifier.size(if (collectionStyle && index != null) 28.dp else 48.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Crossfade(isPlaying) {
@@ -215,6 +224,7 @@ fun SongFullWidthItems(
                                         iterations = Compottie.IterateForever,
                                     ),
                                 contentDescription = "Lottie animation",
+                                colorFilter = if (collectionStyle) androidx.compose.ui.graphics.ColorFilter.tint(GratifyColors.Accent) else null,
                             )
                         } else if (index == null) {
                             val rawThumb = track?.thumbnails?.lastOrNull()?.url ?: songEntity?.thumbnails
@@ -230,18 +240,19 @@ fun SongFullWidthItems(
                                         .build(),
                                 placeholder = painterResource(Res.drawable.holder),
                                 error = painterResource(Res.drawable.holder),
+                                fallback = painterResource(Res.drawable.holder),
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
                                 modifier =
                                     Modifier
                                         .fillMaxSize()
-                                        .clip(RoundedCornerShape(4.dp)),
+                                        .clip(GratifyShapes.extraSmall),
                             )
                         } else {
                             Text(
                                 text = (index + 1).toString(),
-                                color = Color.White,
-                                style = typo().titleMedium,
+                                color = GratifyColors.TextSecondary,
+                                style = typo().bodyMedium,
                                 modifier = Modifier.align(Alignment.Center),
                             )
                         }
@@ -256,17 +267,15 @@ fun SongFullWidthItems(
                 ) {
                     Text(
                         text = track?.title ?: songEntity?.title ?: "",
-                        style = typo().titleSmall,
+                        style = if (collectionStyle) typo().bodyLarge else typo().titleSmall,
                         maxLines = 1,
-                        color = Color.White,
+                        overflow = TextOverflow.Ellipsis,
+                        color = if (isPlaying) GratifyColors.Accent else GratifyColors.TextPrimary,
                         modifier =
                             Modifier
                                 .fillMaxWidth()
                                 .wrapContentHeight(align = Alignment.CenterVertically)
-                                .basicMarquee(
-                                    iterations = Int.MAX_VALUE,
-                                    animationMode = MarqueeAnimationMode.Immediately,
-                                ).focusable(),
+                                .focusable(),
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         AnimatedVisibility(
@@ -307,15 +316,13 @@ fun SongFullWidthItems(
                                 ) ?: "",
                             style = typo().bodySmall,
                             maxLines = 1,
-                            color = Color(0xC4FFFFFF),
+                            overflow = TextOverflow.Ellipsis,
+                            color = GratifyColors.TextSecondary,
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
                                     .wrapContentHeight(align = Alignment.CenterVertically)
-                                    .basicMarquee(
-                                        iterations = Int.MAX_VALUE,
-                                        animationMode = MarqueeAnimationMode.Immediately,
-                                    ).focusable(),
+                                    .focusable(),
                         )
                     }
                 }
@@ -323,9 +330,16 @@ fun SongFullWidthItems(
                     rightView()
                 }
                 if (onMoreClickListener != null) {
-                    RippleIconButton(resId = Res.drawable.baseline_more_vert_24, fillMaxSize = false) {
-                        val videoId = track?.videoId ?: songEntity?.videoId
-                        videoId?.let { onMoreClickListener.invoke(it) }
+                    if (collectionStyle) {
+                        CollectionDetailAction(androidx.compose.material.icons.Icons.Rounded.MoreHoriz,
+                            stringResource(gratify.composeapp.generated.resources.Res.string.detail_options), onClick = {
+                                (track?.videoId ?: songEntity?.videoId)?.let(onMoreClickListener)
+                            })
+                    } else {
+                        RippleIconButton(resId = Res.drawable.baseline_more_vert_24, fillMaxSize = false) {
+                            val videoId = track?.videoId ?: songEntity?.videoId
+                            videoId?.let { onMoreClickListener.invoke(it) }
+                        }
                     }
                 }
                 AnimatedVisibility(
@@ -397,12 +411,13 @@ fun SuggestItems(
                                     .build(),
                             placeholder = painterResource(Res.drawable.holder),
                             error = painterResource(Res.drawable.holder),
+                            fallback = painterResource(Res.drawable.holder),
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
                             modifier =
                                 Modifier
                                     .fillMaxSize()
-                                    .clip(RoundedCornerShape(4.dp)),
+                                    .clip(GratifyShapes.extraSmall),
                         )
                     }
                 }
@@ -417,15 +432,13 @@ fun SuggestItems(
                     text = track.title,
                     style = typo().titleSmall,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     color = Color.White,
                     modifier =
                         Modifier
                             .fillMaxWidth()
                             .wrapContentHeight(align = Alignment.CenterVertically)
-                            .basicMarquee(
-                                iterations = Int.MAX_VALUE,
-                                animationMode = MarqueeAnimationMode.Immediately,
-                            ).focusable(),
+                            .focusable(),
                 )
                 Text(
                     text =
@@ -434,15 +447,13 @@ fun SuggestItems(
                         ) ?: "",
                     style = typo().bodySmall,
                     maxLines = 1,
-                    color = Color(0xC4FFFFFF),
+                    overflow = TextOverflow.Ellipsis,
+                    color = GratifyColors.TextSecondary,
                     modifier =
                         Modifier
                             .fillMaxWidth()
                             .wrapContentHeight(align = Alignment.CenterVertically)
-                            .basicMarquee(
-                                iterations = Int.MAX_VALUE,
-                                animationMode = MarqueeAnimationMode.Immediately,
-                            ).focusable(),
+                            .focusable(),
                 )
             }
             RippleIconButton(
@@ -541,7 +552,7 @@ fun PlaylistFullWidthItems(
                     PlaylistCollageThumbnail(
                         tracks = data.tracks!!,
                         placeholderTitle = data.title,
-                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(4.dp)),
+                        modifier = Modifier.fillMaxSize().clip(GratifyShapes.extraSmall),
                     )
                 } else {
                     AsyncImage(
@@ -555,12 +566,13 @@ fun PlaylistFullWidthItems(
                                 .build(),
                         placeholder = painterResource(Res.drawable.holder),
                         error = painterResource(Res.drawable.holder),
+                        fallback = painterResource(Res.drawable.holder),
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier =
                             Modifier
                                 .fillMaxSize()
-                                .clip(RoundedCornerShape(4.dp)),
+                                .clip(GratifyShapes.extraSmall),
                     )
                 }
             }
@@ -574,15 +586,13 @@ fun PlaylistFullWidthItems(
                     text = title,
                     style = typo().titleSmall,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     color = Color.White,
                     modifier =
                         Modifier
                             .fillMaxWidth()
                             .wrapContentHeight(align = Alignment.CenterVertically)
-                            .basicMarquee(
-                                iterations = Int.MAX_VALUE,
-                                animationMode = MarqueeAnimationMode.Immediately,
-                            ).focusable(),
+                            .focusable(),
                 )
 
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -601,15 +611,13 @@ fun PlaylistFullWidthItems(
                         text = "$firstSubtitle ${if (secondSubtitle.isNotEmpty()) " • $secondSubtitle" else ""}",
                         style = typo().bodySmall,
                         maxLines = 1,
-                        color = Color(0xC4FFFFFF),
+                        overflow = TextOverflow.Ellipsis,
+                        color = GratifyColors.TextSecondary,
                         modifier =
                             Modifier
                                 .fillMaxWidth()
                                 .wrapContentHeight(align = Alignment.CenterVertically)
-                                .basicMarquee(
-                                    iterations = Int.MAX_VALUE,
-                                    animationMode = MarqueeAnimationMode.Immediately,
-                                ).focusable(),
+                                .focusable(),
                     )
                 }
 
@@ -618,15 +626,13 @@ fun PlaylistFullWidthItems(
                         text = thirdRowSubtitle,
                         style = typo().bodySmall,
                         maxLines = 1,
-                        color = Color(0xC4FFFFFF),
+                        overflow = TextOverflow.Ellipsis,
+                        color = GratifyColors.TextSecondary,
                         modifier =
                             Modifier
                                 .fillMaxWidth()
                                 .wrapContentHeight(align = Alignment.CenterVertically)
-                                .basicMarquee(
-                                    iterations = Int.MAX_VALUE,
-                                    animationMode = MarqueeAnimationMode.Immediately,
-                                ).focusable(),
+                                .focusable(),
                     )
                 }
             }
@@ -675,6 +681,7 @@ fun ArtistFullWidthItems(
                             .build(),
                     placeholder = painterResource(Res.drawable.holder),
                     error = painterResource(Res.drawable.holder),
+                    fallback = painterResource(Res.drawable.holder),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier =
@@ -693,30 +700,26 @@ fun ArtistFullWidthItems(
                     text = name,
                     style = typo().titleSmall,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     color = Color.White,
                     modifier =
                         Modifier
                             .fillMaxWidth()
                             .wrapContentHeight(align = Alignment.CenterVertically)
-                            .basicMarquee(
-                                iterations = Int.MAX_VALUE,
-                                animationMode = MarqueeAnimationMode.Immediately,
-                            ).focusable(),
+                            .focusable(),
                 )
 
                 Text(
                     text = stringResource(Res.string.artists),
                     style = typo().bodySmall,
                     maxLines = 1,
-                    color = Color(0xC4FFFFFF),
+                    overflow = TextOverflow.Ellipsis,
+                    color = GratifyColors.TextSecondary,
                     modifier =
                         Modifier
                             .fillMaxWidth()
                             .wrapContentHeight(align = Alignment.CenterVertically)
-                            .basicMarquee(
-                                iterations = Int.MAX_VALUE,
-                                animationMode = MarqueeAnimationMode.Immediately,
-                            ).focusable(),
+                            .focusable(),
                 )
             }
             if (rightView != null) {

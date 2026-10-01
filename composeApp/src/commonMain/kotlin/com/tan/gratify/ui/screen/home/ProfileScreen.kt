@@ -1,5 +1,8 @@
 package com.tan.gratify.ui.screen.home
 
+import com.tan.gratify.ui.theme.GratifyColors
+import com.tan.gratify.ui.theme.GratifyShapes
+
 import com.tan.logger.Logger
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -229,9 +232,9 @@ fun ProfileScreen(
     val showPlaylistStr by showPlaylistFlow.collectAsStateWithLifecycle(initialValue = "TRUE")
     val showRecentArtistsStr by showRecentArtistsFlow.collectAsStateWithLifecycle(initialValue = "TRUE")
     
-    val showFollowers = showFollowersStr != "FALSE"
-    val showPlaylist = showPlaylistStr != "FALSE"
-    val showRecentArtists = showRecentArtistsStr != "FALSE"
+    val showFollowers = showFollowersStr == "TRUE"
+    val showPlaylist = showPlaylistStr == "TRUE"
+    val showRecentArtists = showRecentArtistsStr == "TRUE"
 
 
     val photoPicker = photoPickerResult { uri ->
@@ -240,7 +243,7 @@ fun ProfileScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF121212))) {
+    Box(modifier = Modifier.fillMaxSize().background(GratifyColors.Background)) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -259,9 +262,9 @@ fun ProfileScreen(
                         .background(
                             Brush.verticalGradient(
                                 colors = listOf(
-                                    Color(0xFF555555).copy(alpha = 0.6f),
-                                    Color(0xFF333333).copy(alpha = 0.2f),
-                                    Color(0xFF121212)
+                                    GratifyColors.AccentContainer.copy(alpha = 0.6f),
+                                    GratifyColors.Divider.copy(alpha = 0.2f),
+                                    GratifyColors.Background
                                 )
                             )
                         )
@@ -296,10 +299,10 @@ fun ProfileScreen(
                             .clip(CircleShape)
                             .background(
                                 Brush.linearGradient(
-                                    colors = listOf(Color(0xFF5A5A5A), Color(0xFF2B2B2B))
+                                    colors = listOf(GratifyColors.AccentContainer, GratifyColors.SurfaceRaised)
                                 )
                             )
-                            .border(1.5.dp, Color(0xFF8E8E8E), CircleShape),
+                            .border(1.5.dp, GratifyColors.Outline, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         if (!displayImage.isNullOrEmpty()) {
@@ -312,6 +315,7 @@ fun ProfileScreen(
                                     .build(),
                                 placeholder = painterResource(Res.drawable.holder),
                                 error = painterResource(Res.drawable.holder),
+                                fallback = painterResource(Res.drawable.holder),
                                 contentDescription = "Profile",
                                 modifier = Modifier.fillMaxSize().clip(CircleShape),
                                 contentScale = ContentScale.Crop
@@ -331,7 +335,7 @@ fun ProfileScreen(
                                 Icon(
                                     imageVector = Icons.Rounded.Person,
                                     contentDescription = null,
-                                    tint = Color(0xFFE0E0E0),
+                                    tint = GratifyColors.TextPrimary,
                                     modifier = Modifier.size(56.dp)
                                 )
                             }
@@ -355,9 +359,9 @@ fun ProfileScreen(
                                 Text(
                                     text = "${userProfileState.followersCount} pengikut",
                                     style = typo().bodySmall,
-                                    color = Color(0xFFB3B3B3),
+                                    color = GratifyColors.TextSecondary,
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(4.dp))
+                                        .clip(GratifyShapes.extraSmall)
                                         .clickable {
                                             val uid = userProfileState.profile?.id ?: supabase.auth.currentUserOrNull()?.id
                                             if (uid != null) {
@@ -369,14 +373,14 @@ fun ProfileScreen(
                                 Text(
                                     text = " · ",
                                     style = typo().bodySmall,
-                                    color = Color(0xFFB3B3B3)
+                                    color = GratifyColors.TextSecondary
                                 )
                                 Text(
                                     text = "${userProfileState.followingCount} mengikuti",
                                     style = typo().bodySmall,
-                                    color = Color(0xFFB3B3B3),
+                                    color = GratifyColors.TextSecondary,
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(4.dp))
+                                        .clip(GratifyShapes.extraSmall)
                                         .clickable {
                                             val uid = userProfileState.profile?.id ?: supabase.auth.currentUserOrNull()?.id
                                             if (uid != null) {
@@ -403,8 +407,8 @@ fun ProfileScreen(
                     // Follow button for preview
                     Box(
                         modifier = Modifier
-                            .border(1.dp, Color(0xFF727272), RoundedCornerShape(20.dp))
-                            .clip(RoundedCornerShape(20.dp))
+                            .border(1.dp, GratifyColors.Outline, GratifyShapes.large)
+                            .clip(GratifyShapes.large)
                             .clickable { /* TODO: Follow action */ }
                             .padding(horizontal = 16.dp, vertical = 6.dp)
                     ) {
@@ -431,8 +435,8 @@ fun ProfileScreen(
                     // Edit button
                     Box(
                         modifier = Modifier
-                            .border(1.dp, Color(0xFF727272), RoundedCornerShape(20.dp))
-                            .clip(RoundedCornerShape(20.dp))
+                            .border(1.dp, GratifyColors.Outline, GratifyShapes.large)
+                            .clip(GratifyShapes.large)
                             .clickable {
                                 editName = appProfileName ?: ""
                                 editImage = appProfileImage ?: ""
@@ -480,7 +484,7 @@ fun ProfileScreen(
             ModalBottomSheet(
                 onDismissRequest = { showAddPlaylistSheet = false },
                 sheetState = sheetState,
-                containerColor = Color(0xFF1E1E1E),
+                containerColor = GratifyColors.Surface,
                 dragHandle = null
             ) {
                 Column(
@@ -503,14 +507,14 @@ fun ProfileScreen(
                             Text(
                                 text = "Playlist akan muncul di profilmu",
                                 style = typo().bodySmall,
-                                color = Color(0xFFB3B3B3)
+                                color = GratifyColors.TextSecondary
                             )
                         }
 
                         Box(
                             modifier = Modifier
-                                .border(1.dp, Color(0xFF727272), RoundedCornerShape(20.dp))
-                                .clip(RoundedCornerShape(20.dp))
+                                .border(1.dp, GratifyColors.Outline, GratifyShapes.large)
+                                .clip(GratifyShapes.large)
                                 .clickable {
                                     // Add all local playlists (optimistic, lalu sinkron + refresh dari server)
                                     val allIds = ownPlaylists.map { it.id }.toSet()
@@ -548,7 +552,7 @@ fun ProfileScreen(
                             Text(
                                 text = "Kamu belum membuat playlist apa pun.",
                                 style = typo().bodyMedium,
-                                color = Color(0xFFB3B3B3),
+                                color = GratifyColors.TextSecondary,
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.fillMaxWidth().padding(top = 20.dp)
                             )
@@ -562,7 +566,7 @@ fun ProfileScreen(
                                     Box(
                                         modifier = Modifier
                                             .size(60.dp)
-                                            .background(Color(0xFF282828), RoundedCornerShape(4.dp))
+                                            .background(GratifyColors.SurfaceRaised, GratifyShapes.extraSmall)
                                     ) {
                                         if (playlist.thumbnail != null) {
                                             AsyncImage(
@@ -575,7 +579,7 @@ fun ProfileScreen(
                                             Icon(
                                                 painter = painterResource(Res.drawable.holder),
                                                 contentDescription = null,
-                                                tint = Color.Gray,
+                                                tint = GratifyColors.TextSecondary,
                                                 modifier = Modifier.align(Alignment.Center).size(24.dp)
                                             )
                                         }
@@ -591,7 +595,7 @@ fun ProfileScreen(
                                         Text(
                                             text = "Publik • Kamu",
                                             style = typo().bodySmall,
-                                            color = Color(0xFFB3B3B3)
+                                            color = GratifyColors.TextSecondary
                                         )
                                     }
                                     Spacer(modifier = Modifier.width(16.dp))
@@ -599,8 +603,8 @@ fun ProfileScreen(
                                     if (isAdded) {
                                         Box(
                                             modifier = Modifier
-                                                .border(1.dp, Color.Transparent, RoundedCornerShape(20.dp))
-                                                .background(Color(0xFFE0E0E0), RoundedCornerShape(20.dp))
+                                                .border(1.dp, Color.Transparent, GratifyShapes.large)
+                                                .background(GratifyColors.TextPrimary, GratifyShapes.large)
                                                 .clickable {
                                                     pinnedPlaylistIds = pinnedPlaylistIds - playlist.id
                                                     coroutineScope.launch {
@@ -623,8 +627,8 @@ fun ProfileScreen(
                                     } else {
                                         Box(
                                             modifier = Modifier
-                                                .border(1.dp, Color.Transparent, RoundedCornerShape(20.dp))
-                                                .background(Color.White, RoundedCornerShape(20.dp))
+                                                .border(1.dp, Color.Transparent, GratifyShapes.large)
+                                                .background(Color.White, GratifyShapes.large)
                                                 .clickable {
                                                     pinnedPlaylistIds = pinnedPlaylistIds + playlist.id
                                                     coroutineScope.launch {
@@ -659,7 +663,7 @@ fun ProfileScreen(
             ModalBottomSheet(
                 onDismissRequest = { selectedPinnedPlaylist = null },
                 sheetState = sheetState,
-                containerColor = Color(0xFF1E1E1E),
+                containerColor = GratifyColors.Surface,
                 dragHandle = null
             ) {
                 Column(
@@ -764,15 +768,15 @@ fun ProfileScreen(
                             Text(
                                 text = "Orang lain bisa melihat musik yang kamu suka, membagikan playlist-mu, dan menyimpan playlist untuk didengar nanti.",
                                 style = typo().bodySmall,
-                                color = Color(0xFFB3B3B3),
+                                color = GratifyColors.TextSecondary,
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.padding(horizontal = 24.dp)
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Box(
                                 modifier = Modifier
-                                    .border(1.dp, Color.White, RoundedCornerShape(20.dp))
-                                    .clip(RoundedCornerShape(20.dp))
+                                    .border(1.dp, Color.White, GratifyShapes.large)
+                                    .clip(GratifyShapes.large)
                                     .clickable { showAddPlaylistSheet = true }
                                     .padding(horizontal = 20.dp, vertical = 8.dp)
                             ) {
@@ -794,7 +798,7 @@ fun ProfileScreen(
                                         .clickable { selectedPinnedPlaylist = playlist }
                                         .padding(vertical = 4.dp)
                                 ) {
-                                    Box(modifier = Modifier.size(60.dp).background(Color(0xFF282828), RoundedCornerShape(4.dp))) {
+                                    Box(modifier = Modifier.size(60.dp).background(GratifyColors.SurfaceRaised, GratifyShapes.extraSmall)) {
                                         if (playlist.thumbnail != null) {
                                             AsyncImage(
                                                 model = playlist.thumbnail,
@@ -806,7 +810,7 @@ fun ProfileScreen(
                                             Icon(
                                                 painter = painterResource(Res.drawable.holder),
                                                 contentDescription = null,
-                                                tint = Color.Gray,
+                                                tint = GratifyColors.TextSecondary,
                                                 modifier = Modifier.align(Alignment.Center).size(24.dp)
                                             )
                                         }
@@ -821,7 +825,7 @@ fun ProfileScreen(
                                         Text(
                                             text = "Publik • Kamu",
                                             style = typo().bodySmall,
-                                            color = Color.Gray
+                                            color = GratifyColors.TextSecondary
                                         )
                                     }
                                 }
@@ -831,8 +835,8 @@ fun ProfileScreen(
                             
                             Box(
                                 modifier = Modifier
-                                    .border(1.dp, Color.White, RoundedCornerShape(20.dp))
-                                    .clip(RoundedCornerShape(20.dp))
+                                    .border(1.dp, Color.White, GratifyShapes.large)
+                                    .clip(GratifyShapes.large)
                                     .clickable { showAddPlaylistSheet = true }
                                     .padding(horizontal = 20.dp, vertical = 8.dp)
                                     .align(Alignment.CenterHorizontally)
@@ -880,7 +884,7 @@ fun ProfileScreen(
                                         .width(80.dp)
                                         .clickable { navController.navigate(ArtistDestination(artist.channelId)) }
                                 ) {
-                                    Box(modifier = Modifier.size(72.dp).clip(CircleShape).background(Color(0xFF282828))) {
+                                    Box(modifier = Modifier.size(72.dp).clip(CircleShape).background(GratifyColors.SurfaceRaised)) {
                                         if (artist.thumbnails != null) {
                                             AsyncImage(
                                                 model = artist.thumbnails,
@@ -892,7 +896,7 @@ fun ProfileScreen(
                                             Icon(
                                                 painter = painterResource(Res.drawable.holder),
                                                 contentDescription = null,
-                                                tint = Color.Gray,
+                                                tint = GratifyColors.TextSecondary,
                                                 modifier = Modifier.align(Alignment.Center).size(28.dp)
                                             )
                                         }
@@ -950,7 +954,7 @@ fun ProfileScreen(
             exit = slideOutVertically(targetOffsetY = { it }),
             modifier = Modifier.fillMaxSize()
         ) {
-            Box(modifier = Modifier.fillMaxSize().background(Color(0xFF121212))) {
+            Box(modifier = Modifier.fillMaxSize().background(GratifyColors.Background)) {
                 Column(modifier = Modifier.fillMaxSize()) {
                     // Top Bar
                     Row(
@@ -1052,7 +1056,7 @@ fun ProfileScreen(
                             modifier = Modifier
                                 .size(140.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFF535353))
+                                .background(GratifyColors.Outline)
                         ) {
                             if (editImage.isNotEmpty()) {
                                 AsyncImage(
@@ -1063,6 +1067,7 @@ fun ProfileScreen(
                                         .build(),
                                     placeholder = painterResource(Res.drawable.holder),
                                     error = painterResource(Res.drawable.holder),
+                                    fallback = painterResource(Res.drawable.holder),
                                     contentDescription = "Avatar",
                                     modifier = Modifier.fillMaxSize(),
                                     contentScale = ContentScale.Crop
@@ -1072,7 +1077,7 @@ fun ProfileScreen(
                                     imageVector = Icons.Rounded.Person,
                                     contentDescription = "Default Avatar",
                                     modifier = Modifier.fillMaxSize().padding(32.dp),
-                                    tint = Color.Gray
+                                    tint = GratifyColors.TextSecondary
                                 )
                             }
                         }
@@ -1129,7 +1134,7 @@ fun ProfileScreen(
                                     .align(Alignment.BottomCenter)
                                     .fillMaxWidth()
                                     .height(1.dp)
-                                    .background(Color(0xFF535353))
+                                    .background(GratifyColors.Outline)
                             )
                         }
                     }
@@ -1142,7 +1147,7 @@ fun ProfileScreen(
             ModalBottomSheet(
                 onDismissRequest = { showPrivacySheet = false },
                 sheetState = sheetState,
-                containerColor = Color(0xFF282828)
+                containerColor = GratifyColors.SurfaceRaised
             ) {
                 Column(
                     modifier = Modifier
@@ -1162,12 +1167,12 @@ fun ProfileScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
                             Text("Pengikut dan mengikuti", style = typo().bodyLarge.copy(color = Color.White, fontWeight = FontWeight.Bold))
-                            Text("Di profilmu, orang bisa melihat siapa yang mengikutimu dan siapa yang kamu ikuti.", style = typo().bodySmall.copy(color = Color(0xFFB3B3B3)))
+                            Text("Di profilmu, orang bisa melihat siapa yang mengikutimu dan siapa yang kamu ikuti.", style = typo().bodySmall.copy(color = GratifyColors.TextSecondary))
                         }
                         Switch(
                             checked = showFollowers ?: true,
-                            onCheckedChange = { coroutineScope.launch { dataStoreManager.putString("privacy_show_followers", if (it) "TRUE" else "FALSE") } },
-                            colors = SwitchDefaults.colors(checkedThumbColor = Color.Black, checkedTrackColor = Color(0xFFE0E0E0), uncheckedThumbColor = Color.Gray)
+                            onCheckedChange = { coroutineScope.launch { userProfileViewModel.setProfilePrivacy("privacy_show_followers", it) } },
+                            colors = SwitchDefaults.colors(checkedThumbColor = Color.Black, checkedTrackColor = GratifyColors.TextPrimary, uncheckedThumbColor = GratifyColors.TextSecondary)
                         )
                     }
                     
@@ -1178,12 +1183,12 @@ fun ProfileScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
                             Text("Playlist", style = typo().bodyLarge.copy(color = Color.White, fontWeight = FontWeight.Bold))
-                            Text("Orang bisa melihat playlist yang kamu tambahkan ke profilmu.", style = typo().bodySmall.copy(color = Color(0xFFB3B3B3)))
+                            Text("Orang bisa melihat playlist yang kamu tambahkan ke profilmu.", style = typo().bodySmall.copy(color = GratifyColors.TextSecondary))
                         }
                         Switch(
                             checked = showPlaylist ?: true,
-                            onCheckedChange = { coroutineScope.launch { dataStoreManager.putString("privacy_show_playlist", if (it) "TRUE" else "FALSE") } },
-                            colors = SwitchDefaults.colors(checkedThumbColor = Color.Black, checkedTrackColor = Color(0xFFE0E0E0), uncheckedThumbColor = Color.Gray)
+                            onCheckedChange = { coroutineScope.launch { userProfileViewModel.setProfilePrivacy("privacy_show_playlist", it) } },
+                            colors = SwitchDefaults.colors(checkedThumbColor = Color.Black, checkedTrackColor = GratifyColors.TextPrimary, uncheckedThumbColor = GratifyColors.TextSecondary)
                         )
                     }
                     
@@ -1194,12 +1199,12 @@ fun ProfileScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
                             Text("Artis yang baru diputar", style = typo().bodyLarge.copy(color = Color.White, fontWeight = FontWeight.Bold))
-                            Text("Orang bisa melihat siapa yang baru-baru ini kamu dengarkan di profilmu.", style = typo().bodySmall.copy(color = Color(0xFFB3B3B3)))
+                            Text("Orang bisa melihat siapa yang baru-baru ini kamu dengarkan di profilmu.", style = typo().bodySmall.copy(color = GratifyColors.TextSecondary))
                         }
                         Switch(
                             checked = showRecentArtists ?: true,
-                            onCheckedChange = { coroutineScope.launch { dataStoreManager.putString("privacy_show_recent_artists", if (it) "TRUE" else "FALSE") } },
-                            colors = SwitchDefaults.colors(checkedThumbColor = Color.Black, checkedTrackColor = Color(0xFFE0E0E0), uncheckedThumbColor = Color.Gray)
+                            onCheckedChange = { coroutineScope.launch { userProfileViewModel.setProfilePrivacy("privacy_show_recent_artists", it) } },
+                            colors = SwitchDefaults.colors(checkedThumbColor = Color.Black, checkedTrackColor = GratifyColors.TextPrimary, uncheckedThumbColor = GratifyColors.TextSecondary)
                         )
                     }
                     
@@ -1213,7 +1218,7 @@ fun ProfileScreen(
             ModalBottomSheet(
                 onDismissRequest = { showShareProfileSheet = false },
                 sheetState = sheetState,
-                containerColor = Color(0xFF1E1E1E)
+                containerColor = GratifyColors.Surface
             ) {
                 Column(
                     modifier = Modifier
@@ -1227,7 +1232,7 @@ fun ProfileScreen(
                             .width(280.dp)
                             .wrapContentHeight()
                             .defaultMinSize(minHeight = 370.dp)
-                            .clip(RoundedCornerShape(24.dp))
+                            .clip(GratifyShapes.large)
                             .background(shareCardBgColor)
                             .drawWithContent {
                                 graphicsLayer.record {
@@ -1262,7 +1267,7 @@ fun ProfileScreen(
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = "Profil di Gratify",
-                                    style = typo().bodyMedium.copy(color = Color(0xFFB3B3B3))
+                                    style = typo().bodyMedium.copy(color = GratifyColors.TextSecondary)
                                 )
 
                                 val shareSongTitle = nowPlayingData.nowPlayingTitle.takeIf { it.isNotEmpty() }
@@ -1279,7 +1284,7 @@ fun ProfileScreen(
                                     Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .clip(RoundedCornerShape(12.dp))
+                                            .clip(GratifyShapes.medium)
                                             .background(Color(0x33000000))
                                             .padding(horizontal = 12.dp, vertical = 10.dp)
                                     ) {
@@ -1287,7 +1292,7 @@ fun ProfileScreen(
                                             Icon(
                                                 imageVector = Icons.Rounded.PlayArrow,
                                                 contentDescription = null,
-                                                tint = Color(0xFF1DB954),
+                                                tint = GratifyColors.Accent,
                                                 modifier = Modifier.size(20.dp)
                                             )
                                             Spacer(modifier = Modifier.width(8.dp))
@@ -1300,7 +1305,7 @@ fun ProfileScreen(
                                                 )
                                                 Text(
                                                     text = shareSongArtist,
-                                                    style = typo().bodySmall.copy(fontSize = 10.sp, color = Color(0xFFCCCCCC)),
+                                                    style = typo().bodySmall.copy(fontSize = 10.sp, color = GratifyColors.TextSecondary),
                                                     maxLines = 1,
                                                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                                 )
@@ -1320,7 +1325,7 @@ fun ProfileScreen(
                                                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                                 modifier = Modifier
                                                     .padding(start = 28.dp)
-                                                    .clip(RoundedCornerShape(4.dp))
+                                                    .clip(GratifyShapes.extraSmall)
                                                     .clickable {
                                                         val lines = nowPlayingData.lyricsData?.lyrics?.lines
                                                         if (!lines.isNullOrEmpty()) {
@@ -1392,7 +1397,7 @@ fun ProfileScreen(
                             shareUrl("Bagikan Profil", url)
                             showShareProfileSheet = false
                         }) {
-                            Box(modifier = Modifier.size(60.dp).clip(CircleShape).background(Color(0xFF333333)), contentAlignment = Alignment.Center) {
+                            Box(modifier = Modifier.size(60.dp).clip(CircleShape).background(GratifyColors.Divider), contentAlignment = Alignment.Center) {
                                 Icon(imageVector = Icons.Rounded.Link, contentDescription = "Salin", tint = Color.White, modifier = Modifier.size(24.dp))
                             }
                             Spacer(modifier = Modifier.height(8.dp))
@@ -1449,7 +1454,7 @@ fun ProfileScreen(
                                 }
                             }
                         }) {
-                            Box(modifier = Modifier.size(60.dp).clip(CircleShape).background(Color(0xFF333333)), contentAlignment = Alignment.Center) {
+                            Box(modifier = Modifier.size(60.dp).clip(CircleShape).background(GratifyColors.Divider), contentAlignment = Alignment.Center) {
                                 Icon(imageVector = Icons.Rounded.Share, contentDescription = "Lainnya", tint = Color.White, modifier = Modifier.size(24.dp))
                             }
                             Spacer(modifier = Modifier.height(8.dp))
@@ -1468,7 +1473,7 @@ fun ProfileScreen(
                 ModalBottomSheet(
                     onDismissRequest = { showLyricsSelectionSheet = false },
                     sheetState = sheetState,
-                    containerColor = Color(0xFF1E1E1E)
+                    containerColor = GratifyColors.Surface
                 ) {
                     Column(
                         modifier = Modifier
@@ -1499,7 +1504,7 @@ fun ProfileScreen(
                                 Text(
                                     text = snippet,
                                     style = typo().bodyMedium.copy(
-                                        color = if (isSelected) Color(0xFF1DB954) else Color.White,
+                                        color = if (isSelected) GratifyColors.Accent else Color.White,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                     ),
                                     modifier = Modifier
@@ -1525,7 +1530,7 @@ fun ProfileScreen(
             ModalBottomSheet(
                 onDismissRequest = { showMoreOptionsSheet = false },
                 sheetState = sheetState,
-                containerColor = Color(0xFF282828)
+                containerColor = GratifyColors.SurfaceRaised
             ) {
                 Column(
                     modifier = Modifier
@@ -1543,7 +1548,7 @@ fun ProfileScreen(
                             modifier = Modifier
                                 .size(48.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFF535353))
+                                .background(GratifyColors.Outline)
                         ) {
                             if (appProfileImage?.isNotEmpty() == true) {
                                 AsyncImage(
@@ -1554,6 +1559,7 @@ fun ProfileScreen(
                                         .build(),
                                     placeholder = painterResource(Res.drawable.holder),
                                     error = painterResource(Res.drawable.holder),
+                                    fallback = painterResource(Res.drawable.holder),
                                     contentDescription = "Profile Mini",
                                     modifier = Modifier.fillMaxSize(),
                                     contentScale = ContentScale.Crop
@@ -1707,7 +1713,7 @@ fun ProfileScreen(
                     Box(
                         modifier = Modifier
                             .width(280.dp)
-                            .background(Color(0xFFDCE2F0), RoundedCornerShape(16.dp))
+                            .background(Color(0xFFDCE2F0), GratifyShapes.medium)
                             .padding(20.dp)
                     ) {
                         Column(
@@ -1723,7 +1729,7 @@ fun ProfileScreen(
                                     modifier = Modifier
                                         .size(48.dp)
                                         .clip(CircleShape)
-                                        .background(Color.Gray)
+                                        .background(GratifyColors.TextSecondary)
                                 ) {
                                     if (appProfileImage?.isNotEmpty() == true) {
                                         AsyncImage(
@@ -1734,6 +1740,7 @@ fun ProfileScreen(
                                                 .build(),
                                             placeholder = painterResource(Res.drawable.holder),
                                             error = painterResource(Res.drawable.holder),
+                                            fallback = painterResource(Res.drawable.holder),
                                             contentDescription = "Profile Code Avatar",
                                             modifier = Modifier.fillMaxSize(),
                                             contentScale = ContentScale.Crop
@@ -1743,7 +1750,7 @@ fun ProfileScreen(
                                             imageVector = Icons.Rounded.Person,
                                             contentDescription = "Default Avatar",
                                             modifier = Modifier.fillMaxSize().padding(8.dp),
-                                            tint = Color.DarkGray
+                                            tint = GratifyColors.SurfaceHighest
                                         )
                                     }
                                 }
@@ -1755,7 +1762,7 @@ fun ProfileScreen(
                                     )
                                     Text(
                                         text = "Gratify Profile ID",
-                                        style = typo().labelSmall.copy(color = Color.DarkGray)
+                                        style = typo().labelSmall.copy(color = GratifyColors.SurfaceHighest)
                                     )
                                 }
                             }
@@ -1769,7 +1776,7 @@ fun ProfileScreen(
                             Box(
                                 modifier = Modifier
                                     .size(180.dp)
-                                    .background(Color.White, RoundedCornerShape(8.dp))
+                                    .background(Color.White, GratifyShapes.small)
                                     .padding(12.dp),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -1789,13 +1796,13 @@ fun ProfileScreen(
                                 Icon(
                                     imageVector = Icons.Rounded.QrCodeScanner,
                                     contentDescription = "QR Logo",
-                                    tint = Color.DarkGray,
+                                    tint = GratifyColors.SurfaceHighest,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = "Pindai untuk berteman & lihat playlist",
-                                    style = typo().labelSmall.copy(color = Color.DarkGray, fontWeight = FontWeight.Medium)
+                                    style = typo().labelSmall.copy(color = GratifyColors.SurfaceHighest, fontWeight = FontWeight.Medium)
                                 )
                             }
                         }

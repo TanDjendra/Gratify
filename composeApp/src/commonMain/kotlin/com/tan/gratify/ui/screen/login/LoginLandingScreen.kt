@@ -1,10 +1,13 @@
 package com.tan.gratify.ui.screen.login
 
+import com.tan.gratify.ui.theme.GratifyColors
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -12,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -44,11 +48,14 @@ import com.tan.gratify.ui.navigation.destination.login.EmailLoginDestination
 import com.tan.gratify.ui.navigation.destination.login.SignUpDestination
 import com.tan.gratify.ui.navigation.destination.login.CreateProfileDestination
 import com.tan.gratify.ui.theme.typo
+import gratify.composeapp.generated.resources.ui_login_headline
+import gratify.composeapp.generated.resources.mono
 import gratify.composeapp.generated.resources.Res
 import gratify.composeapp.generated.resources.app_icon
 import gratify.composeapp.generated.resources.ic_google
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.compose.koinInject
 import kotlinx.coroutines.flow.first
@@ -56,12 +63,12 @@ import kotlinx.coroutines.flow.firstOrNull
 import io.github.jan.supabase.auth.auth
 
 // Konstanta warna sesuai desain premium
-private val AntigravityGreen = Color(0xFFE0E0E0)
-private val ButtonOutlineColor = Color(0xFF727272)
-private val BackgroundBlack = Color(0xFF000000)
+private val GratifyAccent = GratifyColors.Accent
+private val ButtonOutlineColor = GratifyColors.Outline
+private val BackgroundBlack = GratifyColors.Background
 
 /**
- * Halaman awal Login / Landing Page untuk aplikasi musik Antigravity.
+ * Halaman awal Login / Landing Page untuk aplikasi musik Gratify.
  * Menggunakan Jetpack Navigation Compose (navigasi bawaan proyek saat ini).
  * Didesain modular agar mudah diintegrasikan dengan sistem navigasi lain seperti Voyager jika dibutuhkan.
  */
@@ -117,12 +124,18 @@ fun LoginLandingScreen(
     val userDataSyncManager: com.tan.data.sync.UserDataSyncManager = koinInject()
     LaunchedEffect(Unit) {
         supabase.auth.sessionStatus.collect { status ->
-            if (hasNavigated) return@collect
+            if (hasNavigated || com.tan.gratify.viewModel.auth.PasswordRecoveryCoordinator.pending.value) return@collect
             when (status) {
                 is io.github.jan.supabase.auth.status.SessionStatus.Authenticated -> {
+                    if (!dataStoreManager.getString("pending_signup_email").first().isNullOrBlank()) {
+                        supabase.auth.clearSession()
+                        dataStoreManager.putString("pending_signup_email", "")
+                        return@collect
+                    }
                     val user = supabase.auth.currentUserOrNull() ?: return@collect
                     try {
-                        dataStoreManager.clearPerUserData()
+                        userDataSyncManager.performLoginSync()
+                        // Account-specific preferences are cleared before cloud restore by the sync manager.
                         dataStoreManager.setLoggedIn(true)
                         dataStoreManager.putString("AccountEmail", user.email ?: "")
 
@@ -184,8 +197,6 @@ fun LoginLandingScreen(
                         // Pulihkan data akun ini dari cloud + jaga isolasi per-akun:
                         // bila akun yang login via Google berbeda dari akun sebelumnya,
                         // performLoginSync membersihkan DB akun lama dulu baru menarik data akun baru.
-                        userDataSyncManager.performLoginSync()
-
                         val appProfileName = dataStoreManager.getString("AppProfileName").first()
                         val destination = if (appProfileName.isNullOrEmpty()) {
                             CreateProfileDestination
@@ -224,15 +235,16 @@ fun LoginLandingScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 32.dp),
+                .padding(horizontal = 32.dp)
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
 
             // ── Logo Aplikasi ────────────────────────────────────────────────
             Image(
-                painter = painterResource(Res.drawable.app_icon),
-                contentDescription = "Antigravity Logo",
+                painter = painterResource(Res.drawable.mono),
+                contentDescription = "Gratify Logo",
                 modifier = Modifier
                     .size(72.dp)
                     .clip(CircleShape),
@@ -240,9 +252,9 @@ fun LoginLandingScreen(
 
             Spacer(Modifier.height(28.dp))
 
-            // ── Judul Utama (Sesuai Permintaan: Antigravity) ─────────────────
+            // ── Judul Utama (Sesuai Permintaan: Gratify) ─────────────────
             Text(
-                text = "Millions of songs.\nFree on Antigravity.",
+                text = stringResource(Res.string.ui_login_headline),
                 style = typo().titleLarge.copy(
                     fontSize = 28.sp,
                     fontWeight = FontWeight.ExtraBold,
@@ -260,10 +272,10 @@ fun LoginLandingScreen(
                 onClick = onSignUpClick,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp),
+                    .heightIn(min = 52.dp),
                 shape = RoundedCornerShape(50),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = AntigravityGreen,
+                    containerColor = GratifyAccent,
                     contentColor = Color.Black,
                 ),
             ) {
@@ -284,7 +296,7 @@ fun LoginLandingScreen(
                 onClick = onEmailLoginClick,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp),
+                    .heightIn(min = 52.dp),
                 shape = RoundedCornerShape(50),
                 border = BorderStroke(1.dp, ButtonOutlineColor),
                 colors = ButtonDefaults.outlinedButtonColors(
@@ -331,14 +343,14 @@ private fun SocialLoginButton(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(52.dp),
+            .heightIn(min = 52.dp),
         shape = RoundedCornerShape(50),
         border = BorderStroke(1.dp, ButtonOutlineColor),
         colors = ButtonDefaults.outlinedButtonColors(
             containerColor = Color.Transparent,
             contentColor = Color.White,
         ),
-        contentPadding = PaddingValues(horizontal = 20.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

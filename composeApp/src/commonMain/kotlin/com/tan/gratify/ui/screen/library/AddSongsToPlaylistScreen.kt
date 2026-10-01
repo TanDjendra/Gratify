@@ -1,5 +1,8 @@
 package com.tan.gratify.ui.screen.library
 
+import com.tan.gratify.ui.theme.GratifyColors
+import com.tan.gratify.ui.theme.GratifyShapes
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -60,7 +63,7 @@ fun AddSongsToPlaylistScreen(
     }
 
     Scaffold(
-        containerColor = Color(0xFF121212),
+        containerColor = GratifyColors.Background,
         topBar = {
             TopAppBar(
                 title = {
@@ -79,12 +82,12 @@ fun AddSongsToPlaylistScreen(
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = GratifyColors.Background),
             )
         },
         bottomBar = {
             Surface(
-                color = Color(0xFF1E1E1E),
+                color = GratifyColors.Surface,
                 tonalElevation = 8.dp,
             ) {
                 Row(
@@ -97,15 +100,15 @@ fun AddSongsToPlaylistScreen(
                     Text(
                         text = "${uiState.selectedTracks.size}/$MIN_SONGS lagu minimum",
                         style = typo().bodyMedium,
-                        color = if (uiState.selectedTracks.size >= MIN_SONGS) Color(0xFF1DB954) else Color.Gray,
+                        color = if (uiState.selectedTracks.size >= MIN_SONGS) GratifyColors.Accent else GratifyColors.TextSecondary,
                     )
                     Button(
                         onClick = { viewModel.savePlaylist(playlistTitle) },
                         enabled = uiState.selectedTracks.size >= MIN_SONGS && !uiState.isSaving,
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF1DB954),
+                            containerColor = GratifyColors.Accent,
                             contentColor = Color.Black,
-                            disabledContainerColor = Color(0xFF1DB954).copy(alpha = 0.3f),
+                            disabledContainerColor = GratifyColors.Accent.copy(alpha = 0.3f),
                             disabledContentColor = Color.Black.copy(alpha = 0.3f),
                         ),
                         shape = RoundedCornerShape(50),
@@ -145,7 +148,7 @@ fun AddSongsToPlaylistScreen(
                     Text("Cari lagu", style = typo().bodyLarge)
                 },
                 leadingIcon = {
-                    Icon(Icons.Rounded.Search, contentDescription = null, tint = Color.Gray)
+                    Icon(Icons.Rounded.Search, contentDescription = null, tint = GratifyColors.TextSecondary)
                 },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
@@ -153,21 +156,21 @@ fun AddSongsToPlaylistScreen(
                             searchQuery = ""
                             viewModel.clearSearch()
                         }) {
-                            Icon(Icons.Rounded.Close, contentDescription = "Hapus", tint = Color.Gray)
+                            Icon(Icons.Rounded.Close, contentDescription = "Hapus", tint = GratifyColors.TextSecondary)
                         }
                     }
                 },
                 singleLine = true,
-                shape = RoundedCornerShape(8.dp),
+                shape = GratifyShapes.small,
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color(0xFF2A2A2A),
-                    unfocusedContainerColor = Color(0xFF2A2A2A),
+                    focusedContainerColor = GratifyColors.SurfaceRaised,
+                    unfocusedContainerColor = GratifyColors.SurfaceRaised,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
                     focusedTextColor = Color.White,
                     unfocusedTextColor = Color.White,
-                    unfocusedPlaceholderColor = Color.Gray,
-                    focusedPlaceholderColor = Color.Gray,
+                    unfocusedPlaceholderColor = GratifyColors.TextSecondary,
+                    focusedPlaceholderColor = GratifyColors.TextSecondary,
                 ),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(
@@ -192,7 +195,7 @@ fun AddSongsToPlaylistScreen(
                     Text(
                         text = "${uiState.selectedTracks.size} lagu dipilih",
                         style = typo().bodySmall,
-                        color = if (uiState.selectedTracks.size >= MIN_SONGS) Color(0xFF1DB954) else Color(0xFFB3B3B3),
+                        color = if (uiState.selectedTracks.size >= MIN_SONGS) GratifyColors.Accent else GratifyColors.TextSecondary,
                     )
                 }
             }
@@ -231,7 +234,7 @@ fun AddSongsToPlaylistScreen(
                             modifier = Modifier.fillMaxWidth().padding(32.dp),
                             contentAlignment = Alignment.Center,
                         ) {
-                            CircularProgressIndicator(color = Color(0xFF1DB954))
+                            CircularProgressIndicator(color = GratifyColors.Accent)
                         }
                     }
                 } else if (uiState.searchResults.isNotEmpty()) {
@@ -297,7 +300,7 @@ fun AddSongsToPlaylistScreen(
                                 Text(
                                     text = "Cari lagu untuk ditambahkan ke playlist",
                                     style = typo().bodyMedium,
-                                    color = Color.Gray,
+                                    color = GratifyColors.TextSecondary,
                                 )
                             }
                         }
@@ -329,7 +332,7 @@ private fun SongSelectItem(
             contentDescription = null,
             modifier = Modifier
                 .size(48.dp)
-                .clip(RoundedCornerShape(4.dp)),
+                .clip(GratifyShapes.extraSmall),
             contentScale = ContentScale.Crop,
         )
         Column(
@@ -338,14 +341,14 @@ private fun SongSelectItem(
             Text(
                 text = title,
                 style = typo().bodyLarge,
-                color = if (isSelected) Color(0xFF1DB954) else Color.White,
+                color = if (isSelected) GratifyColors.Accent else Color.White,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = artist,
                 style = typo().bodySmall,
-                color = Color(0xFFB3B3B3),
+                color = GratifyColors.TextSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -354,7 +357,7 @@ private fun SongSelectItem(
             Icon(
                 imageVector = if (isSelected) Icons.Rounded.Check else Icons.Rounded.Add,
                 contentDescription = if (isSelected) "Hapus" else "Tambah",
-                tint = if (isSelected) Color(0xFF1DB954) else Color.White,
+                tint = if (isSelected) GratifyColors.Accent else Color.White,
             )
         }
     }

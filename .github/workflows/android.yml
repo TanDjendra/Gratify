@@ -39,18 +39,31 @@ jobs:
       - name: Update build product flavor
         run: |
           echo "" >> ./gradle.properties
-          echo "isFullBuild=true" >> ./gradle.properties
+          echo "isFullBuild=false" >> ./gradle.properties
 
-      - name: Update Sentry Secrets
+      - name: Write build configuration
         env:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
-          echo 'SENTRY_DSN=${{ secrets.SENTRY_DSN }}' > ./local.properties
-          echo "SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}" >> ./local.properties
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_KEY" ]; then
+            echo "::error::Supabase build configuration is missing. Add SUPABASE_URL and SUPABASE_KEY repository secrets."
+            exit 1
+          fi
+          {
+            printf 'SENTRY_DSN=%s\n' "$SENTRY_DSN"
+            printf 'SENTRY_AUTH_TOKEN=%s\n' "$SENTRY_AUTH_TOKEN"
+            printf 'SUPABASE_URL=%s\n' "$SUPABASE_URL"
+            printf 'SUPABASE_KEY=%s\n' "$SUPABASE_KEY"
+          } > ./local.properties
 
       - name: Generate aboutLibraries.json
         run: ./gradlew exportLibraryDefinitions
+
+      - name: Run shared tests and Android lint
+        run: ./gradlew :domain:jvmTest :data:jvmTest :ktorExt:jvmTest :lyricsService:jvmTest :kotlinYtmusicScraper:jvmTest :composeApp:jvmTest :androidApp:lintDebug --max-workers=2
 
       - name: Build release APK
         run: ./gradlew androidApp:assembleRelease

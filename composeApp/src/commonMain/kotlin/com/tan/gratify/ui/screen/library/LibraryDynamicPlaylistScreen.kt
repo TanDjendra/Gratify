@@ -1,18 +1,18 @@
 package com.tan.gratify.ui.screen.library
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.material.icons.rounded.Close
+import com.tan.gratify.ui.component.*
+import com.tan.gratify.viewModel.UIEvent
+import gratify.composeapp.generated.resources.*
+
+import com.tan.gratify.ui.theme.GratifyColors
+
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -23,8 +23,6 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -35,9 +33,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.tan.common.Config
@@ -50,43 +46,18 @@ import com.tan.domain.utils.toArrayListTrack
 import com.tan.domain.utils.toTrack
 import com.tan.logger.Logger
 import com.tan.gratify.extension.getStringBlocking
-import com.tan.gratify.ui.component.ArtistFullWidthItems
-import com.tan.gratify.ui.component.EndOfPage
-import com.tan.gratify.ui.component.NowPlayingBottomSheet
-import com.tan.gratify.ui.component.PlaylistFullWidthItems
-import com.tan.gratify.ui.component.RippleIconButton
-import com.tan.gratify.ui.component.SongFullWidthItems
 import com.tan.gratify.ui.navigation.destination.list.AlbumDestination
 import com.tan.gratify.ui.navigation.destination.list.ArtistDestination
 import com.tan.gratify.ui.theme.typo
 import com.tan.gratify.viewModel.AnalyticsViewModel
 import com.tan.gratify.viewModel.LibraryDynamicPlaylistViewModel
 import com.tan.gratify.viewModel.SharedViewModel
-import dev.chrisbanes.haze.hazeEffect
-import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
-import dev.chrisbanes.haze.materials.HazeMaterials
 import dev.chrisbanes.haze.rememberHazeState
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
-import gratify.composeapp.generated.resources.Res
-import gratify.composeapp.generated.resources.baseline_arrow_back_ios_new_24
-import gratify.composeapp.generated.resources.baseline_close_24
-import gratify.composeapp.generated.resources.baseline_play_circle_24
-import gratify.composeapp.generated.resources.baseline_search_24
-import gratify.composeapp.generated.resources.baseline_shuffle_24
-import gratify.composeapp.generated.resources.downloaded
-import gratify.composeapp.generated.resources.favorite
-import gratify.composeapp.generated.resources.followed
-import gratify.composeapp.generated.resources.lower_plays
-import gratify.composeapp.generated.resources.most_played
-import gratify.composeapp.generated.resources.search
-import gratify.composeapp.generated.resources.seconds
-import gratify.composeapp.generated.resources.your_top_albums
-import gratify.composeapp.generated.resources.your_top_artists
-import gratify.composeapp.generated.resources.your_top_tracks
 
 @OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
@@ -118,12 +89,7 @@ fun LibraryDynamicPlaylistScreen(
     var tempTopTracks by remember { mutableStateOf(analyticsUIState.topTracks.data ?: emptyList()) }
     var tempTopArtists by remember { mutableStateOf(analyticsUIState.topArtists.data ?: emptyList()) }
     var tempTopAlbums by remember { mutableStateOf(analyticsUIState.topAlbums.data ?: emptyList()) }
-    val hazeState =
-        rememberHazeState(
-            blurEnabled = true,
-        )
-
-    LaunchedEffect(query) {
+    LaunchedEffect(query, favorite, followed, mostPlayed, downloaded, analyticsUIState) {
         Logger.w("LibraryDynamicPlaylistScreen", "Check query: $query")
         tempFavorite = favorite.filter { it.title.contains(query, ignoreCase = true) }
         Logger.w("LibraryDynamicPlaylistScreen", "Check tempFavorite: $tempFavorite")
@@ -150,12 +116,50 @@ fun LibraryDynamicPlaylistScreen(
         Logger.w("LibraryDynamicPlaylistScreen", "Check tempTopAlbums: $tempTopAlbums")
     }
 
+    val collectionType = LibraryDynamicPlaylistType.toType(type)
+    val isSongCollection = collectionType != LibraryDynamicPlaylistType.Followed && collectionType != LibraryDynamicPlaylistType.TopArtists && collectionType != LibraryDynamicPlaylistType.TopAlbums
+    val collectionSongs = when (collectionType) {
+        LibraryDynamicPlaylistType.Favorite -> favorite
+        LibraryDynamicPlaylistType.Downloaded -> downloaded
+        LibraryDynamicPlaylistType.MostPlayed -> mostPlayed
+        LibraryDynamicPlaylistType.TopTracks -> analyticsUIState.topTracks.data.orEmpty().map { it.second }
+        else -> emptyList()
+    }
+    val title = stringResource(collectionType.name())
+    val queueData by sharedViewModel.getQueueDataState().collectAsStateWithLifecycle()
+    val controller by sharedViewModel.controllerState.collectAsStateWithLifecycle()
+    val collectionQueueName = if (collectionType == LibraryDynamicPlaylistType.TopTracks) title else stringResource(Res.string.playlist) + " " + title
+    val collectionIsPlaying = controller.isPlaying && queueData?.data?.playlistName == collectionQueueName
+    val startTopTracks: (Boolean) -> Unit = { shuffle ->
+        val songs = if (shuffle) collectionSongs.shuffled() else collectionSongs
+        songs.firstOrNull()?.let { first ->
+            sharedViewModel.setQueueData(QueueData.Data(listTracks = songs.toArrayListTrack(), firstPlayedTrack = first.toTrack(),
+                playlistId = null, playlistName = title, playlistType = PlaylistType.RADIO, continuation = null))
+            sharedViewModel.loadMediaItem(first.toTrack(), Config.PLAYLIST_CLICK, 0)
+        }
+    }
+    val lazyState = rememberLazyListState()
+    val collapsed by remember { derivedStateOf { lazyState.firstVisibleItemIndex > 0 } }
     LazyColumn(
-        modifier = Modifier.hazeSource(hazeState),
-        contentPadding = innerPadding,
+        modifier = Modifier.background(GratifyColors.Background),
+        state = lazyState,
+        contentPadding = if (isSongCollection) PaddingValues(bottom = innerPadding.calculateBottomPadding()) else innerPadding,
     ) {
-        item {
-            Spacer(Modifier.height(64.dp))
+        item(key = "collection-header") {
+            if (isSongCollection && !showSearchBar) {
+                CollectionDetailHeader(title = title, kind = stringResource(Res.string.playlist), subtitle = stringResource(Res.string.your_playlist),
+                    metadata = stringResource(Res.string.album_length, collectionSongs.size.toString(), ""),
+                    accent = playlistTitleGradient(title).first(), onBack = { navController.navigateUp() },
+                    isPlaying = collectionIsPlaying, canPlay = collectionSongs.isNotEmpty(),
+                    onPlay = {
+                        if (queueData?.data?.playlistName == collectionQueueName) sharedViewModel.onUIEvent(UIEvent.PlayPause)
+                        else if (collectionType == LibraryDynamicPlaylistType.TopTracks) startTopTracks(false) else viewModel.playAll(collectionType)
+                    },
+                    onShuffle = { if (collectionType == LibraryDynamicPlaylistType.TopTracks) startTopTracks(true) else viewModel.shuffle(collectionType) },
+                    artwork = { modifier -> Image(painterPlaylistThumbnail(title, style = typo().headlineLarge, 250.dp to 250.dp), title, modifier) },
+                    actions = { CollectionDetailAction(Icons.Rounded.Search, stringResource(Res.string.detail_search_tracks), onClick = { showSearchBar = true }) })
+                if (collectionSongs.isEmpty()) CollectionDetailEmpty()
+            } else Spacer(Modifier.height(64.dp))
         }
         item {
             AnimatedVisibility(showSearchBar) {
@@ -265,9 +269,9 @@ fun LibraryDynamicPlaylistScreen(
                         },
                         key = { it.hashCode() },
                     ) { song ->
-                        SongFullWidthItems(
+                        SongFullWidthItems(collectionStyle = true,
                             songEntity = song.second,
-                            isPlaying = song.second.videoId == nowPlayingVideoId,
+                            isPlaying = controller.isPlaying && song.second.videoId == nowPlayingVideoId,
                             modifier = Modifier.fillMaxWidth(),
                             onMoreClickListener = {
                                 chosenSong = song.second
@@ -349,9 +353,9 @@ fun LibraryDynamicPlaylistScreen(
                 },
                 key = { it.hashCode() },
             ) { song ->
-                SongFullWidthItems(
+                SongFullWidthItems(collectionStyle = true,
                     songEntity = song,
-                    isPlaying = song.videoId == nowPlayingVideoId,
+                    isPlaying = controller.isPlaying && song.videoId == nowPlayingVideoId,
                     modifier = Modifier.fillMaxWidth(),
                     onMoreClickListener = {
                         chosenSong = song
@@ -385,118 +389,11 @@ fun LibraryDynamicPlaylistScreen(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        val type = LibraryDynamicPlaylistType.toType(type)
-        val isSongType =
-            type != LibraryDynamicPlaylistType.Followed &&
-                type != LibraryDynamicPlaylistType.TopArtists &&
-                type != LibraryDynamicPlaylistType.TopAlbums
-        Box {
-            TopAppBar(
-                title = {
-                    Text(
-                        text =
-                            stringResource(
-                                type.name(),
-                            ),
-                        style = typo().titleMedium,
-                    )
-                },
-                navigationIcon = {
-                    Box(Modifier.padding(horizontal = 5.dp)) {
-                        RippleIconButton(
-                            Res.drawable.baseline_arrow_back_ios_new_24,
-                            Modifier
-                                .size(32.dp),
-                            true,
-                        ) {
-                            navController.navigateUp()
-                        }
-                    }
-                },
-                actions = {
-                    if (isSongType) {
-                        RippleIconButton(
-                            Res.drawable.baseline_play_circle_24,
-                            Modifier
-                                .size(48.dp),
-                            fillMaxSize = true,
-                        ) {
-                            if (type == LibraryDynamicPlaylistType.TopTracks) {
-                                val data = analyticsUIState.topTracks.data
-                                if (!data.isNullOrEmpty()) {
-                                    val first = data.first().second
-                                    sharedViewModel.setQueueData(
-                                        QueueData.Data(
-                                            listTracks = data.map { it.second }.toArrayListTrack(),
-                                            firstPlayedTrack = first.toTrack(),
-                                            playlistId = null,
-                                            playlistName = getStringBlocking(Res.string.your_top_tracks),
-                                            playlistType = PlaylistType.RADIO,
-                                            continuation = null,
-                                        ),
-                                    )
-                                    sharedViewModel.loadMediaItem(
-                                        first.toTrack(),
-                                        Config.PLAYLIST_CLICK,
-                                        0,
-                                    )
-                                }
-                            } else {
-                                viewModel.playAll(type)
-                            }
-                        }
-                        RippleIconButton(
-                            Res.drawable.baseline_shuffle_24,
-                            Modifier.size(32.dp),
-                            true,
-                        ) {
-                            if (type == LibraryDynamicPlaylistType.TopTracks) {
-                                val data = analyticsUIState.topTracks.data
-                                if (!data.isNullOrEmpty()) {
-                                    val shuffled = data.shuffled()
-                                    val first = shuffled.first().second
-                                    sharedViewModel.setQueueData(
-                                        QueueData.Data(
-                                            listTracks = shuffled.map { it.second }.toArrayListTrack(),
-                                            firstPlayedTrack = first.toTrack(),
-                                            playlistId = null,
-                                            playlistName = getStringBlocking(Res.string.your_top_tracks),
-                                            playlistType = PlaylistType.RADIO,
-                                            continuation = null,
-                                        ),
-                                    )
-                                    sharedViewModel.loadMediaItem(
-                                        first.toTrack(),
-                                        Config.PLAYLIST_CLICK,
-                                        0,
-                                    )
-                                }
-                            } else {
-                                viewModel.shuffle(type)
-                            }
-                        }
-                    }
-                    Box(Modifier.padding(horizontal = 5.dp)) {
-                        RippleIconButton(
-                            if (showSearchBar) Res.drawable.baseline_close_24 else Res.drawable.baseline_search_24,
-                            Modifier
-                                .size(32.dp),
-                            true,
-                        ) {
-                            showSearchBar = !showSearchBar
-                        }
-                    }
-                },
-                modifier =
-                    Modifier
-                        .hazeEffect(hazeState, style = HazeMaterials.ultraThin()) {
-                            blurEnabled = true
-                        },
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent,
-                    ),
-            )
+        AnimatedVisibility(visible = !isSongCollection || collapsed || showSearchBar) {
+            CollectionDetailTopBar(title, onBack = { navController.navigateUp() }, actions = {
+                CollectionDetailAction(if (showSearchBar) Icons.Rounded.Close else Icons.Rounded.Search,
+                    stringResource(if (showSearchBar) Res.string.detail_close_search else Res.string.search), onClick = { showSearchBar = !showSearchBar })
+            })
         }
         androidx.compose.animation.AnimatedVisibility(visible = showSearchBar) {
             SearchBar(

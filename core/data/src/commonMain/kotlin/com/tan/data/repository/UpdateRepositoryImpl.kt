@@ -24,7 +24,9 @@ internal class UpdateRepositoryImpl(
                                 tagName = response.tagName ?: "",
                                 releaseTime = response.publishedAt ?: "",
                                 body = response.body ?: "",
-                                apkUrl = response.assets?.firstOrNull()?.browserDownloadUrl ?: "",
+                                apkUrl = response.assets
+                                    ?.firstOrNull { it?.name?.endsWith(".apk", ignoreCase = true) == true }
+                                    ?.browserDownloadUrl.orEmpty(),
                                 minVersion = response.minVersion,
                             ),
                         ),

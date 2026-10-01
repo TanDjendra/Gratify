@@ -4,34 +4,20 @@ import com.tan.domain.extension.decodeHtmlEntities
 import com.tan.gratify.lyrics.domain.Lyrics
 
 fun parseSyncedLyrics(data: String): Lyrics {
-    val regex = Regex("\\[(\\d{2}):(\\d{2})\\.(\\d{2})\\](.+)")
-    val lines = data.lines()
-    val linesLyrics = ArrayList<Lyrics.LyricsX.Line>()
-    lines.map { line ->
-        val matchResult = regex.matchEntire(line)
-        if (matchResult != null) {
-            val minutes = matchResult.groupValues[1].toLong()
-            val seconds = matchResult.groupValues[2].toLong()
-            val centiseconds = matchResult.groupValues[3].toLong()
-            val timeInMillis = minutes * 60_000L + seconds * 1000L + centiseconds * 10L
-            val content = if (matchResult.groupValues[4].isBlank()) " ♫" else matchResult.groupValues[4].trimStart()
-            linesLyrics.add(
-                Lyrics.LyricsX.Line(
-                    endTimeMs = "0",
-                    startTimeMs = timeInMillis.toString(),
-                    syllables = listOf(),
-                    words = decodeHtmlEntities(content),
-                ),
-            )
+    val timestamp = Regex("""\[(\d{1,6}):(\d{2})(?:\.(\d{1,3}))?\]""")
+    val offset = Regex("""(?m)^\[offset:([+-]?\d+)\]""").find(data)?.groupValues?.get(1)?.toLongOrNull() ?: 0L
+    val lines = data.lines().flatMap { line ->
+        val stamps = timestamp.findAll(line).toList()
+        val words = line.substring(stamps.lastOrNull()?.range?.last?.plus(1) ?: line.length).trimStart().ifBlank { "♫" }
+        stamps.mapNotNull { stamp ->
+            val minutes = stamp.groupValues[1].toLongOrNull() ?: return@mapNotNull null
+            val seconds = stamp.groupValues[2].toLongOrNull()?.takeIf { it < 60 } ?: return@mapNotNull null
+            val millis = stamp.groupValues[3].padEnd(3, '0').toLongOrNull() ?: 0L
+            Lyrics.LyricsX.Line(endTimeMs = "0", startTimeMs = (minutes * 60000 + seconds * 1000 + millis + offset).coerceAtLeast(0).toString(),
+                syllables = listOf(), words = decodeHtmlEntities(words))
         }
-    }
-    return Lyrics(
-        lyrics =
-            Lyrics.LyricsX(
-                lines = linesLyrics,
-                syncType = "LINE_SYNCED",
-            ),
-    )
+    }.sortedBy { it.startTimeMs.toLong() }
+    return Lyrics(lyrics = Lyrics.LyricsX(lines = lines, syncType = "LINE_SYNCED"))
 }
 
 fun parseRichSyncLyrics(data: String): Lyrics {

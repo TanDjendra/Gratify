@@ -1,5 +1,10 @@
 package com.tan.gratify.ui.component
 
+import androidx.compose.ui.text.style.TextOverflow
+
+import com.tan.gratify.ui.theme.GratifyColors
+import com.tan.gratify.ui.theme.GratifyShapes
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.FastOutLinearInEasing
@@ -317,7 +322,7 @@ fun InfoPlayerBottomSheet(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large,
-                    color = Color(0xFF242424),
+                    color = GratifyColors.SurfaceRaised,
                     tonalElevation = AlertDialogDefaults.TonalElevation,
                     shadowElevation = 1.dp,
                 ) {
@@ -354,6 +359,7 @@ fun InfoPlayerBottomSheet(
                                             text = downloadProgress.errorMessage,
                                             modifier = Modifier.padding(bottom = 5.dp),
                                             maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis,
                                             style = typo().bodyMedium,
                                         )
                                     }
@@ -484,14 +490,12 @@ fun InfoPlayerBottomSheet(
                                 color = Color.White,
                                 textAlign = TextAlign.Center,
                                 maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
                                         .wrapContentHeight(align = Alignment.CenterVertically)
-                                        .basicMarquee(
-                                            iterations = Int.MAX_VALUE,
-                                            animationMode = MarqueeAnimationMode.Immediately,
-                                        ).focusable(),
+                                        .focusable(),
                             )
                         }
                     },
@@ -534,13 +538,11 @@ fun InfoPlayerBottomSheet(
                             .fillMaxWidth()
                             .wrapContentHeight(align = Alignment.CenterVertically)
                             .padding(horizontal = 10.dp)
-                            .basicMarquee(
-                                iterations = Int.MAX_VALUE,
-                                animationMode = MarqueeAnimationMode.Immediately,
-                            ).focusable()
+                            .focusable()
                             .padding(horizontal = 10.dp),
                     style = typo().bodyMedium,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
                 )
                 Text(
@@ -559,13 +561,11 @@ fun InfoPlayerBottomSheet(
                         Modifier
                             .fillMaxWidth()
                             .wrapContentHeight(align = Alignment.CenterVertically)
-                            .basicMarquee(
-                                iterations = Int.MAX_VALUE,
-                                animationMode = MarqueeAnimationMode.Immediately,
-                            ).focusable()
+                            .focusable()
                             .padding(horizontal = 10.dp),
                     style = typo().bodyMedium,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
                 )
                 Text(
@@ -584,13 +584,11 @@ fun InfoPlayerBottomSheet(
                         Modifier
                             .fillMaxWidth()
                             .wrapContentHeight(align = Alignment.CenterVertically)
-                            .basicMarquee(
-                                iterations = Int.MAX_VALUE,
-                                animationMode = MarqueeAnimationMode.Immediately,
-                            ).focusable()
+                            .focusable()
                             .padding(horizontal = 10.dp),
                     style = typo().bodyMedium,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
                 )
                 Text(
@@ -609,13 +607,11 @@ fun InfoPlayerBottomSheet(
                         Modifier
                             .fillMaxWidth()
                             .wrapContentHeight(align = Alignment.CenterVertically)
-                            .basicMarquee(
-                                iterations = Int.MAX_VALUE,
-                                animationMode = MarqueeAnimationMode.Immediately,
-                            ).focusable()
+                            .focusable()
                             .padding(horizontal = 10.dp),
                     style = typo().bodyMedium,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
                 )
                 Text(
@@ -634,13 +630,11 @@ fun InfoPlayerBottomSheet(
                         Modifier
                             .fillMaxWidth()
                             .wrapContentHeight(align = Alignment.CenterVertically)
-                            .basicMarquee(
-                                iterations = Int.MAX_VALUE,
-                                animationMode = MarqueeAnimationMode.Immediately,
-                            ).focusable()
+                            .focusable()
                             .padding(horizontal = 10.dp),
                     style = typo().bodyMedium,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
                 )
                 Text(
@@ -659,13 +653,11 @@ fun InfoPlayerBottomSheet(
                         Modifier
                             .fillMaxWidth()
                             .wrapContentHeight(align = Alignment.CenterVertically)
-                            .basicMarquee(
-                                iterations = Int.MAX_VALUE,
-                                animationMode = MarqueeAnimationMode.Immediately,
-                            ).focusable()
+                            .focusable()
                             .padding(horizontal = 10.dp),
                     style = typo().bodyMedium,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
                 )
                 Text(
@@ -684,13 +676,11 @@ fun InfoPlayerBottomSheet(
                         Modifier
                             .fillMaxWidth()
                             .wrapContentHeight(align = Alignment.CenterVertically)
-                            .basicMarquee(
-                                iterations = Int.MAX_VALUE,
-                                animationMode = MarqueeAnimationMode.Immediately,
-                            ).focusable()
+                            .focusable()
                             .padding(horizontal = 10.dp),
                     style = typo().bodyMedium,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
                 )
                 Text(
@@ -709,13 +699,11 @@ fun InfoPlayerBottomSheet(
                         Modifier
                             .fillMaxWidth()
                             .wrapContentHeight(align = Alignment.CenterVertically)
-                            .basicMarquee(
-                                iterations = Int.MAX_VALUE,
-                                animationMode = MarqueeAnimationMode.Immediately,
-                            ).focusable()
+                            .focusable()
                             .padding(horizontal = 10.dp),
                     style = typo().bodyMedium,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
                 )
                 Text(
@@ -734,13 +722,11 @@ fun InfoPlayerBottomSheet(
                         Modifier
                             .fillMaxWidth()
                             .wrapContentHeight(align = Alignment.CenterVertically)
-                            .basicMarquee(
-                                iterations = Int.MAX_VALUE,
-                                animationMode = MarqueeAnimationMode.Immediately,
-                            ).focusable()
+                            .focusable()
                             .padding(horizontal = 10.dp),
                     style = typo().bodyMedium,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
                 )
                 Text(
@@ -759,13 +745,11 @@ fun InfoPlayerBottomSheet(
                         Modifier
                             .fillMaxWidth()
                             .wrapContentHeight(align = Alignment.CenterVertically)
-                            .basicMarquee(
-                                iterations = Int.MAX_VALUE,
-                                animationMode = MarqueeAnimationMode.Immediately,
-                            ).focusable()
+                            .focusable()
                             .padding(horizontal = 10.dp),
                     style = typo().bodyMedium,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
                 )
 
@@ -785,13 +769,11 @@ fun InfoPlayerBottomSheet(
                         Modifier
                             .fillMaxWidth()
                             .wrapContentHeight(align = Alignment.CenterVertically)
-                            .basicMarquee(
-                                iterations = Int.MAX_VALUE,
-                                animationMode = MarqueeAnimationMode.Immediately,
-                            ).focusable()
+                            .focusable()
                             .padding(horizontal = 10.dp),
                     style = typo().bodyMedium,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
                 )
                 Text(
@@ -815,10 +797,7 @@ fun InfoPlayerBottomSheet(
                         Modifier
                             .fillMaxWidth()
                             .wrapContentHeight(align = Alignment.CenterVertically)
-                            .basicMarquee(
-                                iterations = Int.MAX_VALUE,
-                                animationMode = MarqueeAnimationMode.Immediately,
-                            ).focusable()
+                            .focusable()
                             .padding(horizontal = 10.dp),
                     style = typo().bodyMedium,
                     textAlign = TextAlign.Center,
@@ -869,10 +848,7 @@ fun InfoPlayerBottomSheet(
                         Modifier
                             .fillMaxWidth()
                             .wrapContentHeight(align = Alignment.CenterVertically)
-                            .basicMarquee(
-                                iterations = Int.MAX_VALUE,
-                                animationMode = MarqueeAnimationMode.Immediately,
-                            ).focusable(),
+                            .focusable(),
                     style = typo().bodyMedium,
                     textAlign = TextAlign.Center,
                 )
@@ -1039,14 +1015,12 @@ fun QueueBottomSheet(
                                 color = Color.White,
                                 textAlign = TextAlign.Center,
                                 maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
                                         .wrapContentHeight(align = Alignment.CenterVertically)
-                                        .basicMarquee(
-                                            iterations = Int.MAX_VALUE,
-                                            animationMode = MarqueeAnimationMode.Immediately,
-                                        ).focusable(),
+                                        .focusable(),
                             )
                         }
                     },
@@ -1258,7 +1232,7 @@ fun QueueItemBottomSheet(
                     .fillMaxWidth()
                     .wrapContentHeight(),
             shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
-            colors = CardDefaults.cardColors().copy(containerColor = Color(0xFF242424)),
+            colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceRaised),
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -1271,7 +1245,7 @@ fun QueueItemBottomSheet(
                             .height(4.dp),
                     colors =
                         CardDefaults.cardColors().copy(
-                            containerColor = Color(0xFF474545),
+                            containerColor = GratifyColors.SurfaceHighest,
                         ),
                     shape = RoundedCornerShape(50),
                 ) {}
@@ -1492,7 +1466,7 @@ fun NowPlayingBottomSheet(
 
     if (sleepTimerWarning) {
         AlertDialog(
-            containerColor = Color(0xFF242424),
+            containerColor = GratifyColors.SurfaceRaised,
             onDismissRequest = { sleepTimerWarning = false },
             confirmButton = {
                 TextButton(onClick = {
@@ -1535,7 +1509,7 @@ fun NowPlayingBottomSheet(
 
         AlertDialog(
             onDismissRequest = { mainLyricsProvider = false },
-            containerColor = Color(0xFF242424),
+            containerColor = GratifyColors.SurfaceRaised,
             title = {
                 Text(
                     text = stringResource(Res.string.main_lyrics_provider),
@@ -1638,7 +1612,7 @@ fun NowPlayingBottomSheet(
                         .fillMaxWidth()
                         .wrapContentHeight(),
                 shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
-                colors = CardDefaults.cardColors().copy(containerColor = Color(0xFF242424)),
+                colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceRaised),
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -1652,7 +1626,7 @@ fun NowPlayingBottomSheet(
                                 .height(4.dp),
                         colors =
                             CardDefaults.cardColors().copy(
-                                containerColor = Color(0xFF474545),
+                                containerColor = GratifyColors.SurfaceHighest,
                             ),
                         shape = RoundedCornerShape(50),
                     ) {}
@@ -1677,12 +1651,13 @@ fun NowPlayingBottomSheet(
                                     .build(),
                             placeholder = painterResource(Res.drawable.holder),
                             error = painterResource(Res.drawable.holder),
+                            fallback = painterResource(Res.drawable.holder),
                             contentDescription = null,
                             contentScale = ContentScale.Inside,
                             modifier =
                                 Modifier
                                     .align(Alignment.CenterVertically)
-                                    .clip(RoundedCornerShape(10.dp))
+                                    .clip(GratifyShapes.small)
                                     .size(60.dp),
                         )
                         Spacer(modifier = Modifier.width(20.dp))
@@ -1691,10 +1666,11 @@ fun NowPlayingBottomSheet(
                                 text = uiState.songUIState.title,
                                 style = typo().labelMedium,
                                 maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                                 modifier =
                                     Modifier
                                         .wrapContentHeight(Alignment.CenterVertically)
-                                        .basicMarquee(animationMode = MarqueeAnimationMode.Immediately)
+
                                         .focusable(),
                             )
                             Text(
@@ -1704,10 +1680,11 @@ fun NowPlayingBottomSheet(
                                         .connectArtists(),
                                 style = typo().bodyMedium,
                                 maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                                 modifier =
                                     Modifier
                                         .wrapContentHeight(Alignment.CenterVertically)
-                                        .basicMarquee(animationMode = MarqueeAnimationMode.Immediately)
+
                                         .focusable(),
                             )
                         }
@@ -1922,13 +1899,13 @@ fun ActionButton(
                     if (enable) {
                         ColorFilter.tint(iconColor)
                     } else {
-                        ColorFilter.tint(Color.Gray)
+                        ColorFilter.tint(GratifyColors.TextSecondary)
                     },
             )
             Text(
                 text = if (text != null) stringResource(text) else textString ?: "",
                 style = typo().labelSmall,
-                color = if (enable) textColor ?: Color.Unspecified else Color.Gray,
+                color = if (enable) textColor ?: Color.Unspecified else GratifyColors.TextSecondary,
                 modifier =
                     Modifier
                         .padding(start = 10.dp)
@@ -2000,7 +1977,7 @@ fun HeartCheckBox(
     Box(
         modifier =
             Modifier
-                .size(size.dp)
+                .size(maxOf(size, 48).dp)
                 .clip(CircleShape)
                 .clickable {
                     onStateChange?.invoke()
@@ -2011,13 +1988,14 @@ fun HeartCheckBox(
                 Image(
                     painter = painterResource(Res.drawable.baseline_favorite_24),
                     contentDescription = "Favorite checked",
-                    modifier = Modifier.fillMaxSize().padding(4.dp),
+                    modifier = Modifier.size(size.dp).align(Alignment.Center).padding(4.dp),
+                    colorFilter = ColorFilter.tint(GratifyColors.Accent),
                 )
             } else {
                 Image(
                     painter = painterResource(Res.drawable.baseline_favorite_border_24),
                     contentDescription = "Favorite unchecked",
-                    modifier = Modifier.fillMaxSize().padding(4.dp),
+                    modifier = Modifier.size(size.dp).align(Alignment.Center).padding(4.dp),
                     colorFilter = ColorFilter.tint(Color.White),
                 )
             }
@@ -2047,7 +2025,7 @@ fun PlaybackSpeedPitchBottomSheet(
         Card(
             modifier = Modifier.fillMaxWidth().wrapContentHeight(),
             shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
-            colors = CardDefaults.cardColors().copy(containerColor = Color(0xFF242424)),
+            colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceRaised),
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -2055,7 +2033,7 @@ fun PlaybackSpeedPitchBottomSheet(
             ) {
                 Card(
                     modifier = Modifier.width(40.dp).height(4.dp),
-                    colors = CardDefaults.cardColors().copy(containerColor = Color(0xFF474545)),
+                    colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceHighest),
                     shape = RoundedCornerShape(50),
                 ) {}
                 Spacer(modifier = Modifier.height(16.dp))
@@ -2068,7 +2046,7 @@ fun PlaybackSpeedPitchBottomSheet(
                         painter = painterResource(Res.drawable.round_speed_24),
                         contentDescription = stringResource(Res.string.playback_speed),
                         modifier = Modifier.size(24.dp),
-                        colorFilter = ColorFilter.tint(Color(0xFFB0B0A0)),
+                        colorFilter = ColorFilter.tint(GratifyColors.TextSecondary),
                     )
                     Spacer(modifier = Modifier.weight(1f))
                     IconButton(
@@ -2083,13 +2061,13 @@ fun PlaybackSpeedPitchBottomSheet(
                         Icon(
                             Icons.Rounded.Remove,
                             contentDescription = "Decrease speed",
-                            tint = Color(0xFFB0B0A0),
+                            tint = GratifyColors.TextSecondary,
                         )
                     }
                     Text(
                         text = "x${String.format("%.1f", playbackSpeed)}",
                         style = typo().titleMedium,
-                        color = Color(0xFFD0D0C0),
+                        color = GratifyColors.TextPrimary,
                         modifier = Modifier.widthIn(min = 60.dp),
                         textAlign = TextAlign.Center,
                     )
@@ -2105,7 +2083,7 @@ fun PlaybackSpeedPitchBottomSheet(
                         Icon(
                             Icons.Rounded.Add,
                             contentDescription = "Increase speed",
-                            tint = Color(0xFFB0B0A0),
+                            tint = GratifyColors.TextSecondary,
                         )
                     }
                 }
@@ -2120,7 +2098,7 @@ fun PlaybackSpeedPitchBottomSheet(
                             Icons.Rounded.Tune,
                             contentDescription = stringResource(Res.string.pitch),
                             modifier = Modifier.size(24.dp),
-                            tint = Color(0xFFB0B0A0),
+                            tint = GratifyColors.TextSecondary,
                         )
                         Spacer(modifier = Modifier.weight(1f))
                         IconButton(
@@ -2132,13 +2110,13 @@ fun PlaybackSpeedPitchBottomSheet(
                             Icon(
                                 Icons.Rounded.Remove,
                                 contentDescription = "Decrease pitch",
-                                tint = Color(0xFFB0B0A0),
+                                tint = GratifyColors.TextSecondary,
                             )
                         }
                         Text(
                             text = "$pitch",
                             style = typo().titleMedium,
-                            color = Color(0xFFD0D0C0),
+                            color = GratifyColors.TextPrimary,
                             modifier = Modifier.widthIn(min = 60.dp),
                             textAlign = TextAlign.Center,
                         )
@@ -2151,7 +2129,7 @@ fun PlaybackSpeedPitchBottomSheet(
                             Icon(
                                 Icons.Rounded.Add,
                                 contentDescription = "Increase pitch",
-                                tint = Color(0xFFB0B0A0),
+                                tint = GratifyColors.TextSecondary,
                             )
                         }
                     }
@@ -2218,7 +2196,7 @@ fun SleepTimerBottomSheet(
         Card(
             modifier = Modifier.fillMaxWidth().wrapContentHeight(),
             shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-            colors = CardDefaults.cardColors().copy(containerColor = Color(0xFF1C1C1C)),
+            colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.Surface),
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -2229,7 +2207,7 @@ fun SleepTimerBottomSheet(
                 // Drag handle
                 Card(
                     modifier = Modifier.width(40.dp).height(4.dp),
-                    colors = CardDefaults.cardColors().copy(containerColor = Color(0xFF555555)),
+                    colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.Outline),
                     shape = RoundedCornerShape(50),
                 ) {}
 
@@ -2272,7 +2250,7 @@ fun SleepTimerBottomSheet(
                                     customMinutes = ""
                                 },
                                 modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp),
+                                shape = GratifyShapes.medium,
                                 colors =
                                     ButtonDefaults.outlinedButtonColors(
                                         containerColor = if (isSelected) seed.copy(alpha = 0.15f) else Color.Transparent,
@@ -2280,14 +2258,14 @@ fun SleepTimerBottomSheet(
                                 border =
                                     BorderStroke(
                                         width = if (isSelected) 1.5.dp else 1.dp,
-                                        color = if (isSelected) seed else Color(0xFF3D3D3D),
+                                        color = if (isSelected) seed else GratifyColors.SurfaceHighest,
                                     ),
                                 contentPadding = PaddingValues(vertical = 10.dp, horizontal = 4.dp),
                             ) {
                                 Text(
                                     text = preset.label,
                                     style = typo().bodySmall,
-                                    color = if (isSelected) seed else Color(0xFFCCCCCC),
+                                    color = if (isSelected) seed else GratifyColors.TextSecondary,
                                     fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                                 )
                             }
@@ -2310,7 +2288,7 @@ fun SleepTimerBottomSheet(
                             customMinutes = ""
                         },
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = GratifyShapes.medium,
                         colors =
                             ButtonDefaults.outlinedButtonColors(
                                 containerColor = if (isEndSelected) seed.copy(alpha = 0.15f) else Color.Transparent,
@@ -2318,14 +2296,14 @@ fun SleepTimerBottomSheet(
                         border =
                             BorderStroke(
                                 width = if (isEndSelected) 1.5.dp else 1.dp,
-                                color = if (isEndSelected) seed else Color(0xFF3D3D3D),
+                                color = if (isEndSelected) seed else GratifyColors.SurfaceHighest,
                             ),
                         contentPadding = PaddingValues(vertical = 10.dp, horizontal = 4.dp),
                     ) {
                         Text(
                             text = "End of song",
                             style = typo().bodySmall,
-                            color = if (isEndSelected) seed else Color(0xFFCCCCCC),
+                            color = if (isEndSelected) seed else GratifyColors.TextSecondary,
                             fontWeight = if (isEndSelected) FontWeight.SemiBold else FontWeight.Normal,
                         )
                     }
@@ -2338,7 +2316,7 @@ fun SleepTimerBottomSheet(
                             selectedPreset = -1
                         },
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = GratifyShapes.medium,
                         colors =
                             ButtonDefaults.outlinedButtonColors(
                                 containerColor = if (isCustomSelected) seed.copy(alpha = 0.15f) else Color.Transparent,
@@ -2346,14 +2324,14 @@ fun SleepTimerBottomSheet(
                         border =
                             BorderStroke(
                                 width = if (isCustomSelected) 1.5.dp else 1.dp,
-                                color = if (isCustomSelected) seed else Color(0xFF3D3D3D),
+                                color = if (isCustomSelected) seed else GratifyColors.SurfaceHighest,
                             ),
                         contentPadding = PaddingValues(vertical = 10.dp, horizontal = 4.dp),
                     ) {
                         Text(
                             text = "Custom",
                             style = typo().bodySmall,
-                            color = if (isCustomSelected) seed else Color(0xFFCCCCCC),
+                            color = if (isCustomSelected) seed else GratifyColors.TextSecondary,
                             fontWeight = if (isCustomSelected) FontWeight.SemiBold else FontWeight.Normal,
                         )
                     }
@@ -2380,13 +2358,13 @@ fun SleepTimerBottomSheet(
                                 Text(
                                     text = "min",
                                     style = typo().bodySmall,
-                                    color = Color.Gray,
+                                    color = GratifyColors.TextSecondary,
                                 )
                             },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
+                            shape = GratifyShapes.medium,
                         )
                     }
                 }
@@ -2435,11 +2413,11 @@ fun SleepTimerBottomSheet(
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = GratifyShapes.medium,
                     colors =
                         ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFE0E0E0),
-                            disabledContainerColor = Color(0xFFE0E0E0).copy(alpha = 0.3f),
+                            containerColor = GratifyColors.TextPrimary,
+                            disabledContainerColor = GratifyColors.TextPrimary.copy(alpha = 0.3f),
                         ),
                     enabled = isSetEnabled,
                 ) {
@@ -2496,7 +2474,7 @@ fun AddToPlaylistModalBottomSheet(
                         .fillMaxWidth()
                         .wrapContentHeight(),
                 shape = BottomSheetDefaults.ExpandedShape,
-                colors = CardDefaults.cardColors().copy(containerColor = Color(0xFF242424)),
+                colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceRaised),
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -2505,7 +2483,7 @@ fun AddToPlaylistModalBottomSheet(
                     Spacer(modifier = Modifier.height(5.dp))
                     Card(
                         modifier = Modifier.width(60.dp).height(4.dp),
-                        colors = CardDefaults.cardColors().copy(containerColor = Color(0xFF474545)),
+                        colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceHighest),
                         shape = RoundedCornerShape(50),
                     ) {}
                     Spacer(modifier = Modifier.height(5.dp))
@@ -2544,7 +2522,7 @@ fun AddToPlaylistModalBottomSheet(
                             text = stringResource(Res.string.no_playlist_found),
                             style = typo().labelSmall,
                             modifier = Modifier.padding(20.dp),
-                            color = Color.Gray,
+                            color = GratifyColors.TextSecondary,
                         )
                     } else {
                         Crossfade(isYouTubePlaylistClicked) { clicked ->
@@ -2613,7 +2591,7 @@ fun AddToPlaylistModalBottomSheet(
                                                 Text(
                                                     text = playlist.title,
                                                     style = typo().labelSmall,
-                                                    color = if (playlist.tracks?.contains(videoId) == true) Color.Gray else Color.White,
+                                                    color = if (playlist.tracks?.contains(videoId) == true) GratifyColors.TextSecondary else Color.White,
                                                 )
                                             }
                                         }
@@ -2661,13 +2639,13 @@ fun ArtistModalBottomSheet(
             Card(
                 modifier = Modifier.fillMaxWidth().wrapContentHeight(),
                 shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
-                colors = CardDefaults.cardColors().copy(containerColor = Color(0xFF242424)),
+                colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceRaised),
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Spacer(modifier = Modifier.height(5.dp))
                     Card(
                         modifier = Modifier.width(60.dp).height(4.dp),
-                        colors = CardDefaults.cardColors().copy(containerColor = Color(0xFF474545)),
+                        colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceHighest),
                         shape = RoundedCornerShape(50),
                     ) {}
                     Spacer(modifier = Modifier.height(5.dp))
@@ -2753,13 +2731,13 @@ fun PlaylistBottomSheet(
             Card(
                 modifier = Modifier.fillMaxWidth().wrapContentHeight(),
                 shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
-                colors = CardDefaults.cardColors().copy(containerColor = Color(0xFF242424)),
+                colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceRaised),
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Spacer(modifier = Modifier.height(5.dp))
                     Card(
                         modifier = Modifier.width(60.dp).height(4.dp),
-                        colors = CardDefaults.cardColors().copy(containerColor = Color(0xFF474545)),
+                        colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceHighest),
                         shape = RoundedCornerShape(50),
                     ) {}
                     Spacer(modifier = Modifier.height(5.dp))
@@ -2809,13 +2787,13 @@ fun PlaylistBottomSheet(
         Card(
             modifier = Modifier.fillMaxWidth().wrapContentHeight(),
             shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
-            colors = CardDefaults.cardColors().copy(containerColor = Color(0xFF242424)),
+            colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceRaised),
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Spacer(modifier = Modifier.height(5.dp))
                 Card(
                     modifier = Modifier.width(60.dp).height(4.dp),
-                    colors = CardDefaults.cardColors().copy(containerColor = Color(0xFF474545)),
+                    colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceHighest),
                     shape = RoundedCornerShape(50),
                 ) {}
                 Spacer(modifier = Modifier.height(5.dp))
@@ -2918,13 +2896,13 @@ fun LocalPlaylistBottomSheet(
             Card(
                 modifier = Modifier.fillMaxWidth().wrapContentHeight(),
                 shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
-                colors = CardDefaults.cardColors().copy(containerColor = Color(0xFF242424)),
+                colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceRaised),
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Spacer(modifier = Modifier.height(5.dp))
                     Card(
                         modifier = Modifier.width(60.dp).height(4.dp),
-                        colors = CardDefaults.cardColors().copy(containerColor = Color(0xFF474545)),
+                        colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceHighest),
                         shape = RoundedCornerShape(50),
                     ) {}
                     Spacer(modifier = Modifier.height(5.dp))
@@ -2968,13 +2946,13 @@ fun LocalPlaylistBottomSheet(
             Card(
                 modifier = Modifier.fillMaxWidth().wrapContentHeight(),
                 shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
-                colors = CardDefaults.cardColors().copy(containerColor = Color(0xFF242424)),
+                colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceRaised),
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Spacer(modifier = Modifier.height(5.dp))
                     Card(
                         modifier = Modifier.width(60.dp).height(4.dp),
-                        colors = CardDefaults.cardColors().copy(containerColor = Color(0xFF474545)),
+                        colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceHighest),
                         shape = RoundedCornerShape(50),
                     ) {}
                     Spacer(modifier = Modifier.height(5.dp))
@@ -3084,13 +3062,13 @@ fun SortPlaylistBottomSheet(
         Card(
             modifier = Modifier.fillMaxWidth().wrapContentHeight(),
             shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
-            colors = CardDefaults.cardColors().copy(containerColor = Color(0xFF242424)),
+            colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceRaised),
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Spacer(modifier = Modifier.height(5.dp))
                 Card(
                     modifier = Modifier.width(60.dp).height(4.dp),
-                    colors = CardDefaults.cardColors().copy(containerColor = Color(0xFF474545)),
+                    colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceHighest),
                     shape = RoundedCornerShape(50),
                 ) {}
                 Text(
@@ -3165,13 +3143,13 @@ fun DevLogInBottomSheet(
         Card(
             modifier = Modifier.fillMaxWidth().wrapContentHeight(),
             shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
-            colors = CardDefaults.cardColors().copy(containerColor = Color(0xFF242424)),
+            colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceRaised),
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Spacer(modifier = Modifier.height(5.dp))
                 Card(
                     modifier = Modifier.width(60.dp).height(4.dp),
-                    colors = CardDefaults.cardColors().copy(containerColor = Color(0xFF474545)),
+                    colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceHighest),
                     shape = RoundedCornerShape(50),
                 ) {}
                 Spacer(modifier = Modifier.height(10.dp))
@@ -3229,13 +3207,13 @@ fun DevCookieLogInBottomSheet(
         Card(
             modifier = Modifier.fillMaxWidth().wrapContentHeight(),
             shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
-            colors = CardDefaults.cardColors().copy(containerColor = Color(0xFF242424)),
+            colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceRaised),
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Spacer(modifier = Modifier.height(5.dp))
                 Card(
                     modifier = Modifier.width(60.dp).height(4.dp),
-                    colors = CardDefaults.cardColors().copy(containerColor = Color(0xFF474545)),
+                    colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceHighest),
                     shape = RoundedCornerShape(50),
                 ) {}
                 Spacer(modifier = Modifier.height(10.dp))

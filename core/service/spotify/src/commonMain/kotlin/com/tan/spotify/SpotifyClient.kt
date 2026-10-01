@@ -58,7 +58,7 @@ class SpotifyClient {
             install(HttpCache)
             install(Logging) {
                 logger = Logger.DEFAULT
-                level = LogLevel.ALL
+                level = LogLevel.NONE
             }
             install(CurlLogger) {
                 logger = { Logger.DEFAULT.log(it) }

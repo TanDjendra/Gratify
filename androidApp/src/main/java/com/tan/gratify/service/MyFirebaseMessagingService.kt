@@ -73,16 +73,14 @@ class MyFirebaseMessagingService : FirebaseMessagingService(), KoinComponent {
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         // Create the NotificationChannel for Android 8.0+
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                channelId,
-                channelName,
-                NotificationManager.IMPORTANCE_DEFAULT
-            ).apply {
-                description = "Default channel for FCM notifications"
-            }
-            notificationManager.createNotificationChannel(channel)
+        val channel = NotificationChannel(
+            channelId,
+            channelName,
+            NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+            description = "Default channel for FCM notifications"
         }
+        notificationManager.createNotificationChannel(channel)
 
         // Open MainActivity when notification is clicked
         val intent = Intent(this, MainActivity::class.java).apply {

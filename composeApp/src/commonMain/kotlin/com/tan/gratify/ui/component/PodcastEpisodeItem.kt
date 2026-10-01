@@ -1,5 +1,9 @@
 package com.tan.gratify.ui.component
 
+import androidx.compose.ui.text.style.TextOverflow
+
+import com.tan.gratify.ui.theme.GratifyColors
+
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.MarqueeAnimationMode
 import androidx.compose.foundation.basicMarquee
@@ -65,6 +69,7 @@ fun PodcastEpisodeFullWidthItem(
                             .build(),
                     placeholder = painterResource(Res.drawable.holder),
                     error = painterResource(Res.drawable.holder),
+                    fallback = painterResource(Res.drawable.holder),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize(),
@@ -80,30 +85,26 @@ fun PodcastEpisodeFullWidthItem(
                     text = episode.title,
                     style = typo().labelMedium,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     color = Color.White,
                     modifier =
                         Modifier
                             .fillMaxWidth()
                             .wrapContentHeight(align = Alignment.CenterVertically)
-                            .basicMarquee(
-                                iterations = Int.MAX_VALUE,
-                                animationMode = MarqueeAnimationMode.Immediately,
-                            ).focusable(),
+                            .focusable(),
                 )
 
                 Text(
                     text = "${episode.createdDay ?: ""}${if (!episode.durationString.isNullOrEmpty()) " • ${episode.durationString}" else ""}",
                     style = typo().bodyMedium,
                     maxLines = 1,
-                    color = Color(0xC4FFFFFF),
+                    overflow = TextOverflow.Ellipsis,
+                    color = GratifyColors.TextSecondary,
                     modifier =
                         Modifier
                             .fillMaxWidth()
                             .wrapContentHeight(align = Alignment.CenterVertically)
-                            .basicMarquee(
-                                iterations = Int.MAX_VALUE,
-                                animationMode = MarqueeAnimationMode.Immediately,
-                            ).focusable(),
+                            .focusable(),
                 )
 
                 val description = episode.description
@@ -112,15 +113,13 @@ fun PodcastEpisodeFullWidthItem(
                         text = description,
                         style = typo().bodyMedium,
                         maxLines = 1,
-                        color = Color(0xC4FFFFFF),
+                        overflow = TextOverflow.Ellipsis,
+                        color = GratifyColors.TextSecondary,
                         modifier =
                             Modifier
                                 .fillMaxWidth()
                                 .wrapContentHeight(align = Alignment.CenterVertically)
-                                .basicMarquee(
-                                    iterations = Int.MAX_VALUE,
-                                    animationMode = MarqueeAnimationMode.Immediately,
-                                ).focusable(),
+                                .focusable(),
                     )
                 }
             }

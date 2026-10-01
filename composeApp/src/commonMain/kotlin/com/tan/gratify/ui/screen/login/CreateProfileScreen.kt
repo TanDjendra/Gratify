@@ -1,16 +1,21 @@
 package com.tan.gratify.ui.screen.login
 
+import com.tan.gratify.ui.theme.GratifyColors
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -58,10 +63,10 @@ import org.koin.compose.viewmodel.koinViewModel
 import gratify.composeapp.generated.resources.Res
 import gratify.composeapp.generated.resources.baseline_add_photo_alternate_24
 
-private val GratifyGreen = Color(0xFFE0E0E0)
-private val BackgroundBlack = Color(0xFF000000)
-private val DarkGray = Color(0xFF2E2E2E)
-private val LightGray = Color(0xFFE0E0E0)
+private val GratifyAccent = GratifyColors.Accent
+private val BackgroundBlack = GratifyColors.Background
+private val DarkGray = GratifyColors.SurfaceRaised
+private val LightGray = GratifyColors.Accent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -118,7 +123,8 @@ fun CreateProfileScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 24.dp),
+                .imePadding()
+                .padding(horizontal = 24.dp).verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {
@@ -130,7 +136,7 @@ fun CreateProfileScreen(
                     .size(120.dp)
                     .clip(CircleShape)
                     .background(DarkGray)
-                    .border(2.dp, GratifyGreen, CircleShape)
+                    .border(2.dp, GratifyAccent, CircleShape)
                     .clickable { photoPicker.launch() },
                 contentAlignment = Alignment.Center
             ) {
@@ -150,7 +156,7 @@ fun CreateProfileScreen(
                         imageVector = Icons.Rounded.Person,
                         contentDescription = "Default Avatar",
                         modifier = Modifier.size(64.dp),
-                        tint = Color.Gray
+                        tint = GratifyColors.TextSecondary
                     )
                 }
             }
@@ -159,7 +165,7 @@ fun CreateProfileScreen(
             Text(
                 text = "Ketuk untuk pilih foto",
                 style = typo().bodySmall,
-                color = Color.Gray,
+                color = GratifyColors.TextSecondary,
                 textAlign = TextAlign.Center
             )
 
@@ -169,7 +175,7 @@ fun CreateProfileScreen(
             OutlinedTextField(
                 value = uiState.displayName,
                 onValueChange = { viewModel.updateDisplayName(it) },
-                label = { Text("Nama Tampilan", color = Color.Gray) },
+                label = { Text("Nama Tampilan", color = GratifyColors.TextSecondary) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
@@ -177,7 +183,7 @@ fun CreateProfileScreen(
                     unfocusedBorderColor = DarkGray,
                     focusedTextColor = Color.White,
                     unfocusedTextColor = Color.White,
-                    cursorColor = GratifyGreen
+                    cursorColor = GratifyAccent
                 ),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(
@@ -188,7 +194,7 @@ fun CreateProfileScreen(
             Spacer(Modifier.height(8.dp))
             Text(
                 text = "Ini adalah nama yang akan ditampilkan di profil kamu.",
-                style = typo().bodySmall.copy(color = Color.Gray)
+                style = typo().bodySmall.copy(color = GratifyColors.TextSecondary)
             )
 
             Spacer(Modifier.height(48.dp))
@@ -197,12 +203,12 @@ fun CreateProfileScreen(
             Button(
                 onClick = { viewModel.saveProfile() },
                 enabled = uiState.displayName.isNotEmpty() && !uiState.isSaving,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = GratifyGreen,
+                    containerColor = GratifyAccent,
                     disabledContainerColor = DarkGray,
                     contentColor = Color.Black,
-                    disabledContentColor = Color.Gray
+                    disabledContentColor = GratifyColors.TextSecondary
                 ),
                 shape = RoundedCornerShape(50)
             ) {

@@ -1,4 +1,5 @@
 [versions]
+sentry = "8.58.0"
 # App version
 version-name = "2.1.0"
 version-code = "61"
@@ -89,6 +90,7 @@ zxing = "3.5.3"
 play-services-code-scanner = "16.1.0"
 
 [libraries]
+sentry-android = { module = "io.sentry:sentry-android", version.ref = "sentry" }
 desugaring = { group = "com.android.tools", name = "desugar_jdk_libs_nio", version.ref = "desugaring"}
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "compose-bom" }
 compose-material3-lib = { group = "androidx.compose.material3", name = "material3", version.ref = "material3-expressive" }

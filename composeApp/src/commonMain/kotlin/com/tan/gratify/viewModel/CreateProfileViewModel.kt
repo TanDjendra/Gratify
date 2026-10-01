@@ -31,6 +31,7 @@ class CreateProfileViewModel(
 ) : BaseViewModel() {
 
     private val supabase: SupabaseClient by inject()
+    private val userRepository: com.tan.domain.repository.UserRepository by inject()
 
     private val _uiState = MutableStateFlow(CreateProfileUiState())
     val uiState: StateFlow<CreateProfileUiState> = _uiState
@@ -55,7 +56,8 @@ class CreateProfileViewModel(
     }
 
     fun saveProfile() {
-        if (_uiState.value.displayName.isEmpty()) {
+        if (_uiState.value.isSaving) return
+        if (_uiState.value.displayName.isBlank()) {
             makeToast("Nama tidak boleh kosong.")
             return
         }
@@ -65,7 +67,7 @@ class CreateProfileViewModel(
             try {
                 // Upload avatar if not empty and not an http URL
                 if (avatarUrlToSave.isNotEmpty() && !avatarUrlToSave.startsWith("http")) {
-                    val compressedBytes = compressImage(avatarUrlToSave)
+                    val compressedBytes = requireNotNull(compressImage(avatarUrlToSave)) { "Avatar cannot be processed" }
                     if (compressedBytes != null) {
                         val currentUserId = supabase.auth.currentUserOrNull()?.id
                         if (currentUserId != null) {
@@ -86,7 +88,7 @@ class CreateProfileViewModel(
                 }
 
                 // Update ke Supabase Backend jika ada sesi
-                val currentUserId = supabase.auth.currentUserOrNull()?.id
+                val currentUserId = requireNotNull(supabase.auth.currentUserOrNull()?.id) { "Login required" }
                 if (currentUserId != null) {
                     supabase.auth.updateUser {
                         data = buildJsonObject {
@@ -96,20 +98,19 @@ class CreateProfileViewModel(
                             }
                         }
                     }
-                    try {
-                        supabase.postgrest["profiles"].upsert(
+                    userRepository.upsertUserProfile(
                             UserProfile(
                                 id = currentUserId,
                                 displayName = _uiState.value.displayName,
                                 avatarUrl = avatarUrlToSave.ifEmpty { null }
                             )
-                        )
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
+                    ).first().getOrThrow()
                 }
             } catch (e: Exception) {
-                // Jangan gagalkan secara lokal bila backend gagal (misal koneksi buruk)
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                _uiState.update { it.copy(isSaving = false, saveSuccess = false) }
+                makeToast("Profil belum tersimpan. Periksa koneksi lalu coba lagi.")
+                return@launch
             }
 
             

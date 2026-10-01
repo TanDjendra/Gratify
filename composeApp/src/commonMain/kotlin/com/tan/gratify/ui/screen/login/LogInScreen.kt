@@ -1,5 +1,7 @@
 package com.tan.gratify.ui.screen.login
 
+import com.tan.gratify.ui.theme.GratifyColors
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -100,7 +102,7 @@ fun LoginScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().hazeSource(state = hazeState)) {
+    Box(modifier = Modifier.fillMaxSize()) {
         Column {
             Spacer(
                 Modifier
@@ -164,9 +166,7 @@ fun LoginScreen(
             modifier =
                 Modifier
                     .align(Alignment.TopCenter)
-                    .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin()) {
-                        blurEnabled = true
-                    },
+                    ,
             title = {
                 Text(
                     text = stringResource(Res.string.log_in),
@@ -198,7 +198,7 @@ fun LoginScreen(
             },
             colors =
                 TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
+                    containerColor = GratifyColors.Background,
                 ),
         )
     }

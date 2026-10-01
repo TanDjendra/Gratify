@@ -6,6 +6,11 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import com.tan.gratify.viewModel.auth.PasswordRecoveryCoordinator
+import com.tan.gratify.ui.navigation.destination.login.ForgotPasswordDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -24,6 +29,13 @@ import com.tan.gratify.ui.theme.AppTheme
 @Composable
 fun App() {
     val navController = rememberNavController()
+    val recoveryPending by PasswordRecoveryCoordinator.pending.collectAsState()
+    LaunchedEffect(recoveryPending) {
+        if (recoveryPending) navController.navigate(ForgotPasswordDestination) {
+            popUpTo(0) { inclusive = true }
+            launchSingleTop = true
+        }
+    }
 
     AppTheme {
         NavHost(

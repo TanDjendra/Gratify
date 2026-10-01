@@ -32,6 +32,7 @@ import multiplatform.network.cmptoast.showToast
 import org.jetbrains.compose.resources.getString
 import org.koin.mp.KoinPlatform.getKoin
 import gratify.composeapp.generated.resources.Res
+import gratify.composeapp.generated.resources.restore_failed
 import gratify.composeapp.generated.resources.restore_success
 import java.io.File
 import java.io.FileInputStream
@@ -99,84 +100,54 @@ actual suspend fun restoreNative(
     getData: () -> Unit,
 ) {
     val application: Context = getKoin().get()
-    application.applicationContext.contentResolver.openInputStream(uri.toAndroidUri())?.use {
-        it.zipInputStream().use { inputStream ->
-            var entry =
-                try {
-                    inputStream.nextEntry
-                } catch (e: Exception) {
-                    null
-                }
-
-            var downloadFolderCleared = false
-
-            while (entry != null) {
-                Logger.d("BackupRestore", "Processing entry: ${entry.name}")
-                when {
-                    entry.name == "$SETTINGS_FILENAME.preferences_pb" -> {
-                        (application.filesDir / "datastore" / "$SETTINGS_FILENAME.preferences_pb")
-                            .outputStream()
-                            .use { outputStream ->
-                                inputStream.copyTo(outputStream)
-                            }
-                    }
-
-                    entry.name == DB_NAME -> {
-                        runBlocking(Dispatchers.IO) {
-                            commonRepository.databaseDaoCheckpoint()
-                            commonRepository.closeDatabase()
-                        }
-                        FileOutputStream(commonRepository.getDatabasePath()).use { outputStream ->
-                            inputStream.copyTo(outputStream)
-                        }
-                    }
-
-                    entry.name == EXOPLAYER_DB_NAME -> {
-                        FileOutputStream(application.getDatabasePath(EXOPLAYER_DB_NAME)).use { outputStream ->
-                            inputStream.copyTo(outputStream)
-                        }
-                    }
-
-                    entry.name.startsWith("$DOWNLOAD_EXOPLAYER_FOLDER/") -> {
-                        Logger.d("BackupRestore", "Found download entry: ${entry.name}")
-                        // Clear download folder on first encounter
-                        if (!downloadFolderCleared) {
-                            val downloadFolder = application.filesDir / DOWNLOAD_EXOPLAYER_FOLDER
-                            Logger.d("BackupRestore", "=== RESTORE: Download folder contents BEFORE clearing ===")
-                            debugFolderContents(downloadFolder)
-                            Logger.d("BackupRestore", "Clearing download folder: ${downloadFolder.absolutePath}")
-                            clearFolder(downloadFolder)
-                            Logger.d("BackupRestore", "=== RESTORE: Download folder contents AFTER clearing ===")
-                            debugFolderContents(downloadFolder)
-                            downloadFolderCleared = true
-                        }
-                        restoreFolder(entry.name, inputStream, "download")
-                    }
-
-                    else -> {
-                        Logger.d("BackupRestore", "Unhandled entry: ${entry.name}")
+    val stage = File(application.cacheDir, "restore-${java.util.UUID.randomUUID()}")
+    check(stage.mkdirs())
+    var databaseClosed = false
+    var success = false
+    try {
+        withContext(Dispatchers.IO) {
+            val files = application.contentResolver.openInputStream(uri.toAndroidUri())?.use { input ->
+                stageRestoreArchive(input, stage, setOf(DB_NAME, EXOPLAYER_DB_NAME, "$SETTINGS_FILENAME.preferences_pb"), DOWNLOAD_EXOPLAYER_FOLDER)
+            } ?: error("Backup cannot be opened")
+            files.filter { it.first == "$SETTINGS_FILENAME.preferences_pb" }.forEach { validateRestorePreferences(it.second) }
+            // Validate SQLite before closing or replacing the live database.
+            files.filter { it.first == DB_NAME || it.first == EXOPLAYER_DB_NAME }.forEach { (_, file) ->
+                android.database.sqlite.SQLiteDatabase.openDatabase(file.path, null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY).use { db ->
+                    db.rawQuery("PRAGMA quick_check", null).use { cursor ->
+                        check(cursor.moveToFirst() && cursor.getString(0) == "ok") { "Invalid backup database" }
                     }
                 }
-                entry = inputStream.nextEntry
             }
+            val replacements = files.filterNot { it.first.startsWith("$DOWNLOAD_EXOPLAYER_FOLDER/") }.map { (name, source) ->
+                source to when (name) {
+                    DB_NAME -> File(requireNotNull(commonRepository.getDatabasePath()))
+                    EXOPLAYER_DB_NAME -> application.getDatabasePath(EXOPLAYER_DB_NAME)
+                    else -> File(application.filesDir, "datastore/$name")
+                }
+            }.toMutableList()
+            if (files.any { it.first.startsWith("$DOWNLOAD_EXOPLAYER_FOLDER/") }) {
+                replacements += File(stage, DOWNLOAD_EXOPLAYER_FOLDER) to File(application.filesDir, DOWNLOAD_EXOPLAYER_FOLDER)
+            }
+            withContext(Dispatchers.Main) { stopService(application) }
+            commonRepository.databaseDaoCheckpoint()
+            commonRepository.closeDatabase()
+            databaseClosed = true
+            replaceRestoreFiles(replacements, File(stage, "rollback"))
+            replacements.map { it.second }.filter { it.name == DB_NAME || it.name == EXOPLAYER_DB_NAME }.forEach { database ->
+                File(database.path + "-wal").delete()
+                File(database.path + "-shm").delete()
+            }
+            success = true
         }
-    }
-    // Final debug check
-    val downloadFolder = application.filesDir / DOWNLOAD_EXOPLAYER_FOLDER
-    Logger.d("BackupRestore", "=== RESTORE: Download folder contents AFTER RESTORE ===")
-    debugFolderContents(downloadFolder)
-
-    withContext(Dispatchers.Main) {
-        showToast(getString(Res.string.restore_success), ToastGravity.Bottom)
-//                        mediaPlayerHandler.stopMediaService(application)
-        stopService(application)
-        getData()
-        val ctx = application.applicationContext
-        val pm: PackageManager = ctx.packageManager
-        val intent = pm.getLaunchIntentForPackage(ctx.packageName)
-        val mainIntent = Intent.makeRestartActivityTask(intent?.component)
-        ctx.startActivity(mainIntent)
-        Runtime.getRuntime().exit(0)
+    } finally {
+        if (!databaseClosed || success) stage.deleteRecursively()
+        if (databaseClosed) withContext(Dispatchers.Main) {
+            showToast(getString(if (success) Res.string.restore_success else Res.string.restore_failed), ToastGravity.Bottom)
+            val ctx = application.applicationContext
+            val launch = requireNotNull(ctx.packageManager.getLaunchIntentForPackage(ctx.packageName))
+            ctx.startActivity(Intent.makeRestartActivityTask(launch.component))
+            Runtime.getRuntime().exit(0)
+        }
     }
 }
 
@@ -282,40 +253,27 @@ actual suspend fun backupNative(
     commonRepository: CommonRepository,
     uri: Uri,
     backupDownloaded: Boolean,
-) {
+) = withContext(Dispatchers.IO) {
     val application: Context = getKoin().get()
-    application.applicationContext.contentResolver.openOutputStream(uri.toAndroidUri())?.use {
-        it.buffered().zipOutputStream().use { outputStream ->
-            (application.filesDir / "datastore" / "$SETTINGS_FILENAME.preferences_pb")
-                .inputStream()
-                .buffered()
-                .use { inputStream ->
-                    outputStream.putNextEntry(ZipEntry("$SETTINGS_FILENAME.preferences_pb"))
-                    inputStream.copyTo(outputStream)
-                }
-            runBlocking(Dispatchers.IO) {
-                commonRepository.databaseDaoCheckpoint()
+    val exported = File(application.cacheDir, "active-library-${java.util.UUID.randomUUID()}.db")
+    try {
+        commonRepository.exportActiveAccountDatabase(exported.absolutePath)
+        val destination = requireNotNull(application.contentResolver.openOutputStream(uri.toAndroidUri())) { "Cannot open backup destination" }
+        ZipOutputStream(destination.buffered()).use { output ->
+            fun append(file: File, name: String) {
+                if (!file.isFile) return
+                output.putNextEntry(ZipEntry(name))
+                file.inputStream().buffered().use { it.copyTo(output) }
+                output.closeEntry()
             }
-            FileInputStream(commonRepository.getDatabasePath()).use { inputStream ->
-                outputStream.putNextEntry(ZipEntry(DB_NAME))
-                inputStream.copyTo(outputStream)
-            }
+            append(application.filesDir / "datastore" / "$SETTINGS_FILENAME.preferences_pb", "$SETTINGS_FILENAME.preferences_pb")
+            append(exported, DB_NAME)
             if (backupDownloaded) {
-                (application.getDatabasePath(EXOPLAYER_DB_NAME))
-                    .inputStream()
-                    .buffered()
-                    .use { inputStream ->
-                        outputStream.putNextEntry(ZipEntry(EXOPLAYER_DB_NAME))
-                        inputStream.copyTo(outputStream)
-                    }
-                // Backup download folder
-                val downloadFolder = application.filesDir / DOWNLOAD_EXOPLAYER_FOLDER
-                Logger.d("BackupRestore", "=== BACKUP: Download folder contents BEFORE backup ===")
-                debugFolderContents(downloadFolder)
-                backupFolder(downloadFolder, DOWNLOAD_EXOPLAYER_FOLDER, outputStream)
+                append(application.getDatabasePath(EXOPLAYER_DB_NAME), EXOPLAYER_DB_NAME)
+                backupFolder(application.filesDir / DOWNLOAD_EXOPLAYER_FOLDER, DOWNLOAD_EXOPLAYER_FOLDER, output)
             }
         }
-    }
+    } finally { exported.delete() }
 }
 
 actual fun getPackageName(): String {

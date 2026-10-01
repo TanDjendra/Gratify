@@ -1,5 +1,8 @@
 package com.tan.gratify.ui.component
 
+import com.tan.gratify.ui.theme.GratifyColors
+import com.tan.gratify.ui.theme.GratifyShapes
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -27,7 +30,7 @@ fun GratifyChartButton(
     Surface(
         modifier = modifier,
         onClick = onClick,
-        shape = RoundedCornerShape(24.dp),
+        shape = GratifyShapes.large,
         color = Color(0xFF1A0F0F),
         border = BorderStroke(1.dp, Color(0xFF3D2828))
     ) {
@@ -60,7 +63,7 @@ fun PreviewGratifyChartButton() {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black),
+            .background(GratifyColors.Background),
         contentAlignment = Alignment.Center
     ) {
         GratifyChartButton(onClick = {})

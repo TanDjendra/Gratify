@@ -1,5 +1,10 @@
 package com.tan.gratify.ui.screen.home
 
+import androidx.compose.ui.text.style.TextOverflow
+
+import com.tan.gratify.ui.theme.GratifyColors
+import com.tan.gratify.ui.theme.GratifyShapes
+
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.MarqueeAnimationMode
 import androidx.compose.foundation.basicMarquee
@@ -161,7 +166,7 @@ fun SwipeableNotificationItem(
                 Modifier
                     .fillMaxSize()
                     .padding(5.dp)
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(GratifyShapes.medium)
                     .background(Color(0xFFE57373)), // Soft red
                 contentAlignment = Alignment.CenterEnd
             ) {
@@ -222,6 +227,7 @@ fun NotificationItem(
                                 .build(),
                         placeholder = painterResource(Res.drawable.holder),
                         error = painterResource(Res.drawable.holder),
+                        fallback = painterResource(Res.drawable.holder),
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier =
@@ -287,8 +293,8 @@ fun DeveloperNotificationItem(
         modifier = Modifier
             .padding(vertical = 8.dp, horizontal = 5.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF1E1E1E))
+            .clip(GratifyShapes.medium)
+            .background(GratifyColors.Surface)
             .padding(16.dp)
     ) {
         Column {
@@ -316,7 +322,7 @@ fun DeveloperNotificationItem(
                     Text(
                         text = "Pesan Pengembang",
                         style = typo().titleSmall,
-                        color = Color(0xFFB7B6B6)
+                        color = GratifyColors.TextSecondary
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
@@ -331,7 +337,7 @@ fun DeveloperNotificationItem(
                 Text(
                     text = notification.time.formatTimeAgo(),
                     style = typo().bodySmall,
-                    color = Color.Gray,
+                    color = GratifyColors.TextSecondary,
                     textAlign = TextAlign.End
                 )
             }
@@ -341,7 +347,7 @@ fun DeveloperNotificationItem(
                 Text(
                     text = body,
                     style = typo().bodyMedium,
-                    color = Color(0xFFE4E2E6),
+                    color = GratifyColors.TextPrimary,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -351,7 +357,7 @@ fun DeveloperNotificationItem(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(GratifyShapes.small)
                         .clickable {
                             try {
                                 uriHandler.openUri(url)
@@ -413,6 +419,7 @@ fun ItemAlbumNotification(
                         .build(),
                 placeholder = painterResource(Res.drawable.holder),
                 error = painterResource(Res.drawable.holder),
+                fallback = painterResource(Res.drawable.holder),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier =
@@ -428,29 +435,25 @@ fun ItemAlbumNotification(
                 style = typo().titleSmall,
                 color = Color.White,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 modifier =
                     Modifier
                         .width(150.dp)
                         .wrapContentHeight(align = Alignment.CenterVertically)
                         .padding(top = 10.dp)
-                        .basicMarquee(
-                            iterations = Int.MAX_VALUE,
-                            animationMode = MarqueeAnimationMode.Immediately,
-                        ).focusable(),
+                        .focusable(),
             )
             Text(
                 text = if (isAlbum) stringResource(Res.string.album) else stringResource(Res.string.singles),
                 style = typo().bodySmall,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 modifier =
                     Modifier
                         .width(150.dp)
                         .wrapContentHeight(align = Alignment.CenterVertically)
                         .padding(top = 10.dp)
-                        .basicMarquee(
-                            iterations = Int.MAX_VALUE,
-                            animationMode = MarqueeAnimationMode.Immediately,
-                        ).focusable(),
+                        .focusable(),
             )
         }
     }
@@ -470,8 +473,8 @@ fun FollowNotificationItem(
         modifier = Modifier
             .padding(vertical = 8.dp, horizontal = 5.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF1E1E1E))
+            .clip(GratifyShapes.medium)
+            .background(GratifyColors.Surface)
             .padding(16.dp)
     ) {
         Column {
@@ -492,6 +495,7 @@ fun FollowNotificationItem(
                         .build(),
                     placeholder = painterResource(Res.drawable.holder),
                     error = painterResource(Res.drawable.holder),
+                    fallback = painterResource(Res.drawable.holder),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
@@ -511,7 +515,7 @@ fun FollowNotificationItem(
                     Text(
                         text = notification.time.formatTimeAgo(),
                         style = typo().bodySmall,
-                        color = Color.Gray
+                        color = GratifyColors.TextSecondary
                     )
                 }
             }

@@ -30,6 +30,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Text
@@ -125,66 +126,11 @@ fun HomeItem(
 
     val channelId = data.channelId
     Column {
-        Row(
-            modifier =
-                if (channelId != null) {
-                    Modifier
-                        .focusable(true)
-                        .clickable {
-                            navController.navigate(
-                                ArtistDestination(
-                                    channelId = channelId,
-                                ),
-                            )
-                        }
-                } else {
-                    Modifier
-                },
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            AnimatedVisibility(
-                visible = (data.thumbnail?.lastOrNull() != null),
-                modifier = Modifier.align(Alignment.CenterVertically),
-            ) {
-                AsyncImage(
-                    model =
-                        ImageRequest
-                            .Builder(LocalPlatformContext.current)
-                            .data(data.thumbnail?.lastOrNull()?.url)
-                            .diskCachePolicy(CachePolicy.ENABLED)
-                            .diskCacheKey(data.thumbnail?.lastOrNull()?.url)
-                            .crossfade(550)
-                            .build(),
-                    contentDescription = "",
-                    placeholder = painterResource(Res.drawable.holder),
-                    error = painterResource(Res.drawable.holder),
-                    modifier =
-                        Modifier
-                            .size(36.dp)
-                            .clip(
-                                CircleShape,
-                            ),
-                )
-            }
-            Column(
-                Modifier
-                    .padding(start = 10.dp),
-            ) {
-                AnimatedVisibility(visible = (data.subtitle != null && data.subtitle != "")) {
-                    Text(
-                        text = data.subtitle ?: "",
-                        style = typo().bodySmall,
-                    )
-                }
-                Text(
-                    text = data.title,
-                    style = typo().headlineMedium,
-                    color = Color.White,
-                    maxLines = 1,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
+        HomeSectionHeading(
+            title = data.title, subtitle = data.subtitle,
+            artworkUrl = data.thumbnail?.lastOrNull()?.url,
+            onClick = channelId?.let { id -> { navController.navigate(ArtistDestination(channelId = id)) } },
+        )
         LazyRow(
             state = lazyListState,
             flingBehavior = snapperFlingBehavior,
@@ -349,7 +295,7 @@ fun HomeItemContentPlaylist(
                             .size(thumbSize)
                             .aspectRatio(1f)
                             .clip(
-                                RoundedCornerShape(10.dp),
+                                MaterialTheme.shapes.small,
                             ),
                 )
             } else {
@@ -413,7 +359,7 @@ fun HomeItemContentPlaylist(
                             .size(thumbSize)
                             .aspectRatio(1f)
                             .clip(
-                                RoundedCornerShape(10.dp),
+                                MaterialTheme.shapes.small,
                             ),
                 )
             }
@@ -518,18 +464,14 @@ fun HomeItemContentPlaylist(
                         }
                     },
                 style = typo().bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 minLines = 1,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier =
                     Modifier
                         .width(thumbSize)
-                        .wrapContentHeight(align = Alignment.CenterVertically)
-                        .basicMarquee(
-                            initialDelayMillis = 2000,
-                            repeatDelayMillis = 2000,
-                            velocity = 25.dp,
-                        ),
+                        .wrapContentHeight(align = Alignment.CenterVertically),
             )
         }
     }
@@ -575,7 +517,7 @@ fun QuickPicksItem(
                         .align(Alignment.CenterVertically)
                         .size(44.dp)
                         .clip(
-                            RoundedCornerShape(10),
+                            MaterialTheme.shapes.small,
                         ),
             )
             Column(
@@ -588,7 +530,7 @@ fun QuickPicksItem(
                 Text(
                     text = data.title,
                     style = typo().titleSmall,
-                    maxLines = 2,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     color = Color.White,
                     modifier =
@@ -615,18 +557,14 @@ fun QuickPicksItem(
                         Text(
                             text = data.artists.toListName().connectArtists(),
                             style = typo().bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             minLines = 1,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
-                                    .wrapContentHeight(align = Alignment.CenterVertically)
-                                    .basicMarquee(
-                                        initialDelayMillis = 2000,
-                                        repeatDelayMillis = 2000,
-                                        velocity = 25.dp,
-                                    ),
+                                    .wrapContentHeight(align = Alignment.CenterVertically),
                         )
                     }
                 }
@@ -680,6 +618,7 @@ fun HomeItemSong(
                         .build(),
                 placeholder = painterResource(Res.drawable.holder),
                 error = painterResource(Res.drawable.holder),
+                fallback = painterResource(Res.drawable.holder),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier =
@@ -687,7 +626,7 @@ fun HomeItemSong(
                         .align(Alignment.CenterHorizontally)
                         .size(160.dp)
                         .clip(
-                            RoundedCornerShape(10.dp),
+                            MaterialTheme.shapes.small,
                         ),
             )
             Text(
@@ -719,6 +658,7 @@ fun HomeItemSong(
                             data.album?.name?.takeIf { it.isNotBlank() },
                         ).joinToString(" • "),
                     style = typo().bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     minLines = 1,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -726,11 +666,6 @@ fun HomeItemSong(
                         Modifier
                             .width(160.dp)
                             .wrapContentHeight(align = Alignment.CenterVertically)
-                            .basicMarquee(
-                                initialDelayMillis = 2000,
-                                repeatDelayMillis = 2000,
-                                velocity = 25.dp,
-                            )
                             .padding(vertical = 3.dp),
                 )
             }
@@ -775,6 +710,7 @@ fun HomeItemVideo(
                         .build(),
                 placeholder = painterResource(Res.drawable.holder_video),
                 error = painterResource(Res.drawable.holder_video),
+                fallback = painterResource(Res.drawable.holder_video),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier =
@@ -783,7 +719,7 @@ fun HomeItemVideo(
                         .height(160.dp)
                         .aspectRatio(16f / 9f)
                         .clip(
-                            RoundedCornerShape(10.dp),
+                            MaterialTheme.shapes.small,
                         ),
             )
             Text(
@@ -805,6 +741,7 @@ fun HomeItemVideo(
                         data.views?.takeIf { it.isNotBlank() },
                     ).joinToString(" • "),
                 style = typo().bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 minLines = 1,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -812,11 +749,6 @@ fun HomeItemVideo(
                     Modifier
                         .width(284.5.dp)
                         .wrapContentHeight(align = Alignment.CenterVertically)
-                        .basicMarquee(
-                            initialDelayMillis = 2000,
-                            repeatDelayMillis = 2000,
-                            velocity = 25.dp,
-                        )
                         .padding(vertical = 2.dp),
             )
         }
@@ -856,6 +788,7 @@ fun HomeItemArtist(
                         .build(),
                 placeholder = painterResource(Res.drawable.holder),
                 error = painterResource(Res.drawable.holder),
+                fallback = painterResource(Res.drawable.holder),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier =
@@ -882,6 +815,7 @@ fun HomeItemArtist(
             Text(
                 text = data.description?.takeIf { it.isNotBlank() }.orEmpty(),
                 style = typo().bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 minLines = 1,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -889,12 +823,7 @@ fun HomeItemArtist(
                 modifier =
                     Modifier
                         .width(160.dp)
-                        .wrapContentHeight(align = Alignment.CenterVertically)
-                        .basicMarquee(
-                            initialDelayMillis = 2000,
-                            repeatDelayMillis = 2000,
-                            velocity = 25.dp,
-                        ),
+                        .wrapContentHeight(align = Alignment.CenterVertically),
             )
         }
     }
@@ -971,6 +900,7 @@ fun ItemVideoChart(
                         .build(),
                 placeholder = painterResource(Res.drawable.holder_video),
                 error = painterResource(Res.drawable.holder_video),
+                fallback = painterResource(Res.drawable.holder_video),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier =
@@ -979,7 +909,7 @@ fun ItemVideoChart(
                         .width(280.dp)
                         .height(160.dp)
                         .clip(
-                            RoundedCornerShape(10),
+                            MaterialTheme.shapes.small,
                         ),
             )
             Row {
@@ -988,6 +918,7 @@ fun ItemVideoChart(
                     style = typo().titleLarge,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     modifier =
                         Modifier
                             .width(40.dp)
@@ -1021,11 +952,6 @@ fun ItemVideoChart(
                             Modifier
                                 .width(210.dp)
                                 .wrapContentHeight(align = Alignment.CenterVertically)
-                                .basicMarquee(
-                                    initialDelayMillis = 2000,
-                                    repeatDelayMillis = 2000,
-                                    velocity = 25.dp,
-                                )
                                 .padding(vertical = 3.dp),
                     )
                 }
@@ -1060,6 +986,7 @@ fun ItemArtistChart(
                 style = typo().titleLarge,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 modifier =
                     Modifier
                         .wrapContentSize(Alignment.Center)
@@ -1079,6 +1006,7 @@ fun ItemArtistChart(
                         .build(),
                 placeholder = painterResource(Res.drawable.holder),
                 error = painterResource(Res.drawable.holder),
+                fallback = painterResource(Res.drawable.holder),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier =
@@ -1118,17 +1046,13 @@ fun ItemArtistChart(
                             )
                         },
                     style = typo().bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     minLines = 1,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier =
                         Modifier
-                            .wrapContentHeight(align = Alignment.CenterVertically)
-                            .basicMarquee(
-                                initialDelayMillis = 2000,
-                                repeatDelayMillis = 2000,
-                                velocity = 25.dp,
-                            ),
+                            .wrapContentHeight(align = Alignment.CenterVertically),
                 )
             }
         }
@@ -1166,6 +1090,7 @@ fun ItemTrackChart(
                             style = typo().titleLarge,
                             textAlign = TextAlign.Center,
                             maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             modifier =
                                 Modifier
                                     .width(40.dp)
@@ -1189,6 +1114,7 @@ fun ItemTrackChart(
                         .build(),
                 placeholder = painterResource(Res.drawable.holder),
                 error = painterResource(Res.drawable.holder),
+                fallback = painterResource(Res.drawable.holder),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier =
@@ -1196,7 +1122,7 @@ fun ItemTrackChart(
                         .align(Alignment.CenterVertically)
                         .size(50.dp)
                         .clip(
-                            RoundedCornerShape(10),
+                            MaterialTheme.shapes.small,
                         ),
             )
             Column(
@@ -1224,18 +1150,14 @@ fun ItemTrackChart(
                 Text(
                     text = data.artists.toListName().connectArtists(),
                     style = typo().bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     minLines = 1,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .wrapContentHeight(align = Alignment.CenterVertically)
-                            .basicMarquee(
-                                initialDelayMillis = 2000,
-                                repeatDelayMillis = 2000,
-                                velocity = 25.dp,
-                            ),
+                            .wrapContentHeight(align = Alignment.CenterVertically),
                 )
             }
         }

@@ -1446,47 +1446,32 @@ class SettingsViewModel(
         }
     }
 
+    private val _deletingAccount = MutableStateFlow(false)
+    val deletingAccount: StateFlow<Boolean> = _deletingAccount
+    fun deleteGratifyAccount() {
+        if (_deletingAccount.value) return
+        _deletingAccount.value = true
+        viewModelScope.launch {
+            try {
+                userDataSyncManager.deleteAccount()
+                makeToast("Akun dan data cloud telah dihapus.")
+                getLoggedIn()
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { makeToast("Penghapusan belum selesai. Periksa koneksi dan coba lagi.") }
+            finally { _deletingAccount.value = false }
+        }
+    }
+
     fun logOutAllYouTube() {
         viewModelScope.launch {
-            // Backup ke cloud SEBELUM sign out. force = true supaya menunggu sync berkala
-            // yang mungkin sedang jalan, bukan menyerah diam-diam — tapi dibatasi waktu
-            // supaya tombol Logout tidak terasa menggantung kalau jaringan bermasalah.
-            // Timeout dihitung sebagai backup GAGAL, jadi arahnya aman: DB lokal dipertahankan.
-            val backedUp =
-                try {
-                    withTimeoutOrNull(LOGOUT_SYNC_TIMEOUT_MS) {
-                        userDataSyncManager.performSyncUp(force = true)
-                    } ?: false
-                } catch (_: Exception) {
-                    false
-                }
-            userDataSyncManager.stopSync()
-
+            // Cloud backup is best effort: the private local archive is the durable fallback.
             try {
-                supabase.auth.signOut()
-            } catch (e: Exception) {
-                // Abaikan bila tidak ada sesi
-            }
-
-            // Bersihkan database lokal agar profil dan pustaka user lama terhapus.
-            // HANYA bila backup berhasil — kalau tidak, pustaka (lagu disukai, artis diikuti)
-            // cuma ada di lokal dan menghapusnya = hilang permanen. Login berikutnya akan
-            // mencoba backup ini lagi lewat performLoginSync.
-            if (backedUp) {
-                withContext(Dispatchers.IO) {
-                    try {
-                        commonRepository.clearDatabase()
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-            } else {
-                Logger.e("logOutAllYouTube", "Sync up failed, keeping local library to avoid data loss")
-                makeToast("Gagal mencadangkan pustaka ke cloud. Data lokal dipertahankan agar tidak hilang.")
-            }
-
-            googleAccounts.value.data?.forEach { account ->
-                accountRepository.deleteGoogleAccount(account.email)
+                withTimeoutOrNull(LOGOUT_SYNC_TIMEOUT_MS) { userDataSyncManager.performSyncUp(force = true) }
+                userDataSyncManager.performLogout()
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) {
+                makeToast("Keluar gagal. Data akun tetap tersimpan; silakan coba lagi.")
+                return@launch
             }
             dataStoreManager.clearPerUserData()
             dataStoreManager.setLoggedIn(false)

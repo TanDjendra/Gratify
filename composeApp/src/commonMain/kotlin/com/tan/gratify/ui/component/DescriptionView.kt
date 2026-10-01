@@ -1,5 +1,7 @@
 package com.tan.gratify.ui.component
 
+import com.tan.gratify.ui.theme.GratifyColors
+
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.foundation.clickable
@@ -142,7 +144,7 @@ fun DescriptionView(
         androidx.compose.animation.AnimatedVisibility(!shouldHideExpandButton) {
             Text(
                 text = if (expanded) stringResource(Res.string.less) else stringResource(Res.string.more),
-                color = Color.LightGray,
+                color = GratifyColors.TextSecondary,
                 modifier =
                     Modifier.clickable {
                         expanded = !expanded

@@ -25,6 +25,7 @@ data class CloudPlaylistDto(
     @SerialName("description") val description: String? = null,
     @SerialName("thumbnail_url") val thumbnailUrl: String? = null,
     @SerialName("is_public") val isPublic: Boolean = false,
+    @SerialName("client_sync_id") val clientSyncId: String? = null,
 )
 
 @Serializable

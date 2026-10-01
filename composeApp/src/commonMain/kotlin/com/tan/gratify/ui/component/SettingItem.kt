@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -58,8 +59,8 @@ fun SettingItem(
                 Modifier
                     .fillMaxWidth()
                     .padding(
-                        vertical = 8.dp,
-                        horizontal = 24.dp,
+                        vertical = 12.dp,
+                        horizontal = 16.dp,
                     ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -70,7 +71,7 @@ fun SettingItem(
                 Text(
                     text = title,
                     style =
-                        typo().labelMedium.let {
+                        typo().titleSmall.let {
                             if (!isEnable) it.greyScale() else it
                         },
                     color = white,
@@ -88,7 +89,8 @@ fun SettingItem(
                                 if (!isEnable) it.greyScale() else it
                             }
                         },
-                    maxLines = 2,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 3,
                 )
 
                 otherView?.let {

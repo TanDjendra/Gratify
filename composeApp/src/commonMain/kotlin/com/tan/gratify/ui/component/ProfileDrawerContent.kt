@@ -1,5 +1,7 @@
 package com.tan.gratify.ui.component
 
+import com.tan.gratify.ui.theme.GratifyColors
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -53,7 +55,7 @@ fun ProfileDrawerContent(
 ) {
     ModalDrawerSheet(
         modifier = Modifier.fillMaxHeight().width(300.dp),
-        drawerContainerColor = Color(0xFF121212)
+        drawerContainerColor = GratifyColors.Background
     ) {
         Column(
             modifier = Modifier
@@ -84,7 +86,7 @@ fun ProfileDrawerContent(
                     Text(
                         text = "Lihat profil",
                         style = typo().bodySmall,
-                        color = Color(0xFFB3B3B3),
+                        color = GratifyColors.TextSecondary,
                         modifier = Modifier.padding(top = 2.dp)
                     )
                 }

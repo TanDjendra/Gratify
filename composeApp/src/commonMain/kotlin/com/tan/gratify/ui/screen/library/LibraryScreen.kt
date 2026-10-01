@@ -1,19 +1,18 @@
 package com.tan.gratify.ui.screen.library
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandHorizontally
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
+import com.tan.gratify.ui.theme.GratifyColors
+import com.tan.gratify.ui.theme.GratifyShapes
+
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.exclude
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -35,43 +34,30 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
-import coil3.request.CachePolicy
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
-import coil3.compose.LocalPlatformContext
-import coil3.request.ImageRequest
-import coil3.request.crossfade
-import com.tan.common.LibraryChipType
 import com.tan.domain.utils.LocalResource
 import com.tan.gratify.extension.copy
 import com.tan.gratify.extension.isScrollingUp
 import com.tan.gratify.ui.component.EndOfPage
-import com.tan.gratify.ui.component.UserAvatar
 import com.tan.gratify.ui.navigation.destination.home.RecentlySongsDestination
 import com.tan.gratify.ui.navigation.destination.library.AddSongsToPlaylistDestination
 import com.tan.gratify.ui.navigation.destination.library.LibraryDynamicPlaylistDestination
 import com.tan.gratify.ui.navigation.destination.list.LocalPlaylistDestination
 import com.tan.gratify.ui.navigation.destination.list.PlaylistDestination
 import com.tan.gratify.ui.navigation.destination.search.SearchDestination
-import com.tan.gratify.ui.theme.transparent
 import com.tan.gratify.ui.theme.typo
 import com.tan.gratify.viewModel.LibraryViewModel
-import dev.chrisbanes.haze.hazeEffect
-import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
-import dev.chrisbanes.haze.materials.HazeMaterials
 import gratify.composeapp.generated.resources.Res
 import gratify.composeapp.generated.resources.holder
-import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.getString
@@ -129,8 +115,8 @@ fun LibraryScreen(
     
     val dataStoreManager: DataStoreManager = koinInject()
     val appProfileName by dataStoreManager.getString("AppProfileName").collectAsStateWithLifecycle(initialValue = "Tan.")
+    val libraryOwner = appProfileName?.takeIf { it.isNotBlank() } ?: stringResource(Res.string.you)
 
-    val hazeState = rememberHazeState(blurEnabled = true)
     var topAppBarHeight by remember { mutableStateOf(0.dp) }
     var showAddSheet by remember { mutableStateOf(false) }
     var selectedChip by remember { mutableStateOf<String?>(null) }
@@ -189,13 +175,13 @@ fun LibraryScreen(
             Card(
                 modifier = Modifier.fillMaxWidth().wrapContentHeight(),
                 shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
-                colors = CardDefaults.cardColors().copy(containerColor = Color(0xFF242424)),
+                colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceRaised),
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Spacer(modifier = Modifier.height(5.dp))
                     Card(
                         modifier = Modifier.width(60.dp).height(4.dp),
-                        colors = CardDefaults.cardColors().copy(containerColor = Color(0xFF474545)),
+                        colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceHighest),
                         shape = RoundedCornerShape(50),
                     ) {}
                     Spacer(modifier = Modifier.height(5.dp))
@@ -229,7 +215,7 @@ fun LibraryScreen(
         ModalBottomSheet(
             onDismissRequest = { showSortSheet = false },
             sheetState = showSortSheetState,
-            containerColor = Color(0xFF242424),
+            containerColor = GratifyColors.SurfaceRaised,
             contentColor = Color.White,
             dragHandle = null,
             scrimColor = Color.Black.copy(alpha = .5f),
@@ -240,7 +226,7 @@ fun LibraryScreen(
             ) {
                 Card(
                     modifier = Modifier.width(40.dp).height(4.dp),
-                    colors = CardDefaults.cardColors().copy(containerColor = Color(0xFF474545)),
+                    colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceHighest),
                     shape = RoundedCornerShape(50),
                 ) {}
                 Spacer(modifier = Modifier.height(16.dp))
@@ -250,7 +236,7 @@ fun LibraryScreen(
                     color = Color.White,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
-                HorizontalDivider(color = Color(0xFF474545))
+                HorizontalDivider(color = GratifyColors.SurfaceHighest)
                 
                 LibrarySortOption.values().forEach { option ->
                     Row(
@@ -267,13 +253,13 @@ fun LibraryScreen(
                         Text(
                             text = option.title,
                             style = typo().bodyLarge,
-                            color = if (sortOption == option) Color(0xFFE0E0E0) else Color.White
+                            color = if (sortOption == option) com.tan.gratify.ui.theme.GratifyColors.Accent else Color.White
                         )
                         if (sortOption == option) {
                             Icon(
                                 Icons.Rounded.Check,
                                 contentDescription = null,
-                                tint = Color(0xFFE0E0E0),
+                                tint = com.tan.gratify.ui.theme.GratifyColors.Accent,
                                 modifier = Modifier.size(24.dp)
                             )
                         }
@@ -289,7 +275,7 @@ fun LibraryScreen(
         ModalBottomSheet(
             onDismissRequest = { showPlaylistOptionSheet = false; selectedPlaylistForOption = null },
             sheetState = optionSheetState,
-            containerColor = Color(0xFF242424),
+            containerColor = GratifyColors.SurfaceRaised,
             contentColor = Color.White,
             dragHandle = null,
             scrimColor = Color.Black.copy(alpha = .5f),
@@ -300,7 +286,7 @@ fun LibraryScreen(
             ) {
                 Card(
                     modifier = Modifier.width(40.dp).height(4.dp),
-                    colors = CardDefaults.cardColors().copy(containerColor = Color(0xFF474545)),
+                    colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceHighest),
                     shape = RoundedCornerShape(50),
                 ) {}
                 Spacer(modifier = Modifier.height(16.dp))
@@ -312,7 +298,7 @@ fun LibraryScreen(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
                 )
-                HorizontalDivider(color = Color(0xFF474545), modifier = Modifier.padding(top = 12.dp))
+                HorizontalDivider(color = GratifyColors.SurfaceHighest, modifier = Modifier.padding(top = 12.dp))
 
                 // Hapus Playlist
                 Row(
@@ -333,14 +319,14 @@ fun LibraryScreen(
                     Icon(
                         painter = painterResource(Res.drawable.baseline_delete_24),
                         contentDescription = null,
-                        tint = Color(0xFFEF4444),
+                        tint = GratifyColors.Error,
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(Modifier.width(16.dp))
                     Text(
                         text = "Hapus playlist",
                         style = typo().bodyLarge,
-                        color = Color(0xFFEF4444)
+                        color = GratifyColors.Error
                     )
                 }
 
@@ -382,17 +368,17 @@ fun LibraryScreen(
         yourLocalPlaylist,
         followedArtists,
         youTubePlaylist,
-        appProfileName
+        libraryOwner
     ) {
         val list = mutableListOf<LibraryItemModel>()
         
         if (selectedChip == null || selectedChip == "Playlist") {
             list.add(LibraryItemModel(
                 title = "Lagu yang Disukai",
-                subtitle = "Playlist • $appProfileName",
+                subtitle = "Playlist • $libraryOwner",
                 placeholderRes = Res.drawable.baseline_favorite_24,
                 gradientColors = listOf(Color(0xFF8B5CF6), Color(0xFF3B82F6)),
-                titleColor = Color(0xFF10B981),
+                titleColor = GratifyColors.Accent,
                 onClick = { navController.navigate(LibraryDynamicPlaylistDestination(type = LibraryDynamicPlaylistType.Favorite.toStringParams())) },
                 type = "Playlist",
                 addedAt = 1000L
@@ -404,7 +390,7 @@ fun LibraryScreen(
                 title = "Tambahkan artis",
                 subtitle = "",
                 placeholderRes = Res.drawable.baseline_add_24,
-                gradientColors = listOf(Color(0xFF333333), Color(0xFF333333)),
+                gradientColors = listOf(GratifyColors.Divider, GratifyColors.Divider),
                 isCircle = true,
                 onClick = { navController.navigate(com.tan.gratify.ui.navigation.destination.library.ArtistSelectionDestination) },
                 type = "Artis",
@@ -417,7 +403,7 @@ fun LibraryScreen(
                 title = "Buat playlist",
                 subtitle = "",
                 placeholderRes = Res.drawable.baseline_add_24,
-                gradientColors = listOf(Color(0xFF333333), Color(0xFF333333)),
+                gradientColors = listOf(GratifyColors.Divider, GratifyColors.Divider),
                 onClick = { showAddSheet = true },
                 type = "Playlist",
                 addedAt = 800L
@@ -425,9 +411,9 @@ fun LibraryScreen(
             
             list.add(LibraryItemModel(
                 title = "Musik Di Unduh",
-                subtitle = "Playlist • $appProfileName",
+                subtitle = "Playlist • $libraryOwner",
                 placeholderRes = Res.drawable.baseline_downloaded,
-                gradientColors = listOf(Color(0xFF333333), Color(0xFF333333)),
+                gradientColors = listOf(GratifyColors.Divider, GratifyColors.Divider),
                 onClick = { navController.navigate(LibraryDynamicPlaylistDestination(type = LibraryDynamicPlaylistType.Downloaded.toStringParams())) },
                 type = "Playlist",
                 addedAt = 700L
@@ -435,9 +421,9 @@ fun LibraryScreen(
             
             list.add(LibraryItemModel(
                 title = "Riwayat Putar",
-                subtitle = "Playlist • $appProfileName",
+                subtitle = "Playlist • $libraryOwner",
                 placeholderRes = Res.drawable.baseline_history_24,
-                gradientColors = listOf(Color(0xFF333333), Color(0xFF333333)),
+                gradientColors = listOf(GratifyColors.Divider, GratifyColors.Divider),
                 onClick = { navController.navigate(RecentlySongsDestination) },
                 type = "Playlist",
                 addedAt = 600L
@@ -451,7 +437,7 @@ fun LibraryScreen(
                         title = playlist.title,
                         subtitle = "Playlist • ${playlist.tracks?.size ?: 0} lagu",
                         placeholderRes = Res.drawable.round_library_music_24,
-                        gradientColors = listOf(Color(0xFF333333), Color(0xFF333333)),
+                        gradientColors = listOf(GratifyColors.Divider, GratifyColors.Divider),
                         onClick = { navController.navigate(LocalPlaylistDestination(id = playlist.id)) },
                         type = "Playlist",
                         addedAt = playlist.id,
@@ -471,7 +457,7 @@ fun LibraryScreen(
                         subtitle = "Artis",
                         imageUrl = artist.thumbnails,
                         placeholderRes = Res.drawable.holder,
-                        gradientColors = listOf(Color(0xFF333333), Color(0xFF333333)),
+                        gradientColors = listOf(GratifyColors.Divider, GratifyColors.Divider),
                         isCircle = true,
                         onClick = { navController.navigate(com.tan.gratify.ui.navigation.destination.list.ArtistDestination(channelId = artist.channelId)) },
                         type = "Artis",
@@ -488,7 +474,7 @@ fun LibraryScreen(
                         title = playlist.title ?: "Playlist",
                         subtitle = "Playlist • YouTube",
                         placeholderRes = Res.drawable.baseline_queue_music_24,
-                        gradientColors = listOf(Color(0xFF333333), Color(0xFF333333)),
+                        gradientColors = listOf(GratifyColors.Divider, GratifyColors.Divider),
                         onClick = { navController.navigate(PlaylistDestination(playlistId = playlist.browseId.removePrefix("VL"), isYourYouTubePlaylist = true)) },
                         type = "Playlist",
                         addedAt = 400L - index,
@@ -509,9 +495,9 @@ fun LibraryScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().hazeSource(hazeState)) {
+    Box(modifier = Modifier.fillMaxSize()) {
         LazyVerticalGrid(
-            columns = if (isGridView) GridCells.Fixed(3) else GridCells.Fixed(1),
+            columns = if (isGridView) GridCells.Adaptive(160.dp) else GridCells.Fixed(1),
             contentPadding = innerPadding.copy(top = topAppBarHeight),
             state = state,
             modifier = Modifier.fillMaxSize()
@@ -519,26 +505,17 @@ fun LibraryScreen(
             // Chips row
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth(),
+                    modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50))
-                            .background(if (selectedChip == "Playlist") Color(0xFFE0E0E0) else Color.White.copy(alpha = 0.2f))
-                            .clickable { selectedChip = if (selectedChip == "Playlist") null else "Playlist" }
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        Text("Playlist", color = if (selectedChip == "Playlist") Color.Black else Color.White, style = typo().labelLarge)
+                    com.tan.gratify.ui.component.Chip(isSelected = selectedChip == null, text = stringResource(Res.string.all)) {
+                        selectedChip = null
                     }
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50))
-                            .background(if (selectedChip == "Artis") Color(0xFFE0E0E0) else Color.White.copy(alpha = 0.2f))
-                            .clickable { selectedChip = if (selectedChip == "Artis") null else "Artis" }
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        Text("Artis", color = if (selectedChip == "Artis") Color.Black else Color.White, style = typo().labelLarge)
+                    com.tan.gratify.ui.component.Chip(isSelected = selectedChip == "Playlist", text = stringResource(Res.string.playlists)) {
+                        selectedChip = if (selectedChip == "Playlist") null else "Playlist"
+                    }
+                    com.tan.gratify.ui.component.Chip(isSelected = selectedChip == "Artis", text = stringResource(Res.string.artists)) {
+                        selectedChip = if (selectedChip == "Artis") null else "Artis"
                     }
                 }
             }
@@ -555,16 +532,18 @@ fun LibraryScreen(
                         Spacer(Modifier.width(8.dp))
                         Text(sortOption.title, color = Color.White, style = typo().labelLarge)
                     }
-                    Icon(
-                        imageVector = if (isGridView) Icons.Rounded.ViewList else Icons.Rounded.GridView, 
-                        contentDescription = null, 
-                        tint = Color.White, 
-                        modifier = Modifier.size(20.dp).clickable { isGridView = !isGridView }
-                    )
+                    IconButton(onClick = { isGridView = !isGridView }) {
+                        Icon(
+                            imageVector = if (isGridView) Icons.Rounded.ViewList else Icons.Rounded.GridView,
+                            contentDescription = if (isGridView) "List view" else "Grid view",
+                            tint = GratifyColors.TextPrimary,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
                 }
             }
 
-            items(sortedItems) { item ->
+            items(sortedItems, key = { "${it.type}-${it.playlistId}-${it.title}-${it.imageUrl}" }) { item ->
                 LibraryListItem(
                     title = item.title,
                     subtitle = item.subtitle,
@@ -590,38 +569,15 @@ fun LibraryScreen(
     // Header (Top App Bar) with Haze
     Column(
         Modifier
-            .background(transparent)
-            .hazeEffect(hazeState, style = HazeMaterials.ultraThin()) {
-                blurEnabled = true
-            }.onGloballyPositioned { coordinates ->
+            .background(MaterialTheme.colorScheme.background).onGloballyPositioned { coordinates ->
                 topAppBarHeight = with(density) { coordinates.size.height.toDp() }
             },
     ) {
-        TopAppBar(
-            windowInsets = TopAppBarDefaults.windowInsets.exclude(
-                TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Start)
-            ),
-            title = {
-                val appProfileImage by dataStoreManager.getString("AppProfileImage").collectAsStateWithLifecycle(initialValue = "")
-                val appProfileName by dataStoreManager.getString("AppProfileName").collectAsStateWithLifecycle(initialValue = "")
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable { onOpenDrawer() }
-                ) {
-                    UserAvatar(
-                        imageUrl = appProfileImage,
-                        name = appProfileName,
-                        modifier = Modifier.size(32.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = "Koleksi Kamu",
-                        style = typo().titleLarge.copy(fontWeight = FontWeight.Bold),
-                        color = Color.White,
-                    )
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+        val headerImage by dataStoreManager.getString("AppProfileImage").collectAsStateWithLifecycle(initialValue = "")
+        val headerName by dataStoreManager.getString("AppProfileName").collectAsStateWithLifecycle(initialValue = "")
+        com.tan.gratify.ui.component.ScreenHeader(
+            title = stringResource(Res.string.library), profileName = headerName,
+            profileImage = headerImage, onOpenProfile = onOpenDrawer,
             actions = {
                 IconButton(onClick = { navController.navigate(SearchDestination) }) {
                     Icon(Icons.Rounded.Search, "Search", tint = Color.White)
@@ -629,7 +585,7 @@ fun LibraryScreen(
                 IconButton(onClick = { showAddSheet = true }) {
                     Icon(Icons.Rounded.Add, "Add Playlist", tint = Color.White)
                 }
-            }
+            },
         )
     }
 }
@@ -664,7 +620,7 @@ fun LibraryListItem(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f) // Square
-                    .clip(if (isCircle) CircleShape else RoundedCornerShape(4.dp))
+                    .clip(if (isCircle) CircleShape else GratifyShapes.extraSmall)
                     .angledGradientBackground(gradientColors, 45f)
             ) {
                 if (imageUrl != null) {
@@ -695,7 +651,7 @@ fun LibraryListItem(
                 Text(
                     text = subtitle,
                     style = typo().bodySmall,
-                    color = Color.LightGray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -716,7 +672,7 @@ fun LibraryListItem(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .size(64.dp)
-                    .clip(if (isCircle) CircleShape else RoundedCornerShape(4.dp))
+                    .clip(if (isCircle) CircleShape else GratifyShapes.extraSmall)
                     .angledGradientBackground(gradientColors, 45f)
             ) {
                 if (imageUrl != null) {
@@ -741,14 +697,15 @@ fun LibraryListItem(
                     text = title,
                     style = typo().bodyLarge.copy(fontWeight = FontWeight.Medium),
                     color = titleColor,
-                    maxLines = 1
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 if (subtitle.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = subtitle,
                         style = typo().bodyMedium,
-                        color = Color.Gray,
+                        color = GratifyColors.TextSecondary,
                         maxLines = 1
                     )
                 }

@@ -71,6 +71,8 @@ kotlin {
     jvm()
 
     sourceSets {
+        androidMain { kotlin.srcDir("src/androidJvmMain/kotlin") }
+        jvmMain { kotlin.srcDir("src/androidJvmMain/kotlin") }
         dependencies {
             val composeBom = project.dependencies.platform(libs.compose.bom)
             val koinBom = project.dependencies.platform(libs.koin.bom)
@@ -182,6 +184,7 @@ kotlin {
             implementation(libs.kotlin.test)
         }
         jvmMain.dependencies {
+            implementation(libs.androidx.sqlite.bundled)
             // Desktop app entry (main.kt), VLC setup, jpackage/Conveyor
             // packaging, and tray icon live in :desktopApp per the
             // JetBrains 2026 KMP default structure. This module keeps the
@@ -554,12 +557,12 @@ buildkonfig {
         buildConfigField(STRING, "versionName", versionName)
         buildConfigField(INT, "versionCode", "$versionCode")
 
-        buildConfigField(STRING, "sentryDsn", "")
 
         val localProps = Properties().apply {
             val file = rootProject.file("local.properties")
             if (file.exists()) load(file.inputStream())
         }
+        buildConfigField(STRING, "sentryDsn", if (isFullBuild) localProps.getProperty("SENTRY_DSN", "") else "")
         buildConfigField(STRING, "SUPABASE_URL", localProps.getProperty("SUPABASE_URL", ""))
         buildConfigField(STRING, "SUPABASE_KEY", localProps.getProperty("SUPABASE_KEY", ""))
     }

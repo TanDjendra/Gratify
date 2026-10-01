@@ -1,5 +1,7 @@
 package com.tan.gratify.ui.screen.home
 
+import androidx.compose.ui.text.style.TextOverflow
+
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.MarqueeAnimationMode
 import androidx.compose.foundation.basicMarquee
@@ -64,7 +66,7 @@ fun CreditScreen(
                 .padding(paddingValues)
                 .padding(top = 64.dp)
                 .verticalScroll(rememberScrollState())
-                .hazeSource(state = hazeState),
+                ,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(modifier = Modifier.height(30.dp))
@@ -232,22 +234,18 @@ fun CreditScreen(
     TopAppBar(
         modifier =
             Modifier
-                .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin()) {
-                    blurEnabled = true
-                },
+                ,
         title = {
             Text(
                 text = stringResource(Res.string.app_name),
                 style = typo().titleMedium,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 modifier =
                     Modifier
                         .fillMaxWidth()
                         .wrapContentHeight(
                             align = Alignment.CenterVertically,
-                        ).basicMarquee(
-                            iterations = Int.MAX_VALUE,
-                            animationMode = MarqueeAnimationMode.Immediately,
                         ).focusable(),
             )
         },

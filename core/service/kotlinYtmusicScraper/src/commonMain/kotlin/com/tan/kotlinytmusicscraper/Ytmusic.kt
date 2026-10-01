@@ -105,7 +105,7 @@ class Ytmusic {
             expectSuccess = true
             install(HttpRedirect) {
                 checkHttpMethod = false
-                allowHttpsDowngrade = true
+                allowHttpsDowngrade = false
             }
             // Disable logging for download - significantly improves performance
             // Note: Don't install Logging plugin for download client
@@ -161,11 +161,11 @@ class Ytmusic {
             }
             install(HttpRedirect) {
                 checkHttpMethod = false
-                allowHttpsDowngrade = true
+                allowHttpsDowngrade = false
             }
             install(Logging) {
                 logger = io.ktor.client.plugins.logging.Logger.DEFAULT
-                level = LogLevel.ALL
+                level = LogLevel.NONE
             }
             install(ContentNegotiation) {
                 protobuf()
@@ -455,7 +455,7 @@ class Ytmusic {
     }
 
     suspend fun getSuggestQuery(query: String) =
-        httpClient.get("http://suggestqueries.google.com/complete/search") {
+        httpClient.get("https://suggestqueries.google.com/complete/search") {
             contentType(ContentType.Application.Json)
             parameter("client", "firefox")
             parameter("ds", "yt")
@@ -598,7 +598,8 @@ class Ytmusic {
         }
 
     suspend fun checkForGithubReleaseUpdate() =
-        httpClient.get("https://tanweb.vercel.app/update.json") {
+        httpClient.get("https://api.github.com/repos/TanDjendra/Gratify/releases/latest") {
+            userAgent("Gratify-Update-Checker")
             contentType(ContentType.Application.Json)
         }
 
@@ -861,6 +862,7 @@ class Ytmusic {
         parallelDownloads: Int = DEFAULT_PARALLEL_DOWNLOADS,
     ): Flow<Triple<Boolean, Float, Int>> =
         channelFlow {
+            require(maxRetries >= 0 && parallelDownloads > 0) { "Invalid download options" }
             val fileSystem = FileSystem.SYSTEM
             val path = pathString.toPath()
             val downloadBufferSize = 256 * 1024
@@ -877,8 +879,9 @@ class Ytmusic {
                                 header("Range", "bytes=0-0")
                             }
                         rangeResponse.headers["Content-Range"] != null ||
-                            rangeResponse.status.value in 200..299
+                            rangeResponse.status.value == 206
                     } catch (e: Exception) {
+                        if (e is kotlinx.coroutines.CancellationException) throw e
                         false
                     }
 
@@ -889,6 +892,7 @@ class Ytmusic {
                             header("User-Agent", DOWNLOAD_USER_AGENT)
                         }.headers[HttpHeaders.ContentLength]?.toLong() ?: 0L
                     } catch (e: Exception) {
+                        if (e is kotlinx.coroutines.CancellationException) throw e
                         0L
                     }
 
@@ -906,7 +910,8 @@ class Ytmusic {
                         },
                         onComplete = { success, exception ->
                             lastException = exception
-                            trySend(Triple(true, if (success) 1f else 0f, 0))
+                            if (success) trySend(Triple(true, 1f, 0))
+                            else lastException = exception ?: okio.IOException("Download failed")
                         },
                     )
                 } else {
@@ -921,10 +926,12 @@ class Ytmusic {
                         },
                         onComplete = { success, exception ->
                             lastException = exception
-                            trySend(Triple(true, if (success) 1f else 0f, 0))
+                            if (success) trySend(Triple(true, 1f, 0))
+                            else lastException = exception ?: okio.IOException("Download failed")
                         },
                     )
                 }
+                lastException?.let { throw it }
             }
         }
 
@@ -976,21 +983,32 @@ class Ytmusic {
                                         if (res.status.value != 206) {
                                             throw IllegalStateException("Server returned ${res.status.value} instead of 206 for Range request")
                                         }
+                                        val expected = endByte - startByte + 1
+                                        val range = Regex("""bytes\s+(\d+)-(\d+)/(\d+|\*)""", RegexOption.IGNORE_CASE)
+                                            .matchEntire(res.headers["Content-Range"].orEmpty().trim())
+                                        check(range != null && range.groupValues[1].toLongOrNull() == startByte &&
+                                            range.groupValues[2].toLongOrNull() == endByte &&
+                                            (range.groupValues[3] == "*" || range.groupValues[3].toLongOrNull() == fileSize)) { "Invalid download range" }
+                                        var received = 0L
                                         val channel = res.bodyAsChannel()
                                         fileSystem.sink(tempFiles[index]).buffer().use { sink ->
                                             while (!channel.isClosedForRead) {
                                                 val packet = channel.readRemaining(downloadBufferSize.toLong())
                                                 while (!packet.exhausted()) {
                                                     val bytes = packet.readByteArray()
+                                                    received += bytes.size
+                                                    check(received <= expected) { "Download chunk exceeds requested range" }
                                                     sink.write(bytes)
                                                 }
                                             }
                                         }
+                                        check(received == expected) { "Incomplete download chunk" }
                                     }
                                     success = true
                                     Logger.d(TAG, "Chunk $index downloaded: $startByte-$endByte")
                                 } catch (e: Exception) {
-                                    Logger.e(TAG, "Chunk $index download failed: ${e.message}")
+                                    if (e is kotlinx.coroutines.CancellationException) throw e
+                                    Logger.e(TAG, "Chunk $index download failed")
                                     attempt++
                                     if (attempt > maxRetries) {
                                         throw e
@@ -1034,10 +1052,11 @@ class Ytmusic {
             // Cleanup temp directory
             fileSystem.delete(tempDir)
 
+            check(fileSystem.metadata(path).size == fileSize) { "Incomplete merged download" }
+
             Logger.d(TAG, "Parallel download completed: $fileSize bytes")
             onComplete(true, null)
         } catch (e: Exception) {
-            Logger.e(TAG, "Parallel download failed: ${e.message}")
             // Cleanup temp directory
             try {
                 if (fileSystem.exists(tempDir)) {
@@ -1046,6 +1065,8 @@ class Ytmusic {
             } catch (ignored: Exception) {
                 // Ignore cleanup errors
             }
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            Logger.e(TAG, "Parallel download failed")
             onComplete(false, e)
         }
     }
@@ -1058,103 +1079,41 @@ class Ytmusic {
         onProgress: suspend (Float, Int) -> Unit,
         onComplete: (Boolean, Throwable?) -> Unit,
     ) {
-        val fileSystem = FileSystem.SYSTEM
-        var lastException: Throwable? = null
-        var downloadedBytes = 0L
-        var jobDone = 0
-
-        repeat(maxRetries + 1) { attempt ->
-            if (jobDone == 1) return@repeat
-
-            if (attempt > 0) {
-                try {
-                    if (fileSystem.exists(path)) {
-                        fileSystem.delete(path)
-                    }
-                } catch (e: IOException) {
-                    e.printStackTrace()
-                }
-                downloadedBytes = 0L
-                val delayMs = (500L * (1 shl (attempt - 1))).coerceAtMost(10000L)
-                Logger.d(TAG, "Retry attempt $attempt after ${delayMs}ms delay")
-                delay(delayMs)
-            }
-
+        var failure: Throwable? = null
+        for (attempt in 0..maxRetries.coerceAtLeast(0)) {
+            if (attempt > 0) delay((500L * (1L shl (attempt - 1).coerceAtMost(5))).coerceAtMost(10_000))
             try {
-                val length =
-                    head(url) {
-                        header("User-Agent", DOWNLOAD_USER_AGENT)
-                    }.headers[HttpHeaders.ContentLength]?.toLong() ?: 0
-
-                coroutineScope {
-                    val downloadJob =
-                        launch {
-                            runCatching {
-                                prepareRequest {
-                                    url(url)
-                                    header("User-Agent", DOWNLOAD_USER_AGENT)
-                                    header("Accept", "*/*")
-                                }.execute { res ->
-                                    val channel = res.bodyAsChannel()
-                                    fileSystem.sink(path).buffer().use { sink ->
-                                        while (!channel.isClosedForRead) {
-                                            val packet = channel.readRemaining(downloadBufferSize.toLong())
-                                            while (!packet.exhausted()) {
-                                                val bytes = packet.readByteArray()
-                                                sink.write(bytes)
-                                                downloadedBytes += bytes.size
-                                            }
-                                        }
-                                    }
-                                }
-                            }.onSuccess {
-                                Logger.d(TAG, "Download completed: $downloadedBytes bytes")
-                                jobDone = 1
-                            }.onFailure { e ->
-                                Logger.e(TAG, "Download failed: ${e.message}")
-                                lastException = e
-                                jobDone = 1
+                var downloaded = 0L
+                val started = kotlin.time.TimeSource.Monotonic.markNow()
+                prepareRequest {
+                    url(url)
+                    header("User-Agent", DOWNLOAD_USER_AGENT)
+                    header("Accept", "*/*")
+                }.execute { response ->
+                    check(response.status.value in 200..299) { "Download HTTP ${response.status.value}" }
+                    val length = response.headers[HttpHeaders.ContentLength]?.toLongOrNull() ?: 0L
+                    val channel = response.bodyAsChannel()
+                    FileSystem.SYSTEM.sink(path).buffer().use { sink ->
+                        while (!channel.isClosedForRead) {
+                            val packet = channel.readRemaining(downloadBufferSize.toLong())
+                            while (!packet.exhausted()) {
+                                val bytes = packet.readByteArray()
+                                sink.write(bytes)
+                                downloaded += bytes.size
                             }
+                            val seconds = started.elapsedNow().inWholeMilliseconds.coerceAtLeast(1) / 1000.0
+                            onProgress(if (length > 0) (downloaded.toFloat() / length).coerceIn(0f, 1f) else 0f,
+                                (downloaded / 1024.0 / seconds).toInt())
                         }
-
-                    val emitJob =
-                        launch {
-                            var lastEmittedProgress = -1f
-                            while (jobDone < 1) {
-                                delay(200)
-                                if (length > 0) {
-                                    val progress = downloadedBytes.toFloat() / length
-                                    val progressDiff =
-                                        if (progress > lastEmittedProgress) {
-                                            progress - lastEmittedProgress
-                                        } else {
-                                            lastEmittedProgress - progress
-                                        }
-                                    if (progressDiff >= 0.01f || progress >= 1f) {
-                                        val elapsedSeconds = (downloadedBytes / 1024.0) / 200.0
-                                        val speed = if (elapsedSeconds > 0) (downloadedBytes / elapsedSeconds / 1024).toInt() else 0
-                                        lastEmittedProgress = progress
-                                        onProgress(progress, speed)
-                                    }
-                                }
-                            }
-                        }
-
-                    downloadJob.join()
-                    emitJob.cancel()
+                    }
+                    check(downloaded > 0 && (length <= 0 || downloaded == length)) { "Incomplete download" }
                 }
-            } catch (e: Exception) {
-                Logger.e(TAG, "Download attempt $attempt failed: ${e.message}")
-                lastException = e
-                if (attempt == maxRetries) {
-                    jobDone = 1
-                }
-            }
+                onComplete(true, null)
+                return
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) { failure = e }
         }
-
-        Logger.d(TAG, "Download finished: $downloadedBytes bytes")
-        val isSuccess = lastException == null && downloadedBytes > 0
-        onComplete(isSuccess, lastException)
+        onComplete(false, failure ?: okio.IOException("Download failed"))
     }
 
     suspend fun is403Url(url: String): Boolean {
@@ -1163,7 +1122,7 @@ class Ytmusic {
         } catch (e: io.ktor.client.plugins.ResponseException) {
             e.response.status.value in 400..499
         } catch (e: Exception) {
-            e.printStackTrace()
+            Logger.w(TAG, "Network operation failed")
             false
         }
     }

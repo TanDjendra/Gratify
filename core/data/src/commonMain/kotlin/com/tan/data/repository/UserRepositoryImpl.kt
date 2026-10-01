@@ -7,19 +7,57 @@ import com.tan.domain.repository.UserRepository
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.flow.Flow
+import kotlinx.serialization.json.*
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.flow.flow
 import io.github.jan.supabase.postgrest.query.Columns
+import io.github.jan.supabase.auth.auth
+import com.tan.domain.manager.DataStoreManager
+import com.tan.data.sync.LegacyProfilePrivacyMigration
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class UserRepositoryImpl(
-    private val supabase: SupabaseClient
+    private val supabase: SupabaseClient,
+    private val preferences: DataStoreManager? = null,
 ) : UserRepository {
+    private val privacyMutex = Mutex()
+
+    private suspend fun publishPrivacy(setting: String, visible: Boolean) {
+        supabase.postgrest.rpc("gratify_set_profile_privacy", buildJsonObject {
+            put("p_setting", setting); put("p_visible", visible)
+        })
+    }
+
+    override suspend fun setProfilePrivacy(setting: String, visible: Boolean): Result<Unit> = try {
+        privacyMutex.withLock {
+            val owner = requireNotNull(supabase.auth.currentUserOrNull()?.id)
+            preferences?.let { LegacyProfilePrivacyMigration(it).apply(owner) { key, value ->
+                check(supabase.auth.currentUserOrNull()?.id == owner) { "Account ownership changed" }
+                publishPrivacy(key, value)
+            } }
+            check(supabase.auth.currentUserOrNull()?.id == owner) { "Account ownership changed" }
+            publishPrivacy(setting, visible)
+        }
+        Result.success(Unit)
+    } catch (e: CancellationException) { throw e }
+    catch (e: Exception) { Result.failure(e) }
+
 
     override fun getUserProfile(userId: String): Flow<UserProfile?> = flow {
         // Penting: emit HARUS di luar try/catch. Kalau di dalam, saat consumer memakai
         // first()/firstOrNull() dan membatalkan flow, AbortFlowException dari emit akan
         // tertangkap catch lalu emit(null) → "Emissions from 'catch' blocks are prohibited" → crash.
         val profile = try {
-            supabase.postgrest["profiles"]
+            if (preferences != null && supabase.auth.currentUserOrNull()?.id == userId) {
+                privacyMutex.withLock {
+                    LegacyProfilePrivacyMigration(preferences).apply(userId) { key, value ->
+                        check(supabase.auth.currentUserOrNull()?.id == userId) { "Account ownership changed" }
+                        publishPrivacy(key, value)
+                    }
+                }
+            }
+            supabase.postgrest["public_profiles"]
                 .select {
                     filter {
                         eq("id", userId)
@@ -29,7 +67,7 @@ class UserRepositoryImpl(
         } catch (e: kotlin.coroutines.cancellation.CancellationException) {
             throw e
         } catch (e: Exception) {
-            e.printStackTrace()
+            if (e is CancellationException) throw e
             null
         }
         emit(profile)
@@ -43,7 +81,7 @@ class UserRepositoryImpl(
                 return@flow
             }
             
-            val results = supabase.postgrest["profiles"]
+            val results = supabase.postgrest["public_profiles"]
                 .select {
                     filter {
                         ilike("display_name", "%$q%")
@@ -52,7 +90,7 @@ class UserRepositoryImpl(
                 .decodeList<UserProfile>()
             emit(results)
         } catch (e: Exception) {
-            e.printStackTrace()
+            if (e is CancellationException) throw e
             emit(emptyList())
         }
     }
@@ -63,7 +101,7 @@ class UserRepositoryImpl(
             supabase.postgrest["follows"].insert(follow)
             emit(Result.success(Unit))
         } catch (e: Exception) {
-            e.printStackTrace()
+            if (e is CancellationException) throw e
             emit(Result.failure(e))
         }
     }
@@ -78,7 +116,7 @@ class UserRepositoryImpl(
             }
             emit(Result.success(Unit))
         } catch (e: Exception) {
-            e.printStackTrace()
+            if (e is CancellationException) throw e
             emit(Result.failure(e))
         }
     }
@@ -100,7 +138,7 @@ class UserRepositoryImpl(
 
             val followerIds = follows.map { it.followerId }.filter { it.isNotBlank() }
             val profiles = try {
-                supabase.postgrest["profiles"]
+                supabase.postgrest["public_profiles"]
                     .select {
                         filter {
                             isIn("id", followerIds)
@@ -108,6 +146,7 @@ class UserRepositoryImpl(
                     }
                     .decodeList<UserProfile>()
             } catch (e: Exception) {
+            if (e is CancellationException) throw e
                 emptyList()
             }
             
@@ -117,7 +156,7 @@ class UserRepositoryImpl(
             }
             emit(completeProfiles)
         } catch (e: Exception) {
-            e.printStackTrace()
+            if (e is CancellationException) throw e
             emit(emptyList())
         }
     }
@@ -139,7 +178,7 @@ class UserRepositoryImpl(
 
             val followingIds = follows.map { it.followingId }.filter { it.isNotBlank() }
             val profiles = try {
-                supabase.postgrest["profiles"]
+                supabase.postgrest["public_profiles"]
                     .select {
                         filter {
                             isIn("id", followingIds)
@@ -147,6 +186,7 @@ class UserRepositoryImpl(
                     }
                     .decodeList<UserProfile>()
             } catch (e: Exception) {
+            if (e is CancellationException) throw e
                 emptyList()
             }
             
@@ -156,7 +196,7 @@ class UserRepositoryImpl(
             }
             emit(completeProfiles)
         } catch (e: Exception) {
-            e.printStackTrace()
+            if (e is CancellationException) throw e
             emit(emptyList())
         }
     }
@@ -174,7 +214,7 @@ class UserRepositoryImpl(
                 .size
             emit(count > 0)
         } catch (e: Exception) {
-            e.printStackTrace()
+            if (e is CancellationException) throw e
             emit(false)
         }
     }
@@ -182,10 +222,12 @@ class UserRepositoryImpl(
 
     override fun upsertUserProfile(profile: UserProfile): Flow<Result<Unit>> = flow {
         try {
-            supabase.postgrest["profiles"].upsert(profile)
+            val json = Json.encodeToJsonElement(profile).jsonObject
+            val payload = JsonObject(json.filterKeys { it !in setOf("show_followers", "show_playlists", "show_recent_artists") })
+            supabase.postgrest["profiles"].upsert(payload)
             emit(Result.success(Unit))
         } catch (e: Exception) {
-            e.printStackTrace()
+            if (e is CancellationException) throw e
             emit(Result.failure(e))
         }
     }
@@ -199,7 +241,7 @@ class UserRepositoryImpl(
             }
             emit(Result.success(Unit))
         } catch (e: Exception) {
-            e.printStackTrace()
+            if (e is CancellationException) throw e
             emit(Result.failure(e))
         }
     }
@@ -217,7 +259,7 @@ class UserRepositoryImpl(
             }
             emit(Result.success(Unit))
         } catch (e: Exception) {
-            e.printStackTrace()
+            if (e is CancellationException) throw e
             emit(Result.failure(e))
         }
     }
@@ -240,7 +282,7 @@ class UserRepositoryImpl(
             }
             emit(Result.success(Unit))
         } catch (e: Exception) {
-            e.printStackTrace()
+            if (e is CancellationException) throw e
             emit(Result.failure(e))
         }
     }

@@ -130,13 +130,13 @@ internal class LyricsCanvasRepositoryImpl(
                     ) {
                         spotifyPersonalToken = dataStoreManager.spotifyPersonalToken.first()
                         spotifyClientToken = dataStoreManager.spotifyClientToken.first()
-                        Logger.d("Canvas", "spotifyPersonalToken: $spotifyPersonalToken")
-                        Logger.d("Canvas", "spotifyClientToken: $spotifyClientToken")
+                        Logger.d("Credentials", "Credential state updated")
+                        Logger.d("Credentials", "Credential state updated")
                     } else if (dataStoreManager.spdc.first().isNotEmpty()) {
                         spotify
                             .getClientToken()
                             .onSuccess {
-                                Logger.d("Canvas", "Request clientToken: ${it.grantedToken.token}")
+                                Logger.d("Credentials", "Credential state updated")
                                 dataStoreManager.setSpotifyClientTokenExpires(
                                     (it.grantedToken.expiresAfterSeconds * 1000L) + Clock.System.now().toEpochMilliseconds(),
                                 )
@@ -154,7 +154,7 @@ internal class LyricsCanvasRepositoryImpl(
                                 dataStoreManager.setSpotifyPersonalTokenExpires(
                                     it.accessTokenExpirationTimestampMs,
                                 )
-                                Logger.d("Canvas", "Request spotifyPersonalToken: $spotifyPersonalToken")
+                                Logger.d("Credentials", "Credential state updated")
                             }.onFailure {
                                 it.printStackTrace()
                                 emit(Resource.Error<CanvasResult>(it.message ?: "Not found"))
@@ -274,14 +274,14 @@ internal class LyricsCanvasRepositoryImpl(
                 ) {
                     spotifyPersonalToken = dataStoreManager.spotifyPersonalToken.first()
                     spotifyClientToken = dataStoreManager.spotifyClientToken.first()
-                    Logger.d("Lyrics", "spotifyPersonalToken: $spotifyPersonalToken")
-                    Logger.d("Lyrics", "spotifyClientToken: $spotifyClientToken")
+                    Logger.d("Credentials", "Credential state updated")
+                    Logger.d("Credentials", "Credential state updated")
                 } else if (dataStoreManager.spdc.first().isNotEmpty()) {
                     runBlocking {
                         spotify
                             .getClientToken()
                             .onSuccess {
-                                Logger.d("Canvas", "Request clientToken: ${it.grantedToken.token}")
+                                Logger.d("Credentials", "Credential state updated")
                                 dataStoreManager.setSpotifyClientTokenExpires(
                                     (it.grantedToken.expiresAfterSeconds * 1000L) + Clock.System.now().toEpochMilliseconds(),
                                 )
@@ -301,7 +301,7 @@ internal class LyricsCanvasRepositoryImpl(
                                 dataStoreManager.setSpotifyPersonalTokenExpires(
                                     it.accessTokenExpirationTimestampMs,
                                 )
-                                Logger.d("Lyrics", "REQUEST spotifyPersonalToken: $spotifyPersonalToken")
+                                Logger.d("Credentials", "Credential state updated")
                             }.onFailure {
                                 it.printStackTrace()
                                 emit(Resource.Error<Lyrics>("Not found"))
@@ -310,7 +310,7 @@ internal class LyricsCanvasRepositoryImpl(
                 }
                 if (spotifyPersonalToken.isNotEmpty() && spotifyClientToken.isNotEmpty()) {
                     val authToken = spotifyPersonalToken
-                    Logger.d("Lyrics", "authToken: $authToken")
+                    Logger.d("Credentials", "Credential state updated")
                     spotify
                         .searchSpotifyTrack(q, authToken, spotifyClientToken)
                         .onSuccess { searchResponse ->
