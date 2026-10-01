@@ -1,5 +1,5 @@
 {
-  "status": "EVENT_RECEIVED_MAPPING_PENDING",
+  "status": "EVENT_RECEIVED_CI_MAPPING_UPLOAD_VERIFIED",
   "project": "gratify-android",
   "organization": "calestaan",
   "issue": "GRATIFY-ANDROID-1",
@@ -13,5 +13,9 @@
     "provider-derived coarse geography"
   ],
   "mapping_missing_for_local_test_apk": true,
-  "evidence": "sentry-event-proof.jpg"
+  "evidence": "sentry-event-proof.jpg",
+  "ci_mapping_upload_verified": true,
+  "ci_mapping_uuid": "3401c637-9f61-3b3d-8299-022ede22078a",
+  "ci_run_url": "https://github.com/TanDjendra/Gratify/actions/runs/36873302675",
+  "mapping_scope": "Controlled crash event used an older APK whose mapping was not uploaded. Mapping 3401c637-9f61-3b3d-8299-022ede22078a was uploaded for the subsequent release; latest search release upload pending."
 }

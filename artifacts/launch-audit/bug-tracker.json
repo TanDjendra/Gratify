@@ -429,7 +429,7 @@
     "priority": null,
     "launch_severity": "High",
     "location": "[androidApp Gradle](D:/Tan/Gratify/androidApp/build.gradle.kts:185)",
-    "status": "IMPLEMENTED_REQUIRES_SENTRY_CONFIGURATION",
+    "status": "ANDROID_EVENT_RECEIVED_CI_MAPPING_UPLOAD_VERIFIED_DESKTOP_UNVERIFIED",
     "assignee": "Codex — perbaikan lokal",
     "original_audit_status": "OPEN",
     "repair_report": "LAUNCH_COMPLETION_2026-10-01.md"
@@ -440,7 +440,7 @@
     "priority": null,
     "launch_severity": "High",
     "location": "[android.yml](D:/Tan/Gratify/.github/workflows/android.yml:44)",
-    "status": "IMPLEMENTED_REQUIRES_CI_RUN",
+    "status": "FIXED_CI_VERIFIED",
     "assignee": "Codex — perbaikan lokal",
     "original_audit_status": "OPEN",
     "repair_report": "LAUNCH_COMPLETION_2026-10-01.md"
@@ -476,7 +476,7 @@
     "id": "R03",
     "title": "Pembuatan playlist memerlukan empat lagu dan dapat meninggalkan data parsial saat gagal",
     "priority": "P1",
-    "status": "FIXED_LOCAL_TRANSACTION_TESTED_REQUIRES_DEVICE_UAT",
+    "status": "FIXED_TRANSACTION_TESTED_EMPTY_PLAYLIST_DEVICE_VERIFIED",
     "repair_report": "LAUNCH_COMPLETION_2026-10-01.md",
     "discovered_by": "Live service/device/CI verification"
   },
@@ -492,8 +492,16 @@
     "id": "R05",
     "title": "Build CI bersih gagal karena urutan resource AboutLibraries belum dideklarasikan",
     "priority": "P1",
-    "status": "FIXED_LOCAL_RESOURCE_TASK_ORDER_VERIFIED_REQUIRES_CI_RERUN",
+    "status": "FIXED_CI_VERIFIED",
     "repair_report": "LAUNCH_COMPLETION_2026-10-01.md",
     "discovered_by": "Live service/device/CI verification"
+  },
+  {
+    "id": "R06",
+    "title": "Kolom pencarian tidak membuka papan ketik karena input SearchBar tidak diaktifkan",
+    "priority": "P1",
+    "status": "FIXED_DEBUG_DEVICE_VERIFIED_RELEASE_PENDING",
+    "repair_report": "LAUNCH_COMPLETION_2026-10-01.md",
+    "discovered_by": "Native Android search and album smoke test"
   }
 ]

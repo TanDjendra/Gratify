@@ -62,8 +62,10 @@ for bug in tracker:
     if bug["id"] in server_ids:
         bug["status"]="DEPLOYED_LIVE_RPC_RLS_VERIFIED_REQUIRES_DEVICE_UAT" if server_verified else "READY_FOR_DATABASE_DEPLOYMENT"
     elif bug["id"]=="L02":bug["status"]="DRAFT_REQUIRES_OWNER_REVIEW"
-    elif bug["id"]=="L03":bug["status"]="EVENT_RECEIVED_REQUIRES_MAPPING_VERIFICATION" if monitoring.get("status","").startswith("EVENT_RECEIVED") else "IMPLEMENTED_REQUIRES_SENTRY_CONFIGURATION"
-    elif bug["id"]=="L04":bug["status"]="IMPLEMENTED_REQUIRES_CURRENT_CI_SUCCESS"
+    elif bug["id"]=="L03":
+        bug["status"]=("ANDROID_EVENT_RECEIVED_CI_MAPPING_UPLOAD_VERIFIED_DESKTOP_UNVERIFIED" if monitoring.get("ci_mapping_upload_verified") and monitoring.get("status", "").startswith("EVENT_RECEIVED") else "EVENT_RECEIVED_REQUIRES_MAPPING_VERIFICATION" if monitoring.get("status","").startswith("EVENT_RECEIVED") else "IMPLEMENTED_REQUIRES_SENTRY_CONFIGURATION")
+    elif bug["id"]=="L04":
+        bug["status"]="FIXED_CI_VERIFIED" if ci.get("conclusion")=="success" else "IMPLEMENTED_REQUIRES_CURRENT_CI_SUCCESS"
     # Runtime discoveries and existing UAT statuses retain their specific evidence.
 trackerfile.write_text(json.dumps(tracker,indent=2,ensure_ascii=False))
 print(json.dumps({"tests":tests,"test_failures":failures,"build_successful":successful,"release_signed":signed_verified,

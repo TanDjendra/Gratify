@@ -33,8 +33,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SearchBar
-import androidx.compose.material3.SearchBarDefaults
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -245,70 +248,51 @@ fun SearchScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(modifier = Modifier.weight(1f)) {
-                SearchBar(
-                    inputField = {
-                        SearchBarDefaults.InputField(
-                            query = searchText,
-                            onQueryChange = { newText ->
-                                searchViewModel.cancelSearch()
-                                searchText = newText
-                            },
-                            onSearch = { query ->
-                                if (query.isNotEmpty()) {
-                                    isSearchSubmitted = true
-                                    focusManager.clearFocus()
-                                    searchViewModel.insertSearchHistory(query)
-                                    if (query.startsWith("@")) {
-                                        searchViewModel.searchUsers(query)
-                                    } else {
-                                        searchViewModel.search(query)
-                                    }
-                                }
-                            },
-                            expanded = false,
-                            onExpandedChange = {},
-                            enabled = true,
-                            placeholder = {
-                                Text(
-                                    text = stringResource(Res.string.what_do_you_want_to_listen_to),
-                                    style = typo().bodyMedium,
-                                )
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    painter = painterResource(Res.drawable.baseline_search_24),
-                                    contentDescription = "Search",
-                                )
-                            },
-                            trailingIcon = {
-                                if (searchText.isNotEmpty()) {
-                                    IconButton(
-                                        modifier = Modifier.clip(CircleShape),
-                                        onClick = {
-                                            searchText = ""
-                                            isSearchSubmitted = false
-                                        },
-                                    ) {
-                                        Icon(
-                                            painter = painterResource(Res.drawable.baseline_close_24),
-                                            contentDescription = "Clear search",
-                                        )
-                                    }
-                                }
-                            },
-                        )
+                TextField(
+                    value = searchText,
+                    onValueChange = { newText ->
+                        searchViewModel.cancelSearch()
+                        searchText = newText
                     },
-                    expanded = false,
-                    onExpandedChange = {},
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .focusRequester(focusRequester)
-                            .onFocusChanged {
-                                isFocused = it.isFocused
-                            },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = {
+                        val query = searchText.trim()
+                        if (query.isNotEmpty()) {
+                            searchText = query
+                            isSearchSubmitted = true
+                            focusManager.clearFocus()
+                            searchViewModel.insertSearchHistory(query)
+                            if (query.startsWith("@")) searchViewModel.searchUsers(query)
+                            else searchViewModel.search(query)
+                        }
+                    }),
+                    placeholder = {
+                        Text(stringResource(Res.string.what_do_you_want_to_listen_to), style = typo().bodyMedium)
+                    },
+                    leadingIcon = {
+                        Icon(painterResource(Res.drawable.baseline_search_24), contentDescription = null)
+                    },
+                    trailingIcon = {
+                        if (searchText.isNotEmpty()) {
+                            IconButton(onClick = {
+                                searchViewModel.cancelSearch()
+                                searchText = ""
+                                isSearchSubmitted = false
+                            }) {
+                                Icon(painterResource(Res.drawable.baseline_close_24), contentDescription = "Clear search")
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().focusRequester(focusRequester)
+                        .onFocusChanged { isFocused = it.isFocused },
                     shape = GratifyShapes.large,
-                    content = {},
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = GratifyColors.Surface,
+                        unfocusedContainerColor = GratifyColors.Surface,
+                        focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                        unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                    ),
                 )
             }
         }

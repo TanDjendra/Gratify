@@ -68,6 +68,11 @@ try:
                                       if "certificate SHA-256 digest:" in line],
                   original_keystore_sha256=hashlib.sha256(keystore.read_bytes()).hexdigest(),
                   installed_application_update_tested=False)
+    runtime_path = OUT / "device-runtime-verification.json"
+    if runtime_path.is_file():
+        runtime = json.loads(runtime_path.read_text())
+        if runtime.get("signed_apk_sha256") == report["sha256"]:
+            report["installed_application_update_tested"] = runtime.get("installed_update_session_retained") is True
     aligned.unlink(missing_ok=True)
 except Exception as error:
     report["error_type"] = type(error).__name__

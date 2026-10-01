@@ -48,12 +48,16 @@ assert newpipe_block is not None and "public static void trustEveryone()" in new
 assert newpipe_block.group(1).count("public static void init(") == 3
 assert "dev.maxrave.pipepipe.extractor.NewPipe$1\n" in r8_usage
 assert "dev.maxrave.pipepipe.extractor.NewPipe$2\n" in r8_usage
+apk_hash = hashlib.sha256(APK.read_bytes()).hexdigest()
+runtime_path = OUT / "device-runtime-verification.json"
+runtime = json.loads(runtime_path.read_text()) if runtime_path.is_file() else {}
+matching_runtime = runtime.get("signed_apk_sha256") == apk_hash
 report = {"status": "PASS", "signed_apk": str(APK), "sha256": hashlib.sha256(APK.read_bytes()).hexdigest(),
           "release_package_correct": True, "debuggable": False, "abis": ["arm64-v8a", "armeabi-v7a", "x86_64"],
           "elf_64bit_libraries_checked": len(libraries), "elf_load_segments_16k_aligned": True,
-          "page_size_device_runtime_tested": False, "libraries": libraries,
+          "page_size_device_runtime_tested": matching_runtime and runtime.get("page_size_bytes") == 16384 and runtime.get("startup_verified") is True, "libraries": libraries,
           "r8_removed_unused_insecure_pipepipe_initializers": True,
           "r8_usage_sha256": hashlib.sha256(r8_usage_path.read_bytes()).hexdigest(),
-          "lint_errors": errors, "lint_issues_by_id": counts, "installed_application_update_tested": False}
+          "lint_errors": errors, "lint_issues_by_id": counts, "installed_application_update_tested": matching_runtime and runtime.get("installed_update_session_retained") is True}
 (OUT / "release-package-verification.json").write_text(json.dumps(report, indent=2))
 print(json.dumps({key: value for key, value in report.items() if key != "libraries"}, indent=2))

@@ -36,6 +36,7 @@ def redact(text):
 parser=argparse.ArgumentParser()
 parser.add_argument('action',choices=['snapshot','tap','login','screenshot','runtime'])
 parser.add_argument('value',nargs='?')
+parser.add_argument('--package', choices=['com.tan.gratify', 'com.tan.gratify.dev'], default='com.tan.gratify')
 args=parser.parse_args()
 if args.action=='snapshot':
     for node in tree().iter('node'):
@@ -60,5 +61,5 @@ elif args.action=='screenshot':
     print(destination)
 else:
     crash=adb('logcat','-d','-b','crash').decode(errors='replace')
-    pid=adb('shell','pidof','com.tan.gratify').decode().strip()
-    print(json.dumps({'process_running':bool(pid),'crash_buffer_empty':not crash.strip(),'page_size':adb('shell','getconf','PAGE_SIZE').decode().strip()}))
+    pid=adb('shell','pidof',args.package).decode().strip()
+    print(json.dumps({'package':args.package,'process_running':bool(pid),'crash_buffer_empty':not crash.strip(),'page_size':adb('shell','getconf','PAGE_SIZE').decode().strip()}))

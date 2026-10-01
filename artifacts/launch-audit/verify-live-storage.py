@@ -23,6 +23,10 @@ def request(path,method='GET',body=None,token=None,admin=False,raw=None):
     except urllib.error.HTTPError as e:return e.code,None
 
 try:
+    status,data=request('/auth/v1/token?grant_type=password','POST',{k:a[k] for k in ('email','password')})
+    assert status==200,('owner_login',status)
+    a['access_token']=data['access_token']
+    (PRIVATE/'test-accounts.json').write_text(json.dumps([a]))
     b={'email':'gratify.storage.'+uuid.uuid4().hex+'@example.invalid','password':secrets.token_hex(24)}
     status,data=request('/auth/v1/admin/users','POST',{**b,'email_confirm':True},admin=True)
     assert status in (200,201),('create',status)
