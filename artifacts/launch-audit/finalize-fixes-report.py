@@ -12,7 +12,11 @@ for module in modules:
         suites.append({"module":module,"suite":suite.attrib["name"],"tests":int(suite.attrib["tests"]),"failures":int(suite.attrib["failures"]),"errors":int(suite.attrib["errors"])})
 tests = sum(x["tests"] for x in suites)
 failures = sum(x["failures"]+x["errors"] for x in suites)
-log = (OUT/"completion-final-build.log").read_text(errors="replace")
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("--build-log", default="playlist-device-fixes-build-final.log")
+args = parser.parse_args()
+log = (OUT/args.build_log).read_text(errors="replace")
 successful = "BUILD SUCCESSFUL" in log and "BUILD FAILED" not in log
 packaging_log = log
 packaging_successful = "BUILD SUCCESSFUL" in packaging_log and "BUILD FAILED" not in packaging_log
@@ -29,28 +33,38 @@ lint = None
 if lintfile.exists():
     issues = ET.parse(lintfile).getroot().findall("issue")
     lint = {"errors":sum(x.attrib.get("severity") in ("Error","Fatal") for x in issues),"warnings":sum(x.attrib.get("severity")=="Warning" for x in issues)}
-report = {"time_utc":datetime.now(timezone.utc).isoformat(),"full_build_successful":successful,
+def evidence(name):
+    path=OUT/name
+    return json.loads(path.read_text()) if path.is_file() else {}
+deployment=evidence("database-deployment.json")
+live=evidence("live-api-verification.json")
+monitoring=evidence("sentry-verification.json")
+runtime=evidence("device-runtime-verification.json")
+ci=evidence("ci-verification.json")
+server_verified=deployment.get("status")=="APPLIED" and live.get("status")=="PASS"
+# Refuse to replace previous evidence with a failed/incomplete build.
+if not successful or not packaging_successful or packaged_legal["status"] != "PASS" or database["status"] != "PASS" or lint is None or lint["errors"] or failures or tests<37:
+    raise SystemExit("Verification prerequisites failed; previous reports preserved")
+report = {"time_utc":datetime.now(timezone.utc).isoformat(),"build_log":args.build_log,"full_build_successful":successful,
           "tests":tests,"failures":failures,"suites":suites,"database":database,
           "legal_resource_packaging_successful":packaging_successful,"packaged_legal":packaged_legal,
-          "lint":lint,"live_supabase_verified":False,"device_uat_verified":False,
-          "release_signed":signed_verified,"signing":signing,"legal_documents_approved":False,"sentry_production_configured":False}
+          "lint":lint,"live_supabase_verified":server_verified,"database_deployment":deployment,
+          "live_auth_postgrest":live,"device_uat_verified":runtime.get("full_uat_verified",False),"device_runtime":runtime,
+          "release_signed":signed_verified,"signing":signing,"legal_documents_approved":False,
+          "sentry_production_configured":monitoring.get("status","").startswith("EVENT_RECEIVED"),"sentry":monitoring,"ci":ci}
 (OUT/"fixes-verification.json").write_text(json.dumps(report,indent=2))
-
 trackerfile=OUT/"bug-tracker.json"
 tracker=json.loads(trackerfile.read_text())
 server_ids={"F02","F03","F05","F11","F17","L01"}
 for bug in tracker:
     bug.setdefault("original_audit_status",bug["status"])
-    bug["assignee"]="Codex — perbaikan lokal"
-    bug["repair_report"]="LAUNCH_FIXES_2026-10-01.md"
+    bug["repair_report"]="LAUNCH_COMPLETION_2026-10-01.md"
     if bug["id"] in server_ids:
-        bug["status"]="READY_FOR_DATABASE_DEPLOYMENT"
-    elif bug["id"]=="L02": bug["status"]="DRAFT_REQUIRES_OWNER_REVIEW"
-    elif bug["id"]=="L03": bug["status"]="IMPLEMENTED_REQUIRES_SENTRY_CONFIGURATION"
-    elif bug["id"]=="L04": bug["status"]="IMPLEMENTED_REQUIRES_CI_RUN"
-    elif bug["id"] in {"F20","L05"}: bug["status"]="FIXED_SOURCE_REVIEWED"
-    else: bug["status"]="FIXED_LOCAL_REQUIRES_UAT" if successful and not failures else "IMPLEMENTED_VERIFICATION_PENDING"
+        bug["status"]="DEPLOYED_LIVE_RPC_RLS_VERIFIED_REQUIRES_DEVICE_UAT" if server_verified else "READY_FOR_DATABASE_DEPLOYMENT"
+    elif bug["id"]=="L02":bug["status"]="DRAFT_REQUIRES_OWNER_REVIEW"
+    elif bug["id"]=="L03":bug["status"]="EVENT_RECEIVED_REQUIRES_MAPPING_VERIFICATION" if monitoring.get("status","").startswith("EVENT_RECEIVED") else "IMPLEMENTED_REQUIRES_SENTRY_CONFIGURATION"
+    elif bug["id"]=="L04":bug["status"]="IMPLEMENTED_REQUIRES_CURRENT_CI_SUCCESS"
+    # Runtime discoveries and existing UAT statuses retain their specific evidence.
 trackerfile.write_text(json.dumps(tracker,indent=2,ensure_ascii=False))
-summary={"tests":tests,"test_failures":failures,"build_successful":successful,"release_signed":signed_verified,"legal_resource_packaging_successful":packaging_successful,"local_database_checks":len(database["checks"]),"lint":lint}
-print(json.dumps(summary,indent=2))
-if not successful or not packaging_successful or packaged_legal["status"] != "PASS" or database["status"] != "PASS" or lint is None or lint["errors"] or failures or tests<37: raise SystemExit(1)
+print(json.dumps({"tests":tests,"test_failures":failures,"build_successful":successful,"release_signed":signed_verified,
+                  "live_supabase_verified":server_verified,"device_full_uat":runtime.get("full_uat_verified",False)},indent=2))

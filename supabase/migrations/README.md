@@ -2,7 +2,12 @@
 
 Urutan perbaikan database yang disiapkan: `supabase_user_data_rls_hotfix.sql`,
 `supabase_social_rls_hotfix.sql`, lalu tujuh migrasi `20261001…` secara berurutan.
-Penerapan pada Supabase aktif belum dikonfirmasi.
+Paket kompatibilitas UUID sudah diterapkan pada proyek Gratify aktif
+`bnabldxsqpvkyqpjcsdv` melalui SQL Editor admin. Bukti berada di
+`artifacts/launch-audit/database-deployment.json`.
+Untuk skema UUID aktif, gunakan paket `supabase-launch-fixes-uuid.sql` yang
+mempertahankan tipe PK/FK asli; jangan menjalankan file TEXT mentah satu per satu.
+Migrasi 008 untuk avatar merupakan tahap terpisah dan belum diterapkan.
 Jangan menjalankan ulang setup atau hotfix policy setelah migrasi privasi, karena
 policy publik lama dapat membuka kembali data yang disembunyikan.
 
@@ -22,7 +27,12 @@ sebelum perubahan jika kontrak berbeda.
 
 Uji setelah penerapan: dua akun nyata, privasi dari anon/akun lain, sinkronisasi
 dua perangkat termasuk offline, kegagalan simpan playlist, pemulihan password,
-serta hapus akun uji. Uji Storage dan Auth pada Supabase aktif belum dilakukan.
+serta hapus akun uji. Auth/PostgREST dua akun dan SQL/RLS aktif telah diuji;
+13 akun asli dipertahankan. Storage/avatar ditemukan gagal unggah pemilik
+karena tidak ada policy pada storage.objects. Migrasi 008 disiapkan untuk
+hak avatar milik sendiri (nama auth UID + .jpg) dengan batas 5 MB JPEG/PNG/WebP;
+penerapan melalui dashboard menunggu konfirmasi pemberian akses.
+Pengiriman email pemulihan dan UAT dua perangkat belum dibuktikan.
 
 Migrasi 007 memberi setiap playlist identitas tetap. Judul dan ID numerik lokal
 tidak lagi digunakan untuk pencocokan, penghapusan, atau deduplikasi.

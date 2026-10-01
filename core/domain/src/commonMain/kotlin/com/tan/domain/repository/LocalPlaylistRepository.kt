@@ -92,6 +92,8 @@ interface LocalPlaylistRepository {
 
     suspend fun insertLocalPlaylistAndGetId(localPlaylist: LocalPlaylistEntity): Long
 
+    suspend fun createLocalPlaylistWithSongs(localPlaylist: LocalPlaylistEntity, songs: List<SongEntity>): Long
+
     fun insertLocalPlaylist(
         localPlaylist: LocalPlaylistEntity,
         successMessage: String,

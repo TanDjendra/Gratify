@@ -583,6 +583,12 @@ aboutLibraries {
     }
 }
 
+// The exported license JSON is an input to Compose's resource copier.
+// Declare its producer explicitly so clean Gradle 9 builds have a valid task order.
+tasks.matching { it.name == "copyNonXmlValueResourcesForCommonMain" }.configureEach {
+    dependsOn("exportLibraryDefinitions")
+}
+
 // Wire BuildKonfig output as input to AGP ArtProfile prepare tasks.
 // Required by Gradle 9 strict task dependency validation. BuildKonfig 0.21.0
 // migrated to AGP 9.2.1 + Gradle 9.4.1 but doesn't auto-wire

@@ -3,6 +3,10 @@ import json
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "artifacts/launch-audit"
+# This generator records the original local-only milestone. Preserve the later
+# live-service/device report instead of replacing it with historical pending flags.
+if (OUT / "database-deployment.json").is_file() and json.loads((OUT / "database-deployment.json").read_text()).get("status") == "APPLIED":
+    raise SystemExit("Live deployment exists; update LAUNCH_COMPLETION directly from current evidence")
 verification = json.loads((OUT / "fixes-verification.json").read_text())
 package = json.loads((OUT / "release-package-verification.json").read_text())
 assert verification["full_build_successful"] and verification["failures"] == 0

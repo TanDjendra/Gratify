@@ -12,6 +12,7 @@ import com.tan.domain.utils.Resource
 import com.tan.domain.utils.toSongEntity
 import com.tan.gratify.viewModel.base.BaseViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +29,7 @@ data class AddSongsToPlaylistState(
     val isSearching: Boolean = false,
     val isSaving: Boolean = false,
     val createdPlaylistId: Long? = null,
+    val saveError: String? = null,
 )
 
 class AddSongsToPlaylistViewModel(
@@ -39,10 +41,6 @@ class AddSongsToPlaylistViewModel(
     val uiState: StateFlow<AddSongsToPlaylistState> get() = _uiState.asStateFlow()
 
     private var searchJob: Job? = null
-
-    companion object {
-        const val MIN_TRACKS = 4
-    }
 
     init {
         loadRecentSongs()
@@ -56,12 +54,12 @@ class AddSongsToPlaylistViewModel(
     }
 
     fun searchSongs(query: String) {
+        searchJob?.cancel()
         _uiState.update { it.copy(searchQuery = query) }
         if (query.isBlank()) {
             _uiState.update { it.copy(searchResults = emptyList(), isSearching = false) }
             return
         }
-        searchJob?.cancel()
         searchJob = viewModelScope.launch {
             delay(300)
             _uiState.update { it.copy(isSearching = true) }
@@ -107,24 +105,24 @@ class AddSongsToPlaylistViewModel(
     fun isTrackSelected(videoId: String): Boolean =
         _uiState.value.selectedTracks.any { it.videoId == videoId }
 
-    fun canSave(): Boolean = _uiState.value.selectedTracks.size >= MIN_TRACKS
+    fun canSave(): Boolean = !_uiState.value.isSaving
 
     fun savePlaylist(title: String) {
-        if (!canSave()) return
-        _uiState.update { it.copy(isSaving = true) }
+        if (!canSave() || title.isBlank()) return
+        val selectedTracks = _uiState.value.selectedTracks.toList()
+        _uiState.update { it.copy(isSaving = true, saveError = null) }
         viewModelScope.launch {
-            val localPlaylistEntity = LocalPlaylistEntity(title = title)
-            val createdId = localPlaylistRepository.insertLocalPlaylistAndGetId(localPlaylistEntity)
-
-            if (createdId > 0) {
-                val selectedTracks = _uiState.value.selectedTracks
-                localPlaylistRepository.addTracksToLocalPlaylist(
-                    id = createdId,
-                    songs = selectedTracks.map { it.toSongEntity() },
-                )
+            try {
+                val createdId = localPlaylistRepository.createLocalPlaylistWithSongs(
+                    LocalPlaylistEntity(title = title.trim()), selectedTracks.map { it.toSongEntity() })
+                check(createdId > 0) { "Playlist could not be created" }
+                _uiState.update { it.copy(createdPlaylistId = createdId) }
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                _uiState.update { it.copy(saveError = "Playlist belum tersimpan. Coba lagi.") }
+            } finally {
+                _uiState.update { it.copy(isSaving = false) }
             }
-
-            _uiState.update { it.copy(isSaving = false, createdPlaylistId = createdId) }
         }
     }
 }

@@ -455,5 +455,45 @@
     "assignee": "Codex — perbaikan lokal",
     "original_audit_status": "OPEN",
     "repair_report": "LAUNCH_COMPLETION_2026-10-01.md"
+  },
+  {
+    "id": "R01",
+    "title": "Startup Android crash karena CoroutineScope tanpa qualifier",
+    "priority": "P1",
+    "status": "FIXED_RUNTIME_VERIFIED",
+    "repair_report": "LAUNCH_COMPLETION_2026-10-01.md",
+    "discovered_by": "Live service/device/CI verification"
+  },
+  {
+    "id": "R02",
+    "title": "Email dengan suffix panjang ditolak pada tiga alur autentikasi",
+    "priority": "P2",
+    "status": "FIXED_RUNTIME_VERIFIED",
+    "repair_report": "LAUNCH_COMPLETION_2026-10-01.md",
+    "discovered_by": "Live service/device/CI verification"
+  },
+  {
+    "id": "R03",
+    "title": "Pembuatan playlist memerlukan empat lagu dan dapat meninggalkan data parsial saat gagal",
+    "priority": "P1",
+    "status": "FIXED_LOCAL_TRANSACTION_TESTED_REQUIRES_DEVICE_UAT",
+    "repair_report": "LAUNCH_COMPLETION_2026-10-01.md",
+    "discovered_by": "Live service/device/CI verification"
+  },
+  {
+    "id": "R04",
+    "title": "Avatar pemilik gagal diunggah karena Storage belum mempunyai kebijakan akses",
+    "priority": "P1",
+    "status": "PREPARED_AWAITING_ACCESS_CONFIRMATION",
+    "repair_report": "LAUNCH_COMPLETION_2026-10-01.md",
+    "discovered_by": "Live service/device/CI verification"
+  },
+  {
+    "id": "R05",
+    "title": "Build CI bersih gagal karena urutan resource AboutLibraries belum dideklarasikan",
+    "priority": "P1",
+    "status": "FIXED_LOCAL_RESOURCE_TASK_ORDER_VERIFIED_REQUIRES_CI_RERUN",
+    "repair_report": "LAUNCH_COMPLETION_2026-10-01.md",
+    "discovered_by": "Live service/device/CI verification"
   }
 ]

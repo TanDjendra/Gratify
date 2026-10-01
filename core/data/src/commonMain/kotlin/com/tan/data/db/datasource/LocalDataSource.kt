@@ -305,7 +305,16 @@ internal class LocalDataSource(
     suspend fun insertLocalPlaylist(localPlaylist: LocalPlaylistEntity): Long {
         val email = getActiveUserEmail()
         return databaseDao.insertLocalPlaylist(localPlaylist.copy(ownerEmail = email, syncId = localPlaylist.syncId ?: Uuid.random().toString()))
-    }  suspend fun deleteLocalPlaylist(id: Long) = databaseDao.deleteOwnedLocalPlaylist(id, Uuid.random().toString())
+    }
+
+    suspend fun createLocalPlaylistWithSongs(playlist: LocalPlaylistEntity, songs: List<SongEntity>): Long {
+        val owner = databaseDao.getLibraryOwner()
+        val email = getActiveUserEmail()
+        return databaseDao.createLocalPlaylistWithSongs(owner,
+            playlist.copy(ownerEmail = email, syncId = playlist.syncId ?: Uuid.random().toString()), songs)
+    }
+
+    suspend fun deleteLocalPlaylist(id: Long) = databaseDao.deleteOwnedLocalPlaylist(id, Uuid.random().toString())
 
     suspend fun ensurePlaylistSyncId(id: Long, ownerId: String) =
         databaseDao.ensurePlaylistSyncId(id, ownerId, Uuid.random().toString())

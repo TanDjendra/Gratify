@@ -1,6 +1,8 @@
 package com.tan.data.sync
 
 import androidx.room.Room
+import androidx.room.useWriterConnection
+import androidx.room.execSQL
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.tan.data.db.Converters
 import com.tan.data.db.MusicDatabase
@@ -92,4 +94,38 @@ class PlaylistIdentityTest {
             assertNull(dao.getLocalPlaylistBySyncId(syncId))
         } finally { database.close(); directory.toFile().deleteRecursively() }
     }
+    @Test fun emptyAndSingleSongPlaylistsAreValidAndAccountSwitchIsRejected(): Unit = runBlocking {
+        val directory = Files.createTempDirectory("gratify-create-playlist")
+        val database = database(directory.resolve("test.db").toString())
+        try {
+            AccountLibraryStore(database).activate("A", null)
+            val dao = database.getDatabaseDao()
+            val emptyId = dao.createLocalPlaylistWithSongs("A", LocalPlaylistEntity(title = "Empty", syncId = "empty"), emptyList())
+            assertTrue(dao.getLocalPlaylist(emptyId)!!.tracks.isNullOrEmpty())
+            val oneId = dao.createLocalPlaylistWithSongs("A", LocalPlaylistEntity(title = "One", syncId = "one"), listOf(song("one-song")))
+            assertEquals(listOf("one-song"), dao.getAllPlaylistPairSongByPosition(oneId).map { it.songId })
+            assertFails { dao.createLocalPlaylistWithSongs("B", LocalPlaylistEntity(title = "Wrong account", syncId = "wrong-owner"), emptyList()) }
+            assertNull(dao.getLocalPlaylistBySyncId("wrong-owner"))
+        } finally { database.close(); directory.toFile().deleteRecursively() }
+    }
+
+    @Test fun songWriteFailureRollsBackNewPlaylistAndAllItsTracks(): Unit = runBlocking {
+        val directory = Files.createTempDirectory("gratify-create-rollback")
+        val database = database(directory.resolve("test.db").toString())
+        try {
+            AccountLibraryStore(database).activate("A", null)
+            val dao = database.getDatabaseDao()
+            dao.insertSong(song("existing"))
+            database.useWriterConnection { connection ->
+                connection.execSQL("CREATE TRIGGER audit_fail_song BEFORE INSERT ON song WHEN NEW.videoId = 'fail' BEGIN SELECT RAISE(ABORT, 'audit failure'); END")
+            }
+            assertFails { dao.createLocalPlaylistWithSongs("A", LocalPlaylistEntity(title = "Retry", syncId = "rollback"), listOf(song("first"), song("fail"))) }
+            assertNull(dao.getLocalPlaylistBySyncId("rollback"))
+            assertNull(dao.getSong("first"))
+            assertNotNull(dao.getSong("existing"))
+            val retryId = dao.createLocalPlaylistWithSongs("A", LocalPlaylistEntity(title = "Retry", syncId = "rollback"), listOf(song("first")))
+            assertEquals(listOf("first"), dao.getAllPlaylistPairSongByPosition(retryId).map { it.songId })
+        } finally { database.close(); directory.toFile().deleteRecursively() }
+    }
+
 }

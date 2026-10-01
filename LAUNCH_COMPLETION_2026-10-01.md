@@ -17,11 +17,17 @@ Perbaikan kode dan migrasi Supabase aktif sudah diterapkan. Login Auth/PostgREST
 - Izin penyimpanan lama yang tidak digunakan dihapus, guard Android di bawah minSdk dihapus, URI memakai KTX, resource qualifier yang tidak diperlukan dirapikan, dan widget diberi ukuran minimum untuk Android lama serta konfigurasi sel untuk API 31+.
 - Penandatanganan membaca rahasia dari pengaturan lokal pemilik, memakai password melalui environment proses, memeriksa tanda tangan dan alignment, serta tidak mengubah keystore.
 
+## Temuan tambahan saat pengujian nyata
+
+- Pembuatan playlist tidak lagi memerlukan empat lagu. Playlist kosong dan satu lagu didukung; simpan playlist beserta lagu menggunakan transaksi, menangkap kegagalan dan mengaktifkan kembali tombol retry. Penyimpanan salinan playlist bersama memakai jalur transaksi yang sama. Tes kegagalan insert lagu membuktikan seluruh perubahan di-rollback, data lama utuh dan retry berhasil.
+- Build CI pertama menemukan dependency task AboutLibraries yang belum dinyatakan. `copyNonXmlValueResourcesForCommonMain` kini menunggu `exportLibraryDefinitions`. Kedua task dijalankan bersama dan berhasil; CI perlu diulang dari perubahan ini.
+- Storage/avatar diuji melalui API aktif: unggah pemilik ditolak dan tidak ada policy pada `storage.objects`. Perbaikan owner-only telah disiapkan dalam migrasi 008 dan belum diterapkan karena pemberian akses melalui dashboard menunggu konfirmasi. Akun uji Storage dibersihkan.
+
 ## Hasil verifikasi
 
 | Pemeriksaan | Hasil |
 |---|---|
-| Tes JVM lintas enam modul | **39 lulus; 0 gagal** |
+| Tes JVM lintas enam modul | **41 lulus; 0 gagal** |
 | Tes komponen UI di dalam jumlah tersebut | 9 lulus |
 | PostgreSQL lokal terpisah | **13 pemeriksaan lulus** |
 | Build debug dan release full | Berhasil |
@@ -34,7 +40,7 @@ Perbaikan kode dan migrasi Supabase aktif sudah diterapkan. Login Auth/PostgREST
 
 APK: `androidApp/build/outputs/apk/release/Gratify-release-signed.apk`.
 
-SHA-256 APK: `796c954b571d874cef918ae67a95330c574b57be0e09ea0cabe1c20efe53f425`.
+SHA-256 APK: `4e462ed01bbfccf5a1bef20b53f88389ed55d5aa875894880418486c00a1d926`.
 
 Jumlah warning mencakup 98 pemberitahuan versi dependensi/plugin. Versi yang dibatasi untuk kompatibilitas tidak diperbarui secara massal. Dua warning trust manager berasal dari kode dalam dependensi PipePipe; jalur aplikasi yang memanggil initializer tersebut sudah diganti dan tes penolakan TLS lulus. Laporan R8 untuk build rilis juga mengonfirmasi penghapusan ketiga overload `NewPipe.init`, `trustEveryone`, dan dua kelas anonimnya yang tidak dipakai. Warning ChromeOS diperiksa melalui paket APK yang benar-benar mencantumkan x86_64. Perubahan versi dependensi tetap perlu penilaian kompatibilitas dan pengujian tersendiri.
 

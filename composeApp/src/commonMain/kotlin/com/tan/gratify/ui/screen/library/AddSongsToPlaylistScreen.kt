@@ -42,8 +42,6 @@ import com.tan.gratify.ui.theme.typo
 import com.tan.gratify.viewModel.AddSongsToPlaylistViewModel
 import org.koin.compose.koinInject
 
-private const val MIN_SONGS = 4
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddSongsToPlaylistScreen(
@@ -98,13 +96,14 @@ fun AddSongsToPlaylistScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "${uiState.selectedTracks.size}/$MIN_SONGS lagu minimum",
+                        text = uiState.saveError ?: if (uiState.selectedTracks.isEmpty()) "Tambahkan lagu nanti" else "${uiState.selectedTracks.size} lagu dipilih",
                         style = typo().bodyMedium,
-                        color = if (uiState.selectedTracks.size >= MIN_SONGS) GratifyColors.Accent else GratifyColors.TextSecondary,
+                        color = if (uiState.saveError != null) MaterialTheme.colorScheme.error else GratifyColors.TextSecondary,
+                        modifier = Modifier.weight(1f).padding(end = 12.dp),
                     )
                     Button(
                         onClick = { viewModel.savePlaylist(playlistTitle) },
-                        enabled = uiState.selectedTracks.size >= MIN_SONGS && !uiState.isSaving,
+                        enabled = playlistTitle.isNotBlank() && !uiState.isSaving,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = GratifyColors.Accent,
                             contentColor = Color.Black,
@@ -195,7 +194,7 @@ fun AddSongsToPlaylistScreen(
                     Text(
                         text = "${uiState.selectedTracks.size} lagu dipilih",
                         style = typo().bodySmall,
-                        color = if (uiState.selectedTracks.size >= MIN_SONGS) GratifyColors.Accent else GratifyColors.TextSecondary,
+                        color = GratifyColors.Accent,
                     )
                 }
             }

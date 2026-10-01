@@ -1,0 +1,17 @@
+{
+  "status": "EVENT_RECEIVED_MAPPING_PENDING",
+  "project": "gratify-android",
+  "organization": "calestaan",
+  "issue": "GRATIFY-ANDROID-1",
+  "issue_url": "https://calestaan.sentry.io/issues/7765930944/",
+  "event_source": "Controlled adb crash on owned Android 17 16 KB emulator",
+  "exception_value": "Exception details redacted",
+  "users_count": 0,
+  "metadata_still_present": [
+    "OS/device context",
+    "pseudonymous installation ID",
+    "provider-derived coarse geography"
+  ],
+  "mapping_missing_for_local_test_apk": true,
+  "evidence": "sentry-event-proof.jpg"
+}

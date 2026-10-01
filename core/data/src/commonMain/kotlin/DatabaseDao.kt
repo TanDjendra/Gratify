@@ -480,6 +480,23 @@ interface DatabaseDao {
     @Insert(onConflict = OnConflictStrategy.Companion.IGNORE)
     suspend fun insertLocalPlaylist(localPlaylist: LocalPlaylistEntity): Long
 
+    @Transaction
+    suspend fun createLocalPlaylistWithSongs(ownerId: String?, playlist: LocalPlaylistEntity, songs: List<SongEntity>): Long {
+        check(getLibraryOwner() == ownerId) { "Account ownership changed" }
+        require(playlist.title.isNotBlank()) { "Playlist title is required" }
+        require(songs.map { it.videoId }.distinct().size == songs.size) { "Duplicate playlist tracks" }
+        playlist.sourceSharedPlaylistId?.let { source ->
+            getLocalPlaylistBySourceSharedId(source)?.let { return it.id }
+        }
+        val id = insertLocalPlaylist(playlist.copy(tracks = songs.map { it.videoId }))
+        check(id > 0) { "Playlist could not be created" }
+        songs.forEachIndexed { position, song ->
+            if (getSong(song.videoId) == null) insertSong(song)
+            insertPairSongLocalPlaylist(PairSongLocalPlaylist(playlistId = id, songId = song.videoId, position = position, inPlaylist = now()))
+        }
+        return id
+    }
+
     @Query("SELECT * FROM local_playlist WHERE sync_id = :syncId LIMIT 1")
     suspend fun getLocalPlaylistBySyncId(syncId: String): LocalPlaylistEntity?
 

@@ -41,7 +41,6 @@ import com.tan.kotlinytmusicscraper.parser.getPlaylistContinuation
 import com.tan.logger.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -181,6 +180,9 @@ internal class LocalPlaylistRepositoryImpl(
 
     override suspend fun insertLocalPlaylistAndGetId(localPlaylist: LocalPlaylistEntity): Long =
         localDataSource.insertLocalPlaylist(localPlaylist)
+
+    override suspend fun createLocalPlaylistWithSongs(localPlaylist: LocalPlaylistEntity, songs: List<SongEntity>): Long =
+        localDataSource.createLocalPlaylistWithSongs(localPlaylist, songs)
 
     override fun deleteLocalPlaylist(id: Long, successMessage: String): Flow<LocalResource<String>> = flow {
         emit(LocalResource.Loading())
@@ -968,10 +970,6 @@ internal class LocalPlaylistRepositoryImpl(
         tracks: List<Track>,
         creatorName: String?,
     ): Long {
-        val existing = localDataSource.getLocalPlaylistBySourceSharedId(sharedPlaylistId)
-        if (existing != null) {
-            return existing.id
-        }
         val localPlaylistEntity =
             LocalPlaylistEntity(
                 title = title,
@@ -982,19 +980,7 @@ internal class LocalPlaylistRepositoryImpl(
                 sourceSharedPlaylistId = sharedPlaylistId,
                 creatorName = creatorName,
             )
-        val id = localDataSource.insertLocalPlaylist(localPlaylistEntity)
-        tracks.forEachIndexed { i, track ->
-            localDataSource.insertSong(track.toSongEntity())
-            localDataSource.insertPairSongLocalPlaylist(
-                PairSongLocalPlaylist(
-                    playlistId = id,
-                    songId = track.videoId,
-                    position = i,
-                    inPlaylist = now(),
-                ),
-            )
-        }
-        return id
+        return localDataSource.createLocalPlaylistWithSongs(localPlaylistEntity, tracks.map { it.toSongEntity() })
     }
 
     override suspend fun updateSourceAvailability(sharedPlaylistId: String, availability: Int) {
