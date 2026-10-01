@@ -1,0 +1,9 @@
+{
+  "status": "PASS",
+  "ci_run_url": "https://github.com/TanDjendra/Gratify/actions/runs/36879360981",
+  "head_sha": "90bb5a1f50c369873e1dbaf6fc5ef1c289452dae",
+  "uploaded_mapping_uuids": [
+    "c40d8741-7144-3ea6-9a33-8c9bc94ad9f2"
+  ],
+  "source": "Actual successful CI logs: 0_verify.txt"
+}

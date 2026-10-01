@@ -6,8 +6,9 @@ ROOT=Path(__file__).resolve().parents[2]
 PRIVATE=ROOT/'.local-release-access'
 config=json.loads((PRIVATE/'supabase-test.json').read_text())
 properties=dict(l.split('=',1) for l in (ROOT/'local.properties').read_text().splitlines() if '=' in l and not l.lstrip().startswith(('#','!')))
-a=json.loads((PRIVATE/'test-accounts.json').read_text())[0]
+a=None
 b=None
+created=[]
 image=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6Z1EAAAAASUVORK5CYII=')
 report={'status':'FAIL','checks':[]}
 
@@ -22,18 +23,21 @@ def request(path,method='GET',body=None,token=None,admin=False,raw=None):
             return f.status,data if raw is not None or '/object/public/' in path else json.loads(data) if data else None
     except urllib.error.HTTPError as e:return e.code,None
 
-try:
-    status,data=request('/auth/v1/token?grant_type=password','POST',{k:a[k] for k in ('email','password')})
-    assert status==200,('owner_login',status)
-    a['access_token']=data['access_token']
-    (PRIVATE/'test-accounts.json').write_text(json.dumps([a]))
-    b={'email':'gratify.storage.'+uuid.uuid4().hex+'@example.invalid','password':secrets.token_hex(24)}
-    status,data=request('/auth/v1/admin/users','POST',{**b,'email_confirm':True},admin=True)
+def create_account():
+    account={'email':'gratify.storage.'+uuid.uuid4().hex+'@example.invalid','password':secrets.token_hex(24)}
+    status,data=request('/auth/v1/admin/users','POST',{**account,'email_confirm':True},admin=True)
     assert status in (200,201),('create',status)
-    b['id']=data['id'];(PRIVATE/'storage-account.json').write_text(json.dumps(b))
-    status,data=request('/auth/v1/token?grant_type=password','POST',{k:b[k] for k in ('email','password')})
+    account['id']=data['id'];created.append(account)
+    (PRIVATE/'storage-account.json').write_text(json.dumps(created))
+    status,data=request('/auth/v1/token?grant_type=password','POST',{k:account[k] for k in ('email','password')})
     assert status==200,('login',status)
-    b['access_token']=data['access_token'];(PRIVATE/'storage-account.json').write_text(json.dumps(b))
+    account['access_token']=data['access_token']
+    (PRIVATE/'storage-account.json').write_text(json.dumps(created))
+    return account
+
+try:
+    a=create_account()
+    b=create_account()
     path='/storage/v1/object/avatars/'+a['id']+'.jpg'
     status,_=request(path,'POST',token=a['access_token'],raw=image)
     assert status in (200,201),('owner_upload',status)
@@ -57,11 +61,16 @@ except Exception as e:
     report['error_type']=type(e).__name__
     if isinstance(e,AssertionError):report['failed_check']=str(e)
 finally:
-    request('/storage/v1/object/avatars','DELETE',{'prefixes':[a['id']+'.jpg']},admin=True)
-    if b and b.get('id'):
-        if b.get('access_token'):request('/rest/v1/rpc/gratify_delete_account','POST',{},b['access_token'])
-        status,_=request('/auth/v1/admin/users/'+b['id'],'DELETE',admin=True)
-        report['temporary_account_cleanup_ok']=status in (200,204,404)
+    cleanup_ok=True
+    for account in created:
+        request('/storage/v1/object/avatars','DELETE',{'prefixes':[account['id']+'.jpg']},admin=True)
+        if account.get('access_token'):
+            request('/rest/v1/rpc/gratify_prepare_account_deletion','POST',{},account['access_token'])
+            request('/rest/v1/rpc/gratify_delete_account','POST',{},account['access_token'])
+        status,_=request('/auth/v1/admin/users/'+account['id'],'DELETE',admin=True)
+        cleanup_ok=cleanup_ok and status in (200,204,404)
+    report['temporary_account_cleanup_ok']=cleanup_ok
+    if cleanup_ok:(PRIVATE/'storage-account.json').write_text('[]')
     (ROOT/'artifacts/launch-audit/live-storage-verification.json').write_text(json.dumps(report,indent=2))
     print(json.dumps(report,indent=2))
 if report['status']!='PASS':raise SystemExit(1)

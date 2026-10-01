@@ -63,7 +63,7 @@ for bug in tracker:
         bug["status"]="DEPLOYED_LIVE_RPC_RLS_VERIFIED_REQUIRES_DEVICE_UAT" if server_verified else "READY_FOR_DATABASE_DEPLOYMENT"
     elif bug["id"]=="L02":bug["status"]="DRAFT_REQUIRES_OWNER_REVIEW"
     elif bug["id"]=="L03":
-        bug["status"]=("ANDROID_EVENT_RECEIVED_CI_MAPPING_UPLOAD_VERIFIED_DESKTOP_UNVERIFIED" if monitoring.get("ci_mapping_upload_verified") and monitoring.get("status", "").startswith("EVENT_RECEIVED") else "EVENT_RECEIVED_REQUIRES_MAPPING_VERIFICATION" if monitoring.get("status","").startswith("EVENT_RECEIVED") else "IMPLEMENTED_REQUIRES_SENTRY_CONFIGURATION")
+        bug["status"]=("ANDROID_EVENT_RECEIVED_CI_MAPPING_UPLOAD_VERIFIED_DESKTOP_UNVERIFIED" if monitoring.get("latest_mapping_upload_verified") and monitoring.get("status", "").startswith("EVENT_RECEIVED") else "EVENT_RECEIVED_REQUIRES_MAPPING_VERIFICATION" if monitoring.get("status","").startswith("EVENT_RECEIVED") else "IMPLEMENTED_REQUIRES_SENTRY_CONFIGURATION")
     elif bug["id"]=="L04":
         bug["status"]="FIXED_CI_VERIFIED" if ci.get("conclusion")=="success" else "IMPLEMENTED_REQUIRES_CURRENT_CI_SUCCESS"
     # Runtime discoveries and existing UAT statuses retain their specific evidence.

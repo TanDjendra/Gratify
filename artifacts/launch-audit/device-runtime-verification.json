@@ -1,0 +1,49 @@
+{
+  "time_utc": "2026-10-01T14:56:01.624908+00:00",
+  "status": "PASS_SCOPED_SMOKE_TEST",
+  "signed_apk_sha256": "ae11f391e49502dc91ca31c04659ba823c6973c686a62dc8fa33d4c134a6eb48",
+  "package": "com.tan.gratify",
+  "device": "Owned Gratify_Audit_16KB emulator; Android 17/API 37 x86_64",
+  "page_size_bytes": 16384,
+  "startup_verified": true,
+  "installed_update_session_retained": true,
+  "existing_empty_playlist_retained": true,
+  "search_keyboard_and_submission_verified": true,
+  "search_results_and_album_filter_verified": true,
+  "album_detail_verified": {
+    "title": "Thriller",
+    "artist": "Michael Jackson",
+    "track_count": 9
+  },
+  "playback_verified": {
+    "android_media_session_state": "PLAYING(3)",
+    "position_ms": 6172,
+    "buffered_position_ms": 133932,
+    "speed": 1.0,
+    "error": null,
+    "pause_control_verified": true,
+    "audio_audibility_verified": false
+  },
+  "crash_buffer_empty_at_end": true,
+  "full_uat_verified": false,
+  "limitations": [
+    "Headless emulator, audio muted.",
+    "Transient Android System UI boot ANR occurred on earlier emulator boots; formal app ANR/FPS testing on physical devices is pending.",
+    "Two-device sync, downloads, offline, notifications, recovery email and desktop runtime have not completed full device UAT."
+  ],
+  "evidence": [
+    "android-album-release-proof.png",
+    "search-final-release-build.log"
+  ],
+  "preceding_release_smoke_tests": {
+    "signed_apk_sha256": "fbad850fea10f66776ee9dad2044640b38fb127f4960c2d57f5fb720657cf2f7",
+    "checks": [
+      "Temporary-account login/profile completion",
+      "Home/catalog/library loading",
+      "Empty playlist creation and detail",
+      "Online playlist with 109 tracks",
+      "Playback and pause",
+      "Settings/storage page"
+    ]
+  }
+}

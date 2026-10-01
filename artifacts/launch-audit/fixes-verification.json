@@ -1,0 +1,377 @@
+{
+  "time_utc": "2026-10-01T21:52:09.065731+00:00",
+  "build_log": "search-final-release-build.log",
+  "full_build_successful": true,
+  "tests": 41,
+  "failures": 0,
+  "suites": [
+    {
+      "module": "core/domain",
+      "suite": "LaunchRegressionTest[jvm]",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "module": "core/data",
+      "suite": "PlaylistRegressionTest[jvm]",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "module": "core/data",
+      "suite": "RepositoryCancellationTest[jvm]",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "module": "core/data",
+      "suite": "AccountLibraryStoreTest[jvm]",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "module": "core/data",
+      "suite": "CloudSettingsTest[jvm]",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "module": "core/data",
+      "suite": "LegacyProfilePrivacyMigrationTest[jvm]",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "module": "core/data",
+      "suite": "PlaylistIdentityTest[jvm]",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "module": "core/service/ktorExt",
+      "suite": "CurlSecurityTest[jvm]",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "module": "core/service/kotlinYtmusicScraper",
+      "suite": "DownloadRegressionTest[jvm]",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "module": "core/service/kotlinYtmusicScraper",
+      "suite": "ExtractorTlsTest[jvm]",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "module": "core/service/kotlinYtmusicScraper",
+      "suite": "CookieRegressionTest[jvm]",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "module": "core/service/lyricsService",
+      "suite": "LrcRegressionTest[jvm]",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "module": "composeApp",
+      "suite": "CollectionDetailRenderTest[jvm]",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "module": "composeApp",
+      "suite": "VersionManagerTest[jvm]",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "module": "composeApp",
+      "suite": "EmailValidationTest[jvm]",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "module": "composeApp",
+      "suite": "RestoreArchiveTest[jvm]",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0
+    }
+  ],
+  "database": {
+    "status": "PASS",
+    "environment": "Isolated local PostgreSQL 17.6 on loopback; not live Supabase",
+    "schema": "base TEXT schema",
+    "checks": [
+      "SQL Editor preflight rejects incompatible schema before mutations and the outer transaction rolls back",
+      "SQL Editor bundle applies all hotfixes and seven migrations together; every migration applies again without errors",
+      "Malformed replacement rolls back cloud metadata, cloud tracks and shared publication",
+      "Same titles retain distinct identities; cross-device rename and retry reuse one cloud/shared identity",
+      "Hide/delete affects only the selected stable identity, preserving another playlist with the same title",
+      "Direct REST mutations and legacy column grants are blocked; only owner-checked transaction RPCs can write playlists",
+      "Anonymous cannot read hidden activity, follow graph, playlists or child tracks, nor delete accounts",
+      "Owner can read own private data; second user cannot replace another owner's playlist",
+      "Explicit additions, deletions and re-additions are owner scoped; invalid batch rolls back every edit",
+      "Atomic ordered snapshots preserve 1,025 tracks in one JSON value and cannot bypass private-playlist RLS",
+      "Queue replacement failure preserves previous queue",
+      "Playlist deletion removes owner cloud/shared data together, rejects numeric clients and stale-device resurrection",
+      "Account deletion removes only authenticated account and its cloud state, preserving other account"
+    ]
+  },
+  "legal_resource_packaging_successful": true,
+  "packaged_legal": {
+    "status": "PASS",
+    "documents_approved": false,
+    "packages": [
+      {
+        "variant": "debug",
+        "apk": "androidApp\\build\\outputs\\apk\\debug\\androidApp-universal-debug.apk",
+        "bytes": 98251304,
+        "documents": [
+          {
+            "name": "terms-of-use.md",
+            "sha256": "fc7b0632c0692c27884c675fe4ec58b5b8c7a437578b81b6f18367b68a6635ac"
+          },
+          {
+            "name": "privacy-policy.md",
+            "sha256": "2bca0dcc981c28fdeb83b32288975e287f1661b17f4bd019ff7fe95861d5174b"
+          }
+        ]
+      },
+      {
+        "variant": "release",
+        "apk": "androidApp\\build\\outputs\\apk\\release\\androidApp-universal-release-unsigned.apk",
+        "bytes": 53039320,
+        "documents": [
+          {
+            "name": "terms-of-use.md",
+            "sha256": "fc7b0632c0692c27884c675fe4ec58b5b8c7a437578b81b6f18367b68a6635ac"
+          },
+          {
+            "name": "privacy-policy.md",
+            "sha256": "2bca0dcc981c28fdeb83b32288975e287f1661b17f4bd019ff7fe95861d5174b"
+          }
+        ]
+      }
+    ]
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 116
+  },
+  "live_supabase_verified": true,
+  "database_deployment": {
+    "status": "APPLIED",
+    "project_ref": "bnabldxsqpvkyqpjcsdv",
+    "schema_owner_id_type": "uuid",
+    "deployment_method": "Authenticated Supabase SQL Editor; single transaction after rollback rehearsal",
+    "bundle_sha256": "5043887c6307bea0af8e037242aae260ef5816247e7310cc1638b82d88e7b98d",
+    "verified_rpc_count": 14,
+    "checked_open_policies_remaining": 0,
+    "original_auth_accounts_preserved": 13,
+    "live_sql_rls_test": "PASS; synthetic SQL records rolled back",
+    "live_auth_postgrest_test": "PASS; six checks, two temporary accounts",
+    "evidence": [
+      "supabase-deployment-proof.jpg",
+      "supabase-rls-proof.jpg",
+      "live-api-verification.json"
+    ],
+    "storage_email_recovery_and_two_device_uat_verified": false
+  },
+  "live_auth_postgrest": {
+    "status": "PASS",
+    "environment": "Live Supabase Auth and PostgREST",
+    "checks": [
+      "Two temporary Auth accounts created and signed in using real password tokens",
+      "Actual JWT owners can read their playlist; account B and anonymous cannot read A private playlist or snapshot",
+      "Owner identities remain separate; explicit privacy choices control anonymous publication",
+      "Library data cannot be read by a second account and direct playlist deletion is revoked",
+      "Deleted identities cannot be resurrected; account B data remains intact",
+      "Account deletion RPC removes B Auth record while A session remains valid"
+    ],
+    "temporary_accounts_retained_for_device": 0,
+    "final_cleanup_evidence": "test-account-cleanup.json"
+  },
+  "device_uat_verified": false,
+  "device_runtime": {
+    "time_utc": "2026-10-01T14:56:01.624908+00:00",
+    "status": "PASS_SCOPED_SMOKE_TEST",
+    "signed_apk_sha256": "ae11f391e49502dc91ca31c04659ba823c6973c686a62dc8fa33d4c134a6eb48",
+    "package": "com.tan.gratify",
+    "device": "Owned Gratify_Audit_16KB emulator; Android 17/API 37 x86_64",
+    "page_size_bytes": 16384,
+    "startup_verified": true,
+    "installed_update_session_retained": true,
+    "existing_empty_playlist_retained": true,
+    "search_keyboard_and_submission_verified": true,
+    "search_results_and_album_filter_verified": true,
+    "album_detail_verified": {
+      "title": "Thriller",
+      "artist": "Michael Jackson",
+      "track_count": 9
+    },
+    "playback_verified": {
+      "android_media_session_state": "PLAYING(3)",
+      "position_ms": 6172,
+      "buffered_position_ms": 133932,
+      "speed": 1.0,
+      "error": null,
+      "pause_control_verified": true,
+      "audio_audibility_verified": false
+    },
+    "crash_buffer_empty_at_end": true,
+    "full_uat_verified": false,
+    "limitations": [
+      "Headless emulator, audio muted.",
+      "Transient Android System UI boot ANR occurred on earlier emulator boots; formal app ANR/FPS testing on physical devices is pending.",
+      "Two-device sync, downloads, offline, notifications, recovery email and desktop runtime have not completed full device UAT."
+    ],
+    "evidence": [
+      "android-album-release-proof.png",
+      "search-final-release-build.log"
+    ],
+    "preceding_release_smoke_tests": {
+      "signed_apk_sha256": "fbad850fea10f66776ee9dad2044640b38fb127f4960c2d57f5fb720657cf2f7",
+      "checks": [
+        "Temporary-account login/profile completion",
+        "Home/catalog/library loading",
+        "Empty playlist creation and detail",
+        "Online playlist with 109 tracks",
+        "Playback and pause",
+        "Settings/storage page"
+      ]
+    }
+  },
+  "release_signed": true,
+  "signing": {
+    "time_utc": "2026-10-01T14:56:02.057575+00:00",
+    "status": "SIGNED_AND_VERIFIED",
+    "keystore_exists": true,
+    "unsigned_apk_exists": true,
+    "missing_settings": [],
+    "apk": "D:\\Tan\\Gratify\\androidApp\\build\\outputs\\apk\\release\\Gratify-release-signed.apk",
+    "bytes": 53245061,
+    "unsigned_source_sha256": "b19c0b99e4ef98be59dba87be59e4eb7cf519367ea462886d7a829dc0135ed26",
+    "sha256": "ae11f391e49502dc91ca31c04659ba823c6973c686a62dc8fa33d4c134a6eb48",
+    "certificate_sha256": [
+      "efefe1b8bf7c6502aeeb60db9a45b430dc50040e11c6f76eb22e2308a51c316a"
+    ],
+    "original_keystore_sha256": "a45fc49bcddb3cd84379f7e45b9c0a5e1ed99462785a72cebe34756e075992f5",
+    "installed_application_update_tested": true
+  },
+  "legal_documents_approved": false,
+  "sentry_production_configured": true,
+  "sentry": {
+    "status": "EVENT_RECEIVED_LATEST_MAPPING_UPLOAD_VERIFIED",
+    "project": "gratify-android",
+    "organization": "calestaan",
+    "issue": "GRATIFY-ANDROID-1",
+    "issue_url": "https://calestaan.sentry.io/issues/7765930944/",
+    "event_source": "Controlled adb crash on owned Android 17 16 KB emulator",
+    "exception_value": "Exception details redacted",
+    "users_count": 0,
+    "metadata_still_present": [
+      "OS/device context",
+      "pseudonymous installation ID",
+      "provider-derived coarse geography"
+    ],
+    "mapping_missing_for_local_test_apk": true,
+    "evidence": "sentry-event-proof.jpg",
+    "ci_mapping_upload_verified": true,
+    "ci_mapping_uuid": "3401c637-9f61-3b3d-8299-022ede22078a",
+    "ci_run_url": "https://github.com/TanDjendra/Gratify/actions/runs/36873302675",
+    "mapping_scope": "Controlled crash event used an older APK whose mapping was not uploaded. Mapping 3401c637-9f61-3b3d-8299-022ede22078a was uploaded for the subsequent release; latest search release upload pending.",
+    "latest_signed_apk_sha256": "ae11f391e49502dc91ca31c04659ba823c6973c686a62dc8fa33d4c134a6eb48",
+    "latest_mapping_uuid": "c40d8741-7144-3ea6-9a33-8c9bc94ad9f2",
+    "latest_mapping_upload_verified": true,
+    "latest_mapping_ci_run_url": "https://github.com/TanDjendra/Gratify/actions/runs/36879360981",
+    "latest_mapping_evidence": "ci-mapping-verification.json"
+  },
+  "ci": {
+    "id": 36879360981,
+    "name": "Launch verification",
+    "status": "completed",
+    "conclusion": "success",
+    "head_sha": "90bb5a1f50c369873e1dbaf6fc5ef1c289452dae",
+    "html_url": "https://github.com/TanDjendra/Gratify/actions/runs/36879360981",
+    "jobs": [
+      {
+        "name": "verify",
+        "status": "completed",
+        "conclusion": "success",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run actions/setup-java@v4",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Configure full Android build",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Verify shared behavior and Android lint",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Build full Android release and upload crash mapping",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Keep verification reports",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Run actions/setup-java@v4",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      }
+    ]
+  }
+}

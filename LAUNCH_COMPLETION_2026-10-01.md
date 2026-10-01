@@ -1,8 +1,8 @@
-# Penyelesaian perbaikan Gratify — 1 Oktober 2026
+# Penyelesaian perbaikan Gratify — diperbarui 2 Oktober 2026
 
 ## Status terbaru
 
-Perbaikan kode dan migrasi Supabase aktif sudah diterapkan. Login Auth/PostgREST dua akun, transaksi playlist dan batas privasi server lulus. APK bertanda tangan dapat dibuka pada emulator Android 17 dengan halaman memori 16 KB. Event crash terkontrol diterima Sentry dengan pesan exception disamarkan. **Rilis belum 100% selesai:** upload mapping Sentry, CI terbaru, pengujian fungsi aplikasi lebih lanjut dan persetujuan dokumen resmi masih perlu diselesaikan.
+Perbaikan kode dan migrasi Supabase aktif sudah diterapkan. Login Auth/PostgREST dua akun, transaksi playlist dan batas privasi server lulus. APK bertanda tangan dapat dibuka pada emulator Android 17 dengan halaman memori 16 KB. Event crash terkontrol diterima Sentry dengan pesan exception disamarkan. **Rilis belum 100% selesai:** aturan Storage/avatar menunggu konfirmasi; UAT menyeluruh dan persetujuan dokumen resmi masih diperlukan.
 
 ## Perubahan pada tahap ini
 
@@ -20,27 +20,29 @@ Perbaikan kode dan migrasi Supabase aktif sudah diterapkan. Login Auth/PostgREST
 ## Temuan tambahan saat pengujian nyata
 
 - Pembuatan playlist tidak lagi memerlukan empat lagu. Playlist kosong dan satu lagu didukung; simpan playlist beserta lagu menggunakan transaksi, menangkap kegagalan dan mengaktifkan kembali tombol retry. Penyimpanan salinan playlist bersama memakai jalur transaksi yang sama. Tes kegagalan insert lagu membuktikan seluruh perubahan di-rollback, data lama utuh dan retry berhasil.
-- Build CI pertama menemukan dependency task AboutLibraries yang belum dinyatakan. `copyNonXmlValueResourcesForCommonMain` kini menunggu `exportLibraryDefinitions`. Kedua task dijalankan bersama dan berhasil; CI perlu diulang dari perubahan ini.
+- Build CI pertama menemukan dependency task AboutLibraries yang belum dinyatakan. `copyNonXmlValueResourcesForCommonMain` kini menunggu `exportLibraryDefinitions`. Kedua task dijalankan bersama dan berhasil. CI commit `e8112fe2` lulus seluruh tahap, termasuk upload mapping; CI commit pencarian terbaru `90bb5a1f` juga lulus seluruh tahap.
 - Storage/avatar diuji melalui API aktif: unggah pemilik ditolak dan tidak ada policy pada `storage.objects`. Perbaikan owner-only telah disiapkan dalam migrasi 008 dan belum diterapkan karena pemberian akses melalui dashboard menunggu konfirmasi. Akun uji Storage dibersihkan.
+
+- Kolom pencarian kini memakai input teks yang benar-benar dapat difokuskan dan diketik. Pada debug dan release, keyboard terbuka, pencarian "Thriller" menghasilkan lagu/album, filter bekerja dan detail album sembilan lagu dapat dibuka. Pada release terbaru, playback berubah ke `PLAYING(3)`, buffer terisi dan pause bekerja.
 
 ## Hasil verifikasi
 
 | Pemeriksaan | Hasil |
 |---|---|
 | Tes JVM lintas enam modul | **41 lulus; 0 gagal** |
-| Tes komponen UI di dalam jumlah tersebut | 9 lulus |
+| Tes composeApp di dalam jumlah tersebut | 11 lulus |
 | PostgreSQL lokal terpisah | **13 pemeriksaan lulus** |
 | Build debug dan release full | Berhasil |
 | Android lint debug | **0 error; 116 warning** |
 | APK rilis | Paket `com.tan.gratify`; bukan debuggable; tanda tangan diverifikasi |
 | Pustaka native 64-bit | 30 ELF diperiksa; seluruh segmen LOAD memenuhi alignment 16 KB |
 | Resource Terms/Privacy | Sama dengan draf terbaru, termasuk identitas pengelola dan dukungan |
-| Supabase aktif / Auth / PostgREST | Lulus; Storage/avatar dan email belum diuji |
-| Instalasi pembaruan dan startup Android 16 KB | Lulus pada emulator; UAT fungsi dan FPS masih berlangsung |
+| Supabase aktif / Auth / PostgREST | Auth/PostgREST lulus; Storage/avatar gagal karena policy kosong, perbaikan belum diterapkan; pengiriman email belum diverifikasi |
+| Instalasi pembaruan dan startup Android 16 KB | Lulus pada emulator Android 17/16 KB; sesi dan playlist lama tetap tersimpan. Search, album, playback dan pause lulus; UAT menyeluruh/FPS perangkat fisik belum selesai |
 
 APK: `androidApp/build/outputs/apk/release/Gratify-release-signed.apk`.
 
-SHA-256 APK: `4e462ed01bbfccf5a1bef20b53f88389ed55d5aa875894880418486c00a1d926`.
+SHA-256 APK: `ae11f391e49502dc91ca31c04659ba823c6973c686a62dc8fa33d4c134a6eb48`.
 
 Jumlah warning mencakup 98 pemberitahuan versi dependensi/plugin. Versi yang dibatasi untuk kompatibilitas tidak diperbarui secara massal. Dua warning trust manager berasal dari kode dalam dependensi PipePipe; jalur aplikasi yang memanggil initializer tersebut sudah diganti dan tes penolakan TLS lulus. Laporan R8 untuk build rilis juga mengonfirmasi penghapusan ketiga overload `NewPipe.init`, `trustEveryone`, dan dua kelas anonimnya yang tidak dipakai. Warning ChromeOS diperiksa melalui paket APK yang benar-benar mencantumkan x86_64. Perubahan versi dependensi tetap perlu penilaian kompatibilitas dan pengujian tersendiri.
 
@@ -57,22 +59,27 @@ Jumlah warning mencakup 98 pemberitahuan versi dependensi/plugin. Versi yang dib
 | `TrustAllX509TrustManager` | 2 |
 | `UnusedResources` | 4 |
 
-Alignment ELF dan tanda tangan adalah pemeriksaan paket, bukan bukti bahwa semua fungsi sudah berjalan pada perangkat nyata. [Rujukan Android untuk alignment 16 KB](https://developer.android.com/guide/practices/page-sizes).
+30 ELF lulus alignment, dan APK terbaru dijalankan pada emulator 16 KB. Ini merupakan smoke test terbatas, bukan UAT seluruh fitur. Emulator menggunakan audio nonaktif; keluaran suara belum diperiksa. Android System UI sempat mengalami ANR saat boot sebelumnya; tidak ada crash Gratify pada pemeriksaan akhir. [Rujukan Android untuk alignment 16 KB](https://developer.android.com/guide/practices/page-sizes).
 
 ## Status layanan dan pekerjaan berikutnya
 
-1. **Supabase aktif diterapkan:** proyek `bnabldxsqpvkyqpjcsdv`, skema UUID. Paket `supabase-launch-fixes-uuid.sql` dijalankan sebagai satu transaksi setelah simulasi rollback. Verifikasi: 14 RPC, 0 kebijakan terbuka yang diperiksa, 13 akun asli dipertahankan. Tes SQL sintetis di-rollback; tes login menggunakan dua akun sementara sungguhan.
+1. **Supabase aktif diterapkan:** proyek `bnabldxsqpvkyqpjcsdv`, skema UUID. Paket `supabase-launch-fixes-uuid.sql` dijalankan sebagai satu transaksi setelah simulasi rollback. Verifikasi: 14 RPC, 0 kebijakan terbuka yang diperiksa, 13 akun asli dipertahankan. Tes SQL sintetis di-rollback; tes login menggunakan dua akun sementara sungguhan. Seluruh akun uji sudah dibersihkan; pengecekan akhir menunjukkan 13 akun asli tetap ada.
 2. **Auth/PostgREST lulus:** akun lain dan anonim tidak bisa membaca playlist/library privat, publikasi mengikuti pilihan pemilik, tombstone menolak pemunculan ulang, hapus akun uji B mempertahankan akun A. Storage/avatar, email pemulihan dan sinkronisasi dua perangkat masih memerlukan pengujian.
 3. **Startup Android diperbaiki:** binding `CoroutineScope` untuk `StreamRepository` memakai qualifier `SERVICE_SCOPE`. Masalah sebelumnya benar-benar menyebabkan crash saat startup pada APK lama. APK setelah perbaikan bisa dibuka dan dipasang sebagai pembaruan dengan sertifikat asli. Pengujian login juga menemukan batas TLD enam karakter; validasi bersama diperbaiki; dua tes regresi tambahan dan build penuh lulus.
-4. **Sentry Android aktif:** DSN dikonfigurasi privat; event `GRATIFY-ANDROID-1` dari crash terkontrol emulator diterima, pengguna terhitung 0 dan pesan exception disamarkan. Endpoint tetap memproses metadata perangkat/koneksi. Mapping lokal belum terunggah; token upload sudah ada di GitHub, tetapi validitasnya perlu dibuktikan lewat workflow.
-5. **CI:** workflow `Launch verification` disiapkan untuk tes bersama, lint, full APK dan upload mapping. Secret publik Supabase dan DSN diselaraskan secara terenkripsi. Hasil CI terbaru belum boleh dinyatakan lulus sampai run selesai.
+4. **Sentry Android aktif:** DSN dikonfigurasi privat; event `GRATIFY-ANDROID-1` dari crash terkontrol emulator diterima, pengguna terhitung 0 dan pesan exception disamarkan. Endpoint tetap memproses metadata perangkat/koneksi. Token upload terbukti bekerja: CI `36873302675` mengunggah mapping `3401c637-9f61-3b3d-8299-022ede22078a`, sesuai APK sebelum perbaikan pencarian. Event crash lama memakai mapping berbeda yang belum terunggah. APK terbaru memakai mapping `c40d8741-7144-3ea6-9a33-8c9bc94ad9f2`, dan log CI terbaru membuktikan upload mapping yang cocok berhasil. Runtime desktop belum diverifikasi.
+5. **CI:** workflow `Launch verification` disiapkan untuk tes bersama, lint, full APK dan upload mapping. Secret publik Supabase dan DSN diselaraskan secara terenkripsi. CI `e8112fe2` lulus. [CI perubahan pencarian `90bb5a1f`](https://github.com/TanDjendra/Gratify/actions/runs/36879360981) **lulus seluruh tahap**, termasuk tes/lint, full build dan upload mapping.
 6. **Dokumen:** identitas pengelola dan dukungan sudah dikonfirmasi. URL Terms/Privacy resmi belum tersedia. Contoh URL dan asumsi backup harian yang belum terbukti dihapus dari daftar tinjauan. Kedua dokumen tetap draf sampai pemilik meninjau dan menyetujui fakta/isinya.
 
 Petunjuk rinci ada di `docs/RELEASE_SETUP.md`; dokumen legal ada di `docs/legal/REVIEW.md`.
 
 ## Bukti
 
-- `artifacts/launch-audit/completion-final-build.log`
+- `artifacts/launch-audit/search-final-release-build.log`
+- `artifacts/launch-audit/device-runtime-verification.json`
+- `artifacts/launch-audit/android-album-release-proof.png`
+- `artifacts/launch-audit/ci-verification.json`
+- `artifacts/launch-audit/ci-mapping-verification.json`
+- `artifacts/launch-audit/test-account-cleanup.json`
 - `artifacts/launch-audit/fixes-verification.json`
 - `artifacts/launch-audit/database-fixes-verification.json`
 - `artifacts/launch-audit/database-deployment.json`

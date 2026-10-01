@@ -462,7 +462,8 @@
     "priority": "P1",
     "status": "FIXED_RUNTIME_VERIFIED",
     "repair_report": "LAUNCH_COMPLETION_2026-10-01.md",
-    "discovered_by": "Live service/device/CI verification"
+    "discovered_by": "Live service/device/CI verification",
+    "original_audit_status": "FIXED_RUNTIME_VERIFIED"
   },
   {
     "id": "R02",
@@ -470,7 +471,8 @@
     "priority": "P2",
     "status": "FIXED_RUNTIME_VERIFIED",
     "repair_report": "LAUNCH_COMPLETION_2026-10-01.md",
-    "discovered_by": "Live service/device/CI verification"
+    "discovered_by": "Live service/device/CI verification",
+    "original_audit_status": "FIXED_RUNTIME_VERIFIED"
   },
   {
     "id": "R03",
@@ -478,7 +480,8 @@
     "priority": "P1",
     "status": "FIXED_TRANSACTION_TESTED_EMPTY_PLAYLIST_DEVICE_VERIFIED",
     "repair_report": "LAUNCH_COMPLETION_2026-10-01.md",
-    "discovered_by": "Live service/device/CI verification"
+    "discovered_by": "Live service/device/CI verification",
+    "original_audit_status": "FIXED_TRANSACTION_TESTED_EMPTY_PLAYLIST_DEVICE_VERIFIED"
   },
   {
     "id": "R04",
@@ -486,7 +489,8 @@
     "priority": "P1",
     "status": "PREPARED_AWAITING_ACCESS_CONFIRMATION",
     "repair_report": "LAUNCH_COMPLETION_2026-10-01.md",
-    "discovered_by": "Live service/device/CI verification"
+    "discovered_by": "Live service/device/CI verification",
+    "original_audit_status": "PREPARED_AWAITING_ACCESS_CONFIRMATION"
   },
   {
     "id": "R05",
@@ -494,14 +498,16 @@
     "priority": "P1",
     "status": "FIXED_CI_VERIFIED",
     "repair_report": "LAUNCH_COMPLETION_2026-10-01.md",
-    "discovered_by": "Live service/device/CI verification"
+    "discovered_by": "Live service/device/CI verification",
+    "original_audit_status": "FIXED_CI_VERIFIED"
   },
   {
     "id": "R06",
     "title": "Kolom pencarian tidak membuka papan ketik karena input SearchBar tidak diaktifkan",
     "priority": "P1",
-    "status": "FIXED_DEBUG_DEVICE_VERIFIED_RELEASE_PENDING",
+    "status": "FIXED_RELEASE_DEVICE_VERIFIED",
     "repair_report": "LAUNCH_COMPLETION_2026-10-01.md",
-    "discovered_by": "Native Android search and album smoke test"
+    "discovered_by": "Native Android search and album smoke test",
+    "original_audit_status": "FIXED_RELEASE_DEVICE_VERIFIED"
   }
 ]

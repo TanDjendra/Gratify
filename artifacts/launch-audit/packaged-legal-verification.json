@@ -1,0 +1,36 @@
+{
+  "status": "PASS",
+  "documents_approved": false,
+  "packages": [
+    {
+      "variant": "debug",
+      "apk": "androidApp\\build\\outputs\\apk\\debug\\androidApp-universal-debug.apk",
+      "bytes": 98251304,
+      "documents": [
+        {
+          "name": "terms-of-use.md",
+          "sha256": "fc7b0632c0692c27884c675fe4ec58b5b8c7a437578b81b6f18367b68a6635ac"
+        },
+        {
+          "name": "privacy-policy.md",
+          "sha256": "2bca0dcc981c28fdeb83b32288975e287f1661b17f4bd019ff7fe95861d5174b"
+        }
+      ]
+    },
+    {
+      "variant": "release",
+      "apk": "androidApp\\build\\outputs\\apk\\release\\androidApp-universal-release-unsigned.apk",
+      "bytes": 53039320,
+      "documents": [
+        {
+          "name": "terms-of-use.md",
+          "sha256": "fc7b0632c0692c27884c675fe4ec58b5b8c7a437578b81b6f18367b68a6635ac"
+        },
+        {
+          "name": "privacy-policy.md",
+          "sha256": "2bca0dcc981c28fdeb83b32288975e287f1661b17f4bd019ff7fe95861d5174b"
+        }
+      ]
+    }
+  ]
+}

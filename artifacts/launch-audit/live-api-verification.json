@@ -9,5 +9,6 @@
     "Deleted identities cannot be resurrected; account B data remains intact",
     "Account deletion RPC removes B Auth record while A session remains valid"
   ],
-  "temporary_accounts_retained_for_device": 1
+  "temporary_accounts_retained_for_device": 0,
+  "final_cleanup_evidence": "test-account-cleanup.json"
 }

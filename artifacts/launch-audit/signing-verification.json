@@ -1,0 +1,16 @@
+{
+  "time_utc": "2026-10-01T14:56:02.057575+00:00",
+  "status": "SIGNED_AND_VERIFIED",
+  "keystore_exists": true,
+  "unsigned_apk_exists": true,
+  "missing_settings": [],
+  "apk": "D:\\Tan\\Gratify\\androidApp\\build\\outputs\\apk\\release\\Gratify-release-signed.apk",
+  "bytes": 53245061,
+  "unsigned_source_sha256": "b19c0b99e4ef98be59dba87be59e4eb7cf519367ea462886d7a829dc0135ed26",
+  "sha256": "ae11f391e49502dc91ca31c04659ba823c6973c686a62dc8fa33d4c134a6eb48",
+  "certificate_sha256": [
+    "efefe1b8bf7c6502aeeb60db9a45b430dc50040e11c6f76eb22e2308a51c316a"
+  ],
+  "original_keystore_sha256": "a45fc49bcddb3cd84379f7e45b9c0a5e1ed99462785a72cebe34756e075992f5",
+  "installed_application_update_tested": true
+}

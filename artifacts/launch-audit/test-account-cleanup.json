@@ -1,0 +1,7 @@
+{
+  "status": "PASS",
+  "owned_temporary_accounts_deleted": 1,
+  "auth_accounts_remaining": 13,
+  "original_accounts_preserved": true,
+  "cleanup_method": "Owner-scoped prepare/delete RPC; exact owned ledger and email verified before deletion."
+}
