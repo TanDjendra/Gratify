@@ -11,6 +11,8 @@ Kontak dukungan: supportgratify@gmail.com.
 
 ## Keputusan pemilik yang masih dibutuhkan
 
+Pada 2 Oktober 2026 pemilik meminta ketentuan standar. Usulan operasional yang disiapkan: usia 18+, layanan global sepanjang diizinkan, data akun aktif sampai penghapusan berhasil. Teks konkret dan batas retensi yang belum dibuktikan tersedia di `DEFAULTS_REVIEW_2026-10-02.md`; persetujuan dokumen akhir dan fakta penyedia masih diperlukan.
+
 - Alamat operator dan wilayah layanan.
 - Aturan usia serta penanganan pengguna anak.
 - Dasar pemrosesan tiap fitur, jadwal retensi dan backup yang benar.

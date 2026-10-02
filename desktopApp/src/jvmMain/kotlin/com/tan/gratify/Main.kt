@@ -3,7 +3,7 @@ package com.tan.gratify
 /**
  * Thin entry point for Gratify Desktop.
  *
- * All window setup, VLC bootstrap, Sentry init, Koin loading, deep link
+ * All window setup, VLC bootstrap, Koin loading, deep link
  * handling, mini-player wiring, and tray integration live in
  * `composeApp/src/jvmMain/.../main.kt` as `fun runDesktopApp()`. That keeps
  * the shared module self-contained (it can still be launched directly

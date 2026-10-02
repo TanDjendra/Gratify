@@ -19,11 +19,12 @@ import com.tan.logger.Logger
  */
 object WindowsProtocolRegistrar {
     private const val TAG = "WindowsProtocolRegistrar"
-    private const val SCHEME = "gratify"
-    private const val REG_KEY = "HKCU\\Software\\Classes\\$SCHEME"
+    internal val schemes = listOf("gratify", "com.tan.gratify")
 
     fun register() {
         if (!System.getProperty("os.name", "").contains("Windows", ignoreCase = true)) return
+        // Used by isolated diagnostics; installed applications register by default.
+        if (System.getProperty("gratify.protocol.register", "true") != "true") return
 
         val exePath = resolveExePath() ?: run {
             Logger.e(TAG, "Could not resolve executable path, skipping protocol registration")
@@ -31,22 +32,15 @@ object WindowsProtocolRegistrar {
         }
 
         try {
-            if (isAlreadyRegistered(exePath)) {
-                Logger.d(TAG, "Protocol handler already registered with correct path")
-                return
+            schemes.forEach { scheme ->
+                val key = "HKCU\\Software\\Classes\\$scheme"
+                if (!isAlreadyRegistered(key, exePath)) {
+                    regAdd(key, null, "URL:Gratify Protocol")
+                    regAdd(key, "URL Protocol", "")
+                    regAdd("$key\\DefaultIcon", null, "\"$exePath\",0")
+                    regAdd("$key\\shell\\open\\command", null, commandValue(exePath))
+                }
             }
-
-            Logger.d(TAG, "Registering gratify:// protocol handler -> $exePath")
-
-            // Main key with protocol description
-            regAdd(REG_KEY, null, "URL:Gratify Protocol")
-            regAdd(REG_KEY, "URL Protocol", "")
-
-            // DefaultIcon
-            regAdd("$REG_KEY\\DefaultIcon", null, "\"$exePath\",0")
-
-            // shell\open\command
-            regAdd("$REG_KEY\\shell\\open\\command", null, "\"$exePath\" \"%1\"")
 
             Logger.d(TAG, "Protocol handler registered successfully")
         } catch (e: Exception) {
@@ -54,13 +48,14 @@ object WindowsProtocolRegistrar {
         }
     }
 
-    private fun isAlreadyRegistered(currentExePath: String): Boolean {
+    internal fun commandValue(exePath: String): String = "\"$exePath\" \"%1\""
+
+    private fun isAlreadyRegistered(key: String, currentExePath: String): Boolean {
         return try {
-            val result = regQuery("$REG_KEY\\shell\\open\\command", null)
+            val result = regQuery("$key\\shell\\open\\command", null)
             // Registry stores path with quotes: "C:\path\to\Gratify.exe" "%1"
             // Normalize both for comparison
-            val normalizedExe = currentExePath.replace("\\", "/").lowercase()
-            result?.replace("\\", "/")?.lowercase()?.contains(normalizedExe) == true
+            result?.trim()?.endsWith(commandValue(currentExePath), ignoreCase = true) == true
         } catch (_: Exception) {
             false
         }
@@ -91,25 +86,27 @@ object WindowsProtocolRegistrar {
             }
         }
 
-        // Fallback: running from IDE/dev environment, use current process
-        return ProcessHandle.current().info().command().orElse(null)
+        // A development java.exe/javaw.exe cannot launch this app by URI. Do not
+        // replace the installed handler with a broken development command.
+        return null
     }
 
     private fun regAdd(key: String, valueName: String?, data: String) {
-        // Build command as a single string for cmd.exe to avoid
-        // ProcessBuilder double-escaping embedded quotes in data
-        val valueFlag = if (valueName != null) "/v \"$valueName\"" else "/ve"
-        val escapedData = data.replace("\"", "\\\"")
-        val cmdString = "reg add \"$key\" /f $valueFlag /t REG_SZ /d \"$escapedData\""
-
-        val process = ProcessBuilder("cmd.exe", "/c", cmdString)
+        val process = ProcessBuilder(registrationCommand(key, valueName, data))
             .redirectErrorStream(true)
             .start()
+        process.inputStream.bufferedReader().use { it.readText() }
         val exitCode = process.waitFor()
-        if (exitCode != 0) {
-            val output = process.inputStream.bufferedReader().readText()
-            Logger.e(TAG, "reg add failed (exit=$exitCode): $output")
-        }
+        if (exitCode != 0) error("Protocol registration failed (exit=$exitCode)")
+    }
+
+    internal fun registrationCommand(key: String, valueName: String?, data: String): List<String> {
+        val command = mutableListOf("reg.exe", "add", key, "/f")
+        if (valueName == null) command.add("/ve") else command.addAll(listOf("/v", valueName))
+        // reg.exe parses a Windows command line. Prevent Java from treating the
+        // quoted executable inside the value as quotes around the whole argument.
+        command.addAll(listOf("/t", "REG_SZ", "/d", data.replace("\"", "\\\"")))
+        return command
     }
 
     private fun regQuery(key: String, valueName: String?): String? {

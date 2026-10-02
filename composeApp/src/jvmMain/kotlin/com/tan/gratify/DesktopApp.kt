@@ -1,15 +1,22 @@
 package com.tan.gratify
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -32,11 +39,22 @@ import com.tan.domain.mediaservice.handler.ToastType
 import com.tan.gratify.di.supabaseModule
 import com.tan.gratify.di.viewModelModule
 import com.tan.gratify.ui.component.CustomTitleBar
+import com.tan.gratify.ui.theme.GratifyColors
 import com.tan.gratify.ui.mini_player.MiniPlayerManager
 import com.tan.gratify.ui.mini_player.MiniPlayerWindow
 import com.tan.gratify.utils.VersionManager
 import com.tan.gratify.viewModel.SharedViewModel
 import com.tan.gratify.viewModel.changeLanguageNative
+import com.tan.gratify.viewModel.auth.PasswordRecoveryCoordinator
+import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.auth.auth
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -89,9 +107,7 @@ fun runDesktopApp(args: Array<String> = emptyArray()) {
     // Handle URI passed as command-line argument (Windows/Linux, or explicit invocation)
     // Note: macOS does NOT pass URI as args — it uses Apple Events via setOpenURIHandler
     val deepLinkArg =
-        args.firstOrNull()?.takeIf { arg ->
-            arg.startsWith("gratify://") || arg.startsWith("http://") || arg.startsWith("https://")
-        }
+        args.firstOrNull(DesktopDeepLinkHandler::acceptsArgument)
     // Single-instance guard — MUST run before startKoin. The DataStore Koin
     // singleton is `createdAtStart`, so a second Windows instance would touch
     // ~/.gratify/settings.preferences_pb and crash with an "Unable to rename
@@ -159,11 +175,18 @@ fun runDesktopApp(args: Array<String> = emptyArray()) {
     }
 
     // Connect deep link handler to SharedViewModel
+    val callbackScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    val authCallback = DesktopAuthCallback(getKoin().get<SupabaseClient>().auth)
     DesktopDeepLinkHandler.listener = { intent ->
-        sharedViewModel.setIntent(intent)
+        val uri = intent.data
+        if (uri != null && DesktopAuthCallback.matches(uri)) {
+            if (DesktopAuthCallback.isRecovery(uri)) PasswordRecoveryCoordinator.request()
+            callbackScope.launch { authCallback.handle(uri) }
+        } else sharedViewModel.setIntent(intent)
     }
+    DesktopDeepLinkHandler.consumePendingUri()
 
-    application {
+    try { application {
         // Main Window
         val windowState =
             rememberWindowState(
@@ -179,6 +202,15 @@ fun runDesktopApp(args: Array<String> = emptyArray()) {
                 isVisible = true
                 windowState.isMinimized = false
                 DesktopDeepLinkHandler.consumePendingUri()
+            }
+        }
+        // The second process can write after the restore signal arrives. Poll the
+        // private inbox so this ordering cannot lose a login callback.
+        LaunchedEffect(Unit) {
+            while (true) {
+                val received = withContext(Dispatchers.IO) { DesktopDeepLinkHandler.consumePendingUri() }
+                if (received) { isVisible = true; windowState.isMinimized = false }
+                delay(500)
             }
         }
         val openAppString = stringResource(Res.string.open_app)
@@ -224,7 +256,7 @@ fun runDesktopApp(args: Array<String> = emptyArray()) {
             visible = isVisible,
         ) {
             Column(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().background(GratifyColors.Background),
             ) {
 
                 val context = LocalPlatformContext.current
@@ -250,8 +282,19 @@ fun runDesktopApp(args: Array<String> = emptyArray()) {
                         ).crossfade(true)
                         .build()
                 }
-                App()
-                ToastHost()
+                val accountState by getKoin().get<DataStoreManager>().loggedIn.collectAsState(initial = "")
+                val recoveryPending by PasswordRecoveryCoordinator.pending.collectAsState()
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    val pageSize = if (accountState == DataStoreManager.TRUE && !recoveryPending) {
+                        Modifier.fillMaxSize()
+                    } else {
+                        Modifier.fillMaxHeight().widthIn(max = 480.dp).fillMaxWidth()
+                    }
+                    Box(pageSize) {
+                        App()
+                        ToastHost()
+                    }
+                }
             }
         }
 
@@ -264,6 +307,9 @@ fun runDesktopApp(args: Array<String> = emptyArray()) {
                 },
             )
         }
+    } } finally {
+        DesktopDeepLinkHandler.listener = null
+        callbackScope.cancel()
     }
 }
 

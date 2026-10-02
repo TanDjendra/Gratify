@@ -504,7 +504,7 @@ fun extractWindowsVlcSlice(
         // Music streaming. `**/` is required because include() runs
         // against the original `vlc-<ver>/...` paths inside the zip
         // before the eachFile drop(1) transformation.
-        include("**/*.dll")
+        include("**/*.dll", "**/COPYING.txt", "**/AUTHORS.txt")
         // Strip top-level `vlc-<ver>/` prefix dir.
         eachFile {
             if (relativePath.segments.size > 1) {

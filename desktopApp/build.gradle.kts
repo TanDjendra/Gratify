@@ -159,10 +159,35 @@ tasks.named<hydraulic.conveyor.gradle.WriteConveyorConfigTask>("writeConveyorCon
     }
 }
 
-// vlcSetup block disabled with the plugin above. VLC natives in
-// vlc-natives/{linux,macos,windows}/ are already on disk from prior runs.
-// TODO: replace with a simple Gradle download task that doesn't iterate
-// tasks at apply time, so Conveyor + vlc-setup can coexist.
+// JPackage resources require common/<files>, rather than the per-architecture
+// Conveyor input layout. Stage only the current host's player libraries.
+val desktopHostOs = System.getProperty("os.name").lowercase()
+val desktopHostArm = System.getProperty("os.arch").lowercase() in listOf("aarch64", "arm64")
+val desktopVlcArch = when {
+    desktopHostOs.contains("windows") -> if (desktopHostArm) "windows-arm64" else "windows-x64"
+    desktopHostOs.contains("mac") -> if (desktopHostArm) "macos-arm64" else "macos-x64"
+    else -> "linux-x64"
+}
+val desktopVlcSetup = when (desktopVlcArch) {
+    "windows-arm64" -> ":composeApp:vlcSetupWindowsArmCi"
+    "windows-x64" -> ":composeApp:vlcSetupWindowsX64Ci"
+    "macos-arm64" -> ":composeApp:vlcSetupMacArmCi"
+    "macos-x64" -> ":composeApp:vlcSetupMacX64Ci"
+    else -> ":composeApp:vlcSetupLinuxCi"
+}
+val stageDesktopVlc by tasks.registering(Sync::class) {
+    dependsOn(desktopVlcSetup)
+    from(rootDir.resolve("vlc-natives/$desktopVlcArch"))
+    into(layout.buildDirectory.dir("desktopResources/common/vlc"))
+    doLast {
+        check(destinationDir.walk().any { it.isFile && it.name.startsWith("libvlc") }) {
+            "Desktop player libraries were not staged"
+        }
+    }
+}
+tasks.matching { it.name == "prepareAppResources" }.configureEach {
+    dependsOn(stageDesktopVlc)
+}
 
 compose.desktop {
     application {
@@ -170,7 +195,7 @@ compose.desktop {
         jvmArgs += "--add-opens=java.base/java.nio=ALL-UNNAMED"
 
         nativeDistributions {
-            appResourcesRootDir = rootDir.resolve("vlc-natives/")
+            appResourcesRootDir = layout.buildDirectory.dir("desktopResources").get().asFile
             val listTarget = mutableListOf<TargetFormat>()
             if (org.gradle.internal.os.OperatingSystem
                     .current()
@@ -218,6 +243,7 @@ compose.desktop {
                             <key>CFBundleURLSchemes</key>
                             <array>
                                 <string>gratify</string>
+                                <string>com.tan.gratify</string>
                             </array>
                         </dict>
                     </array>
@@ -388,7 +414,7 @@ tasks.register("packageConveyorAppImage") {
             |Terminal=false
             |Categories=Audio;AudioVideo;
             |StartupWMClass=com-tan-gratify-MainKt
-            |MimeType=x-scheme-handler/gratify;
+            |MimeType=x-scheme-handler/gratify;x-scheme-handler/com.tan.gratify;
             |
             """.trimMargin(),
         )
@@ -526,6 +552,8 @@ tasks.register("buildWindowsMsix") {
 }
 
 tasks.withType<AbstractJPackageTask>().configureEach {
+    dependsOn(stageDesktopVlc)
+    inputs.dir(stageDesktopVlc.map { it.destinationDir }).withPropertyName("bundledDesktopVlc")
     notCompatibleWithConfigurationCache("Compose Desktop JPackage tasks are not yet compatible with configuration cache")
 }
 

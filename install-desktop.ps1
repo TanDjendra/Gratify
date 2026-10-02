@@ -1,3 +1,4 @@
+$ErrorActionPreference = 'Stop'
 Write-Host "===================================================" -ForegroundColor Cyan
 Write-Host "     Gratify Windows Launcher Installer" -ForegroundColor Cyan
 Write-Host "===================================================" -ForegroundColor Cyan
@@ -11,8 +12,8 @@ $ExePath = Join-Path $SrcDir "Gratify.exe"
 if (-not (Test-Path $ExePath)) {
     Write-Host "App build not found. Building Gratify desktop app first..." -ForegroundColor Yellow
     Write-Host "Running: .\gradlew.bat :desktopApp:createReleaseDistributable" -ForegroundColor Yellow
-    Start-Process -FilePath "cmd.exe" -ArgumentList "/c gradlew.bat :desktopApp:createReleaseDistributable" -WorkingDirectory $PSScriptRoot -Wait -NoNewWindow
-    if ($LASTEXITCODE -ne 0) {
+    $buildProcess = Start-Process -FilePath "cmd.exe" -ArgumentList "/c gradlew.bat :desktopApp:createReleaseDistributable -PisFullBuild=true --no-configuration-cache" -WorkingDirectory $PSScriptRoot -Wait -PassThru -WindowStyle Hidden
+    if ($buildProcess.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $ExePath)) {
         Write-Error "Build failed! Please check logs."
         Read-Host "Press Enter to exit..."
         exit 1
