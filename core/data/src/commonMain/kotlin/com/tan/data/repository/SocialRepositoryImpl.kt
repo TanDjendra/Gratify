@@ -137,7 +137,15 @@ internal class SocialRepositoryImpl(
                 val cloudId = playlist.id ?: continue
                 // Legacy server rows receive their own ID in migration 007. Never guess by title/local ID.
                 val syncId = requireNotNull(playlist.clientSyncId) { "Playlist identity migration is required" }
-                if (syncId in pending || localDataSource.getLocalPlaylistBySyncId(syncId) != null) continue
+                if (syncId in pending) continue
+                val existing = localDataSource.getLocalPlaylistBySyncId(syncId)
+                if (existing != null) {
+                    if (existing.ownerEmail.isNullOrBlank()) {
+                        check(supabase.auth.currentUserOrNull()?.id == userId)
+                        localDataSource.restoreCloudPlaylist(userId, existing, emptyList())
+                    }
+                    continue
+                }
                 val items = retryCloudRead {
                     check(supabase.auth.currentUserOrNull()?.id == userId)
                     supabase.postgrest.rpc("gratify_get_cloud_playlist_items", buildJsonObject {
