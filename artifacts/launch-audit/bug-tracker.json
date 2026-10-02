@@ -406,11 +406,12 @@
     "priority": null,
     "launch_severity": "High",
     "location": "[AccountRepositoryImpl](D:/Tan/Gratify/core/data/src/commonMain/kotlin/com/tan/data/repository/AccountRepositoryImpl.kt:55)",
-    "status": "DEPLOYED_LIVE_RPC_RLS_VERIFIED_REQUIRES_DEVICE_UAT",
+    "status": "DEPLOYED_NATIVE_ACCOUNT_DELETION_AND_ISOLATION_VERIFIED",
     "assignee": "Codex — perbaikan lokal",
     "original_audit_status": "OPEN",
     "repair_report": "LAUNCH_COMPLETION_2026-10-01.md",
-    "deployment_evidence": "artifacts/launch-audit/database-deployment.json"
+    "deployment_evidence": "artifacts/launch-audit/database-deployment.json",
+    "native_evidence": "artifacts/launch-audit/native-account-deletion.json"
   },
   {
     "id": "L02",
@@ -487,11 +488,12 @@
     "id": "R04",
     "title": "Avatar pemilik gagal diunggah karena Storage belum mempunyai kebijakan akses",
     "priority": "P1",
-    "status": "DEPLOYED_STORAGE_API_VERIFIED_DEVICE_UI_PENDING",
+    "status": "DEPLOYED_STORAGE_API_AND_RELEASE_AVATAR_UPLOAD_VERIFIED",
     "repair_report": "LAUNCH_COMPLETION_2026-10-01.md",
     "discovered_by": "Live service/device/CI verification",
     "original_audit_status": "PREPARED_AWAITING_ACCESS_CONFIRMATION",
-    "deployment_evidence": "artifacts/launch-audit/avatar-storage-deployment.json"
+    "deployment_evidence": "artifacts/launch-audit/avatar-storage-deployment.json",
+    "device_evidence": "artifacts/launch-audit/profile-device-verification.json"
   },
   {
     "id": "R05",
@@ -515,7 +517,19 @@
     "id": "R07",
     "title": "Edit profil menutup form dan menyimpan perubahan lokal meskipun unggah/update backend gagal",
     "priority": "P1",
-    "status": "FIX_PREPARED_BUILD_AND_DEVICE_VERIFICATION_PENDING",
-    "repair_report": "LAUNCH_COMPLETION_2026-10-01.md"
+    "status": "FIXED_RELEASE_PROFILE_OFFLINE_RETRY_VERIFIED",
+    "repair_report": "LAUNCH_COMPLETION_2026-10-01.md",
+    "device_evidence": "artifacts/launch-audit/profile-device-verification.json",
+    "original_audit_status": "FIXED_RELEASE_PROFILE_OFFLINE_RETRY_VERIFIED"
+  },
+  {
+    "id": "R08",
+    "title": "Timeout cloud dan perlombaan identitas login menyembunyikan playlist yang dipulihkan",
+    "priority": "P1",
+    "status": "FIXED_REGRESSION_AND_SIGNED_TWO_DEVICE_RESTORE_VERIFIED",
+    "repair_report": "LAUNCH_COMPLETION_2026-10-01.md",
+    "diagnosis_evidence": "artifacts/launch-audit/cloud-restore-diagnosis.json",
+    "original_audit_status": "IDENTITY_FIX_BUILD_AND_NATIVE_RECHECK_PENDING",
+    "native_evidence": "artifacts/launch-audit/two-device-fixtures.json"
   }
 ]

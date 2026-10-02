@@ -1,0 +1,41 @@
+{
+  "status": "PASS_SIGNED_RELEASE_TWO_DEVICE_RESTORE",
+  "temporary_accounts": 2,
+  "account_A_private_playlists": [
+    {
+      "title": "AuditTwin",
+      "tracks": 3
+    },
+    {
+      "title": "AuditTwin",
+      "tracks": 0
+    },
+    {
+      "title": "AuditLong",
+      "tracks": 1025
+    }
+  ],
+  "account_B_private_playlists": [
+    {
+      "title": "AuditBOnly",
+      "tracks": 0
+    }
+  ],
+  "public_publication_requested": false,
+  "original_accounts_untouched": true,
+  "device_results_pending": false,
+  "signed_apk_sha256": "5f04ebe76538c8537bc1e2db8b75d23377ecd33ea746813ea61c5b4d527e06c8",
+  "native_evidence": [
+    "cloud-first-a-native.json",
+    "cloud-second-b-native.json",
+    "cloud-second-a-native.json",
+    "cloud-repeat-a-native.json"
+  ],
+  "large_playlist_detail_track_count": 1025,
+  "manual_restore_success_verified": true,
+  "offline_failure_visible_and_retry_enabled": true,
+  "online_retry_completed_without_duplicates": true,
+  "cleanup_pending": false,
+  "temporary_accounts_removed": true,
+  "cleanup_evidence": "device-account-cleanup.json"
+}

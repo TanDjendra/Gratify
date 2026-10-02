@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "signed_apk_sha256": "f9167f31103db5c429249fb509adecc7392f7fe47d4a09e0be3db9bd882d9684",
+  "native_callback_opened_reset_form": true,
+  "native_password_submission_returned_to_login": true,
+  "new_password_authenticates_exact_test_owner": true,
+  "old_password_rejected": true,
+  "disposable_account_only": true,
+  "real_emails_sent_by_this_test": 0,
+  "main_password_changed": false
+}

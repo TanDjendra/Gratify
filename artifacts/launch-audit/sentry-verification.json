@@ -17,10 +17,10 @@
   "ci_mapping_upload_verified": true,
   "ci_mapping_uuid": "3401c637-9f61-3b3d-8299-022ede22078a",
   "ci_run_url": "https://github.com/TanDjendra/Gratify/actions/runs/36873302675",
-  "mapping_scope": "Controlled crash event used an older APK whose mapping was not uploaded. Mapping 3401c637-9f61-3b3d-8299-022ede22078a was uploaded for the subsequent release; latest search release upload pending.",
-  "latest_signed_apk_sha256": "ae11f391e49502dc91ca31c04659ba823c6973c686a62dc8fa33d4c134a6eb48",
-  "latest_mapping_uuid": "c40d8741-7144-3ea6-9a33-8c9bc94ad9f2",
+  "mapping_scope": "Controlled crash event used an older APK without uploaded mapping. Current signed release mapping is independently verified against successful CI upload logs.",
+  "latest_signed_apk_sha256": "5f04ebe76538c8537bc1e2db8b75d23377ecd33ea746813ea61c5b4d527e06c8",
+  "latest_mapping_uuid": "8d7fc4eb-2026-325f-8375-c8363c97e07b",
   "latest_mapping_upload_verified": true,
-  "latest_mapping_ci_run_url": "https://github.com/TanDjendra/Gratify/actions/runs/36879360981",
+  "latest_mapping_ci_run_url": "https://github.com/TanDjendra/Gratify/actions/runs/36944868214",
   "latest_mapping_evidence": "ci-mapping-verification.json"
 }

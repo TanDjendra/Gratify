@@ -41,6 +41,11 @@ live=evidence("live-api-verification.json")
 monitoring=evidence("sentry-verification.json")
 runtime=evidence("device-runtime-verification.json")
 ci=evidence("ci-verification.json")
+cloud=evidence("two-device-fixtures.json")
+account_deletion=evidence("native-account-deletion.json")
+device_cleanup=evidence("device-account-cleanup.json")
+cloud_verified=cloud.get("status")=="PASS_SIGNED_RELEASE_TWO_DEVICE_RESTORE" and cloud.get("signed_apk_sha256")==signing.get("sha256")
+deletion_verified=account_deletion.get("status")=="PASS" and account_deletion.get("signed_apk_sha256")==signing.get("sha256")
 server_verified=deployment.get("status")=="APPLIED" and live.get("status")=="PASS"
 # Refuse to replace previous evidence with a failed/incomplete build.
 if not successful or not packaging_successful or packaged_legal["status"] != "PASS" or database["status"] != "PASS" or lint is None or lint["errors"] or failures or tests<37:
@@ -51,7 +56,12 @@ report = {"time_utc":datetime.now(timezone.utc).isoformat(),"build_log":args.bui
           "lint":lint,"live_supabase_verified":server_verified,"database_deployment":deployment,
           "live_auth_postgrest":live,"device_uat_verified":runtime.get("full_uat_verified",False),"device_runtime":runtime,
           "release_signed":signed_verified,"signing":signing,"legal_documents_approved":False,
-          "sentry_production_configured":monitoring.get("status","").startswith("EVENT_RECEIVED"),"sentry":monitoring,"ci":ci}
+          "sentry_production_configured":monitoring.get("status","").startswith("EVENT_RECEIVED"),"sentry":monitoring,"ci":ci,
+          "two_device_cloud_restore_verified":cloud_verified,"cloud_restore":cloud,
+          "native_account_deletion_verified":deletion_verified,"native_account_deletion":account_deletion,
+          "device_test_account_cleanup":device_cleanup,
+          "recovery_email":evidence("recovery-email-verification.json"),
+          "recovery_native_flow":evidence("recovery-deeplink-verification.json")}
 (OUT/"fixes-verification.json").write_text(json.dumps(report,indent=2))
 trackerfile=OUT/"bug-tracker.json"
 tracker=json.loads(trackerfile.read_text())
@@ -61,6 +71,12 @@ for bug in tracker:
     bug["repair_report"]="LAUNCH_COMPLETION_2026-10-01.md"
     if bug["id"] in server_ids:
         bug["status"]="DEPLOYED_LIVE_RPC_RLS_VERIFIED_REQUIRES_DEVICE_UAT" if server_verified else "READY_FOR_DATABASE_DEPLOYMENT"
+        if bug["id"]=="L01" and server_verified and deletion_verified:
+            bug["status"]="DEPLOYED_NATIVE_ACCOUNT_DELETION_AND_ISOLATION_VERIFIED"
+            bug["native_evidence"]="artifacts/launch-audit/native-account-deletion.json"
+    elif bug["id"]=="R08" and cloud_verified:
+        bug["status"]="FIXED_REGRESSION_AND_SIGNED_TWO_DEVICE_RESTORE_VERIFIED"
+        bug["native_evidence"]="artifacts/launch-audit/two-device-fixtures.json"
     elif bug["id"]=="L02":bug["status"]="DRAFT_REQUIRES_OWNER_REVIEW"
     elif bug["id"]=="L03":
         bug["status"]=("ANDROID_EVENT_RECEIVED_CI_MAPPING_UPLOAD_VERIFIED_DESKTOP_UNVERIFIED" if monitoring.get("latest_mapping_upload_verified") and monitoring.get("status", "").startswith("EVENT_RECEIVED") else "EVENT_RECEIVED_REQUIRES_MAPPING_VERIFICATION" if monitoring.get("status","").startswith("EVENT_RECEIVED") else "IMPLEMENTED_REQUIRES_SENTRY_CONFIGURATION")

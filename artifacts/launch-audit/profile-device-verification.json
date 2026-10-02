@@ -1,0 +1,18 @@
+{
+  "status": "PASS",
+  "signed_apk_sha256": "352a59451d5b261a47deb5d25c61b092c9518763c3756697e738b354de5e0c32",
+  "checks": [
+    "Native release image picker selected synthetic PNG",
+    "Server avatar upload is JPEG with JPEG file signature",
+    "Name and avatar URL stored in owner profile",
+    "Offline save retained edited form and enabled retry",
+    "Returning online and pressing Save persisted edited name and closed form",
+    "Release reinstallation preserved login and uploaded avatar"
+  ],
+  "evidence": [
+    "android-avatar-profile-proof.png",
+    "android-profile-offline-retry-proof.png",
+    "android-profile-retry-success-proof.png"
+  ],
+  "full_profile_uat_verified": false
+}

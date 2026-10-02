@@ -14,7 +14,9 @@ def adb(*args):
     return result.stdout
 
 def tree():
-    adb('shell', 'uiautomator', 'dump', '/sdcard/gratify-audit-ui.xml')
+    result = adb('shell', 'uiautomator', 'dump', '/sdcard/gratify-audit-ui.xml').decode(errors='replace')
+    if 'UI hierchary dumped to:' not in result and 'UI hierarchy dumped to:' not in result:
+        raise RuntimeError('Fresh native UI hierarchy unavailable; cached nodes must not be used')
     return ET.fromstring(adb('shell', 'cat', '/sdcard/gratify-audit-ui.xml'))
 
 def tap(node):
@@ -28,23 +30,35 @@ def tap_text(text):
 
 def redact(text):
     if PRIVATE.is_file():
-        for account in json.loads(PRIVATE.read_text()):
+        accounts = json.loads(PRIVATE.read_text())
+        for account in accounts if isinstance(accounts, list) else []:
             for key in ('email','password','access_token'):
                 if account.get(key): text=text.replace(account[key],'[test account]')
     return text
 
 parser=argparse.ArgumentParser()
-parser.add_argument('action',choices=['snapshot','tap','login','screenshot','runtime'])
+parser.add_argument('action',choices=['snapshot','tap','fill','login','screenshot','runtime'])
 parser.add_argument('value',nargs='?')
+parser.add_argument('--serial',choices=['emulator-5580','emulator-5582'],default='emulator-5580')
+parser.add_argument('--account',type=int,choices=[0,1],default=0)
+parser.add_argument('--field',type=int,default=0)
 parser.add_argument('--package', choices=['com.tan.gratify', 'com.tan.gratify.dev'], default='com.tan.gratify')
 args=parser.parse_args()
+SERIAL=args.serial
 if args.action=='snapshot':
     for node in tree().iter('node'):
         text=node.get('text') or node.get('content-desc')
         if text and node.get('password')!='true':print(redact(text)[:150],node.get('bounds'))
 elif args.action=='tap': tap_text(args.value)
+elif args.action=='fill':
+    fields=[n for n in tree().iter('node') if n.get('class')=='android.widget.EditText']
+    node=fields[args.field];tap(node)
+    adb('shell','input','keyevent','123')
+    if node.get('text'):adb('shell','input','keyevent',*['67']*len(node.get('text')))
+    adb('shell','input','text',args.value)
+    adb('shell','input','keyevent','4')
 elif args.action=='login':
-    account=json.loads(PRIVATE.read_text())[0]
+    account=json.loads(PRIVATE.read_text())[args.account]
     for index,key in enumerate(('email','password')):
         fields=[n for n in tree().iter('node') if n.get('class')=='android.widget.EditText']
         node=fields[index];tap(node)

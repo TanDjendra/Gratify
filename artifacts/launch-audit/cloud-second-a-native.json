@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "signed_apk_sha256": "5f04ebe76538c8537bc1e2db8b75d23377ecd33ea746813ea61c5b4d527e06c8",
+  "device": "emulator-5582",
+  "disposable_owner": "A",
+  "visible_private_playlist_titles": {
+    "AuditTwin": 2,
+    "AuditLong": 1,
+    "AuditBOnly": 0
+  },
+  "expected_track_counts_verified": true,
+  "other_owner_playlists_hidden": true,
+  "screenshot": "android-cloud-second-a.png"
+}

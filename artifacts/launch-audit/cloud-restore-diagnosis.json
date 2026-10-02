@@ -1,0 +1,23 @@
+{
+  "status": "TRANSPORT_TIMEOUT_REPRODUCED",
+  "scope": "Owned API 37 emulator, disposable audit account",
+  "underlying_exception_classes": [
+    "io.github.jan.supabase.exceptions.HttpRequestException"
+  ],
+  "request_timed_out": true,
+  "server_fixture_rows_intact": true,
+  "sensitive_raw_debugger_output_kept_private": true,
+  "transport_reason": "Connect timeout has expired",
+  "failed_read": "user_library_state",
+  "raw_url_and_owner_redacted": true,
+  "repair_status": "VERIFIED_REGRESSION_TESTS_AND_SIGNED_TWO_DEVICE_UAT",
+  "additional_native_diagnosis": {
+    "status": "REPRODUCED",
+    "symptom": "Restore reports completion while library rows remain hidden",
+    "evidence": "Native export of disposable active account database contains all three cloud playlists, with 3, 0, and 1025 tracks, but empty owner_email; preferences contain the exact authenticated A email",
+    "cause": "Background restore starts before AccountEmail is written by the login view model",
+    "repair": "Initialize AccountEmail inside the ownership mutex before starting restore; a repeated owner-checked restore repairs only blank email on the same cloud sync identity, preserving IDs and tracks",
+    "private_export_committed": false
+  },
+  "final_native_evidence": "two-device-fixtures.json"
+}

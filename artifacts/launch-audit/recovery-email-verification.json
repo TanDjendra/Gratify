@@ -1,0 +1,19 @@
+{
+  "status": "DELIVERY_CONFIRMED_BY_RECIPIENT",
+  "http_status": 200,
+  "error_code": null,
+  "recipient": "Gmail alias of supportgratify@gmail.com",
+  "authorized_send_attempts": 1,
+  "send_attempts": 1,
+  "redirect_matches_app": true,
+  "main_account_password_changed": false,
+  "delivery_verified": true,
+  "temporary_account_cleanup_pending": false,
+  "receipt_evidence": "User confirmed the single email arrived in the support mailbox inbox.",
+  "recovery_deeplink_and_password_change_verified": true,
+  "temporary_account_cleanup_verified": true,
+  "separate_disposable_native_password_flow_verified": true,
+  "native_flow_evidence": "recovery-deeplink-verification.json",
+  "native_verification_scope": "Separate disposable account and admin-generated recovery link; the delivered support email link was not consumed.",
+  "delivered_email_link_consumed_by_native_app": false
+}

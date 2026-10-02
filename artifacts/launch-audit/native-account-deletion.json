@@ -1,0 +1,12 @@
+{
+  "status": "PASS",
+  "signed_apk_sha256": "5f04ebe76538c8537bc1e2db8b75d23377ecd33ea746813ea61c5b4d527e06c8",
+  "native_confirmation_and_return_to_login_verified": true,
+  "exact_disposable_owner_removed_from_auth": true,
+  "owned_avatar_metadata_empty": true,
+  "second_account_preserved": true,
+  "original_auth_accounts_preserved": 13,
+  "first_attempt_did_not_complete": true,
+  "explicit_native_retry_succeeded": true,
+  "evidence": "android-account-deleted-login.png"
+}

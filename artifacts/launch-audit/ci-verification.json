@@ -1,10 +1,10 @@
 {
-  "id": 36879360981,
+  "id": 36944868214,
   "name": "Launch verification",
   "status": "completed",
   "conclusion": "success",
-  "head_sha": "90bb5a1f50c369873e1dbaf6fc5ef1c289452dae",
-  "html_url": "https://github.com/TanDjendra/Gratify/actions/runs/36879360981",
+  "head_sha": "f16649257c9ffa6d00c149c92c55d47b3779e46e",
+  "html_url": "https://github.com/TanDjendra/Gratify/actions/runs/36944868214",
   "jobs": [
     {
       "name": "verify",

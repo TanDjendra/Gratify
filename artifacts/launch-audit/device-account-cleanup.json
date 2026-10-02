@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "disposable_device_accounts_removed": 2,
+  "native_deleted_accounts": 1,
+  "cli_deleted_accounts": 1,
+  "exact_owner_rpc_deletion_verified": true,
+  "owned_avatar_metadata_empty_before_account_deletion": true,
+  "original_auth_accounts_preserved": 13,
+  "remaining_auth_accounts": 13,
+  "real_account_mutation_performed": false
+}

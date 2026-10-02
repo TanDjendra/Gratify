@@ -1,8 +1,8 @@
 {
-  "time_utc": "2026-10-01T21:52:09.065731+00:00",
-  "build_log": "search-final-release-build.log",
+  "time_utc": "2026-10-02T00:30:40.447376+00:00",
+  "build_log": "cloud-owner-recovery-final-build.log",
   "full_build_successful": true,
-  "tests": 41,
+  "tests": 50,
   "failures": 0,
   "suites": [
     {
@@ -30,6 +30,20 @@
       "module": "core/data",
       "suite": "AccountLibraryStoreTest[jvm]",
       "tests": 7,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "module": "core/data",
+      "suite": "CloudReadRetryTest[jvm]",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "module": "core/data",
+      "suite": "CloudRestoreConcurrencyTest[jvm]",
+      "tests": 4,
       "failures": 0,
       "errors": 0
     },
@@ -146,7 +160,7 @@
       {
         "variant": "debug",
         "apk": "androidApp\\build\\outputs\\apk\\debug\\androidApp-universal-debug.apk",
-        "bytes": 98251304,
+        "bytes": 100070360,
         "documents": [
           {
             "name": "terms-of-use.md",
@@ -161,7 +175,7 @@
       {
         "variant": "release",
         "apk": "androidApp\\build\\outputs\\apk\\release\\androidApp-universal-release-unsigned.apk",
-        "bytes": 53039320,
+        "bytes": 53037904,
         "documents": [
           {
             "name": "terms-of-use.md",
@@ -214,65 +228,129 @@
   },
   "device_uat_verified": false,
   "device_runtime": {
-    "time_utc": "2026-10-01T14:56:01.624908+00:00",
-    "status": "PASS_SCOPED_SMOKE_TEST",
-    "signed_apk_sha256": "ae11f391e49502dc91ca31c04659ba823c6973c686a62dc8fa33d4c134a6eb48",
+    "time_utc": "2026-10-02T00:28:35.260728+00:00",
+    "status": "PASS_SCOPED_TWO_DEVICE_CLOUD_RESTORE_AND_UPDATE",
+    "signed_apk_sha256": "5f04ebe76538c8537bc1e2db8b75d23377ecd33ea746813ea61c5b4d527e06c8",
+    "source_commit": "f16649257c9ffa6d00c149c92c55d47b3779e46e",
     "package": "com.tan.gratify",
-    "device": "Owned Gratify_Audit_16KB emulator; Android 17/API 37 x86_64",
+    "device": "Two owned Android 17/API 37 x86_64 audit emulators",
     "page_size_bytes": 16384,
     "startup_verified": true,
     "installed_update_session_retained": true,
-    "existing_empty_playlist_retained": true,
-    "search_keyboard_and_submission_verified": true,
-    "search_results_and_album_filter_verified": true,
-    "album_detail_verified": {
-      "title": "Thriller",
-      "artist": "Michael Jackson",
-      "track_count": 9
-    },
-    "playback_verified": {
-      "android_media_session_state": "PLAYING(3)",
-      "position_ms": 6172,
-      "buffered_position_ms": 133932,
-      "speed": 1.0,
-      "error": null,
-      "pause_control_verified": true,
-      "audio_audibility_verified": false
-    },
-    "crash_buffer_empty_at_end": true,
+    "two_device_restore_verified": true,
+    "account_switch_isolation_verified": true,
+    "same_title_playlists_preserved": true,
+    "large_playlist_track_count": 1025,
+    "repeat_restore_no_duplicates": true,
+    "offline_restore_error_and_online_retry_verified": true,
+    "app_crash_observed": false,
     "full_uat_verified": false,
     "limitations": [
-      "Headless emulator, audio muted.",
-      "Transient Android System UI boot ANR occurred on earlier emulator boots; formal app ANR/FPS testing on physical devices is pending.",
-      "Two-device sync, downloads, offline, notifications, recovery email and desktop runtime have not completed full device UAT."
+      "Headless emulators have audio disabled; audible playback and physical-device FPS/ANR testing remain unverified.",
+      "Second emulator System UI reported an ANR during boot; no Gratify crash was observed.",
+      "Latest release scope: startup, update, cloud restore, account switching and offline retry. Avatar/profile and recovery/password tests remain associated with their preceding APK hashes.",
+      "Downloads, notifications and desktop runtime have not completed full device UAT."
     ],
     "evidence": [
-      "android-album-release-proof.png",
-      "search-final-release-build.log"
+      "cloud-first-a-native.json",
+      "cloud-second-b-native.json",
+      "cloud-second-a-native.json",
+      "cloud-repeat-a-native.json",
+      "two-device-fixtures.json",
+      "android-cloud-long-detail.png",
+      "android-cloud-restore-success.png",
+      "android-cloud-offline-retry.png",
+      "native-account-deletion.json",
+      "device-account-cleanup.json"
     ],
     "preceding_release_smoke_tests": {
-      "signed_apk_sha256": "fbad850fea10f66776ee9dad2044640b38fb127f4960c2d57f5fb720657cf2f7",
-      "checks": [
-        "Temporary-account login/profile completion",
-        "Home/catalog/library loading",
-        "Empty playlist creation and detail",
-        "Online playlist with 109 tracks",
-        "Playback and pause",
-        "Settings/storage page"
-      ]
-    }
+      "time_utc": "2026-10-01T23:02:00.845152+00:00",
+      "status": "PASS_PROFILE_AND_UPDATE_SMOKE_RESTORE_UAT_PENDING",
+      "signed_apk_sha256": "352a59451d5b261a47deb5d25c61b092c9518763c3756697e738b354de5e0c32",
+      "package": "com.tan.gratify",
+      "device": "Owned Gratify_Audit_16KB emulator; Android 17/API 37 x86_64",
+      "page_size_bytes": 16384,
+      "startup_verified": true,
+      "installed_update_session_retained": true,
+      "profile_avatar_upload_verified": true,
+      "profile_offline_retry_verified": true,
+      "app_crash_observed": false,
+      "full_uat_verified": false,
+      "limitations": [
+        "Latest release scope: startup, update, login, native avatar upload and offline profile retry.",
+        "Two-account and two-device cloud restore is under investigation; transient native network request failure observed.",
+        "Headless emulator audio muted; audible output and physical-device FPS/ANR UAT pending.",
+        "Recovery email inbox delivery confirmed; recovery deep link/password update and desktop runtime not yet verified."
+      ],
+      "evidence": [
+        "profile-device-verification.json",
+        "android-avatar-profile-proof.png",
+        "android-profile-offline-retry-proof.png",
+        "android-profile-retry-success-proof.png"
+      ],
+      "preceding_release_smoke_tests": {
+        "time_utc": "2026-10-01T14:56:01.624908+00:00",
+        "status": "PASS_SCOPED_SMOKE_TEST",
+        "signed_apk_sha256": "ae11f391e49502dc91ca31c04659ba823c6973c686a62dc8fa33d4c134a6eb48",
+        "package": "com.tan.gratify",
+        "device": "Owned Gratify_Audit_16KB emulator; Android 17/API 37 x86_64",
+        "page_size_bytes": 16384,
+        "startup_verified": true,
+        "installed_update_session_retained": true,
+        "existing_empty_playlist_retained": true,
+        "search_keyboard_and_submission_verified": true,
+        "search_results_and_album_filter_verified": true,
+        "album_detail_verified": {
+          "title": "Thriller",
+          "artist": "Michael Jackson",
+          "track_count": 9
+        },
+        "playback_verified": {
+          "android_media_session_state": "PLAYING(3)",
+          "position_ms": 6172,
+          "buffered_position_ms": 133932,
+          "speed": 1.0,
+          "error": null,
+          "pause_control_verified": true,
+          "audio_audibility_verified": false
+        },
+        "crash_buffer_empty_at_end": true,
+        "full_uat_verified": false,
+        "limitations": [
+          "Headless emulator, audio muted.",
+          "Transient Android System UI boot ANR occurred on earlier emulator boots; formal app ANR/FPS testing on physical devices is pending.",
+          "Two-device sync, downloads, offline, notifications, recovery email and desktop runtime have not completed full device UAT."
+        ],
+        "evidence": [
+          "android-album-release-proof.png",
+          "search-final-release-build.log"
+        ],
+        "preceding_release_smoke_tests": {
+          "signed_apk_sha256": "fbad850fea10f66776ee9dad2044640b38fb127f4960c2d57f5fb720657cf2f7",
+          "checks": [
+            "Temporary-account login/profile completion",
+            "Home/catalog/library loading",
+            "Empty playlist creation and detail",
+            "Online playlist with 109 tracks",
+            "Playback and pause",
+            "Settings/storage page"
+          ]
+        }
+      }
+    },
+    "native_account_deletion_verified": true
   },
   "release_signed": true,
   "signing": {
-    "time_utc": "2026-10-01T14:56:02.057575+00:00",
+    "time_utc": "2026-10-02T00:29:50.505982+00:00",
     "status": "SIGNED_AND_VERIFIED",
     "keystore_exists": true,
     "unsigned_apk_exists": true,
     "missing_settings": [],
     "apk": "D:\\Tan\\Gratify\\androidApp\\build\\outputs\\apk\\release\\Gratify-release-signed.apk",
     "bytes": 53245061,
-    "unsigned_source_sha256": "b19c0b99e4ef98be59dba87be59e4eb7cf519367ea462886d7a829dc0135ed26",
-    "sha256": "ae11f391e49502dc91ca31c04659ba823c6973c686a62dc8fa33d4c134a6eb48",
+    "unsigned_source_sha256": "eb360da995ce7e7b5389d2990f05daa5e9dd326793c12c34d5a86a4e52205d06",
+    "sha256": "5f04ebe76538c8537bc1e2db8b75d23377ecd33ea746813ea61c5b4d527e06c8",
     "certificate_sha256": [
       "efefe1b8bf7c6502aeeb60db9a45b430dc50040e11c6f76eb22e2308a51c316a"
     ],
@@ -300,20 +378,20 @@
     "ci_mapping_upload_verified": true,
     "ci_mapping_uuid": "3401c637-9f61-3b3d-8299-022ede22078a",
     "ci_run_url": "https://github.com/TanDjendra/Gratify/actions/runs/36873302675",
-    "mapping_scope": "Controlled crash event used an older APK whose mapping was not uploaded. Mapping 3401c637-9f61-3b3d-8299-022ede22078a was uploaded for the subsequent release; latest search release upload pending.",
-    "latest_signed_apk_sha256": "ae11f391e49502dc91ca31c04659ba823c6973c686a62dc8fa33d4c134a6eb48",
-    "latest_mapping_uuid": "c40d8741-7144-3ea6-9a33-8c9bc94ad9f2",
+    "mapping_scope": "Controlled crash event used an older APK without uploaded mapping. Current signed release mapping is independently verified against successful CI upload logs.",
+    "latest_signed_apk_sha256": "5f04ebe76538c8537bc1e2db8b75d23377ecd33ea746813ea61c5b4d527e06c8",
+    "latest_mapping_uuid": "8d7fc4eb-2026-325f-8375-c8363c97e07b",
     "latest_mapping_upload_verified": true,
-    "latest_mapping_ci_run_url": "https://github.com/TanDjendra/Gratify/actions/runs/36879360981",
+    "latest_mapping_ci_run_url": "https://github.com/TanDjendra/Gratify/actions/runs/36944868214",
     "latest_mapping_evidence": "ci-mapping-verification.json"
   },
   "ci": {
-    "id": 36879360981,
+    "id": 36944868214,
     "name": "Launch verification",
     "status": "completed",
     "conclusion": "success",
-    "head_sha": "90bb5a1f50c369873e1dbaf6fc5ef1c289452dae",
-    "html_url": "https://github.com/TanDjendra/Gratify/actions/runs/36879360981",
+    "head_sha": "f16649257c9ffa6d00c149c92c55d47b3779e46e",
+    "html_url": "https://github.com/TanDjendra/Gratify/actions/runs/36944868214",
     "jobs": [
       {
         "name": "verify",
@@ -373,5 +451,101 @@
         ]
       }
     ]
+  },
+  "two_device_cloud_restore_verified": true,
+  "cloud_restore": {
+    "status": "PASS_SIGNED_RELEASE_TWO_DEVICE_RESTORE",
+    "temporary_accounts": 2,
+    "account_A_private_playlists": [
+      {
+        "title": "AuditTwin",
+        "tracks": 3
+      },
+      {
+        "title": "AuditTwin",
+        "tracks": 0
+      },
+      {
+        "title": "AuditLong",
+        "tracks": 1025
+      }
+    ],
+    "account_B_private_playlists": [
+      {
+        "title": "AuditBOnly",
+        "tracks": 0
+      }
+    ],
+    "public_publication_requested": false,
+    "original_accounts_untouched": true,
+    "device_results_pending": false,
+    "signed_apk_sha256": "5f04ebe76538c8537bc1e2db8b75d23377ecd33ea746813ea61c5b4d527e06c8",
+    "native_evidence": [
+      "cloud-first-a-native.json",
+      "cloud-second-b-native.json",
+      "cloud-second-a-native.json",
+      "cloud-repeat-a-native.json"
+    ],
+    "large_playlist_detail_track_count": 1025,
+    "manual_restore_success_verified": true,
+    "offline_failure_visible_and_retry_enabled": true,
+    "online_retry_completed_without_duplicates": true,
+    "cleanup_pending": false,
+    "temporary_accounts_removed": true,
+    "cleanup_evidence": "device-account-cleanup.json"
+  },
+  "native_account_deletion_verified": true,
+  "native_account_deletion": {
+    "status": "PASS",
+    "signed_apk_sha256": "5f04ebe76538c8537bc1e2db8b75d23377ecd33ea746813ea61c5b4d527e06c8",
+    "native_confirmation_and_return_to_login_verified": true,
+    "exact_disposable_owner_removed_from_auth": true,
+    "owned_avatar_metadata_empty": true,
+    "second_account_preserved": true,
+    "original_auth_accounts_preserved": 13,
+    "first_attempt_did_not_complete": true,
+    "explicit_native_retry_succeeded": true,
+    "evidence": "android-account-deleted-login.png"
+  },
+  "device_test_account_cleanup": {
+    "status": "PASS",
+    "disposable_device_accounts_removed": 2,
+    "native_deleted_accounts": 1,
+    "cli_deleted_accounts": 1,
+    "exact_owner_rpc_deletion_verified": true,
+    "owned_avatar_metadata_empty_before_account_deletion": true,
+    "original_auth_accounts_preserved": 13,
+    "remaining_auth_accounts": 13,
+    "real_account_mutation_performed": false
+  },
+  "recovery_email": {
+    "status": "DELIVERY_CONFIRMED_BY_RECIPIENT",
+    "http_status": 200,
+    "error_code": null,
+    "recipient": "Gmail alias of supportgratify@gmail.com",
+    "authorized_send_attempts": 1,
+    "send_attempts": 1,
+    "redirect_matches_app": true,
+    "main_account_password_changed": false,
+    "delivery_verified": true,
+    "temporary_account_cleanup_pending": false,
+    "receipt_evidence": "User confirmed the single email arrived in the support mailbox inbox.",
+    "recovery_deeplink_and_password_change_verified": true,
+    "temporary_account_cleanup_verified": true,
+    "separate_disposable_native_password_flow_verified": true,
+    "native_flow_evidence": "recovery-deeplink-verification.json",
+    "native_verification_scope": "Separate disposable account and admin-generated recovery link; the delivered support email link was not consumed.",
+    "delivered_email_link_consumed_by_native_app": false
+  },
+  "recovery_native_flow": {
+    "status": "PASS",
+    "signed_apk_sha256": "f9167f31103db5c429249fb509adecc7392f7fe47d4a09e0be3db9bd882d9684",
+    "native_callback_opened_reset_form": true,
+    "native_password_submission_returned_to_login": true,
+    "new_password_authenticates_exact_test_owner": true,
+    "old_password_rejected": true,
+    "disposable_account_only": true,
+    "real_emails_sent_by_this_test": 0,
+    "main_password_changed": false
   }
 }

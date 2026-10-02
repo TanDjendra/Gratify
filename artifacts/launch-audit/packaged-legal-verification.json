@@ -5,7 +5,7 @@
     {
       "variant": "debug",
       "apk": "androidApp\\build\\outputs\\apk\\debug\\androidApp-universal-debug.apk",
-      "bytes": 98251304,
+      "bytes": 100070360,
       "documents": [
         {
           "name": "terms-of-use.md",
@@ -20,7 +20,7 @@
     {
       "variant": "release",
       "apk": "androidApp\\build\\outputs\\apk\\release\\androidApp-universal-release-unsigned.apk",
-      "bytes": 53039320,
+      "bytes": 53037904,
       "documents": [
         {
           "name": "terms-of-use.md",
