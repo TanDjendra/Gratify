@@ -6,6 +6,7 @@ import com.tan.data.db.Converters
 import com.tan.data.db.MusicDatabase
 import com.tan.domain.data.entities.QueueEntity
 import com.tan.domain.data.entities.SongEntity
+import com.tan.domain.data.entities.LocalPlaylistEntity
 import com.tan.domain.data.model.browse.album.Track
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -73,6 +74,24 @@ class CloudRestoreConcurrencyTest {
             assertNull(dao.getSong("A-song"))
             assertTrue(dao.getSong("B-song")!!.liked)
             assertTrue(dao.getQueue().isEmpty())
+        }
+    }
+
+    @Test fun repeatedRestoreRepairsOnlyMissingEmailOfSameOwnedCloudIdentity(): Unit = runBlocking {
+        withDatabase { db ->
+            AccountLibraryStore(db).activate("A", null)
+            val dao = db.getDatabaseDao()
+            val playlist = LocalPlaylistEntity(title = "same title", syncId = "cloud-A", ownerEmail = "", tracks = listOf("song"))
+            assertTrue(dao.restoreCloudPlaylist("A", playlist, listOf(song("song"))))
+            val id = dao.getLocalPlaylistBySyncId("cloud-A")!!.id
+            assertFalse(dao.restoreCloudPlaylist("A", playlist.copy(ownerEmail = "a@example.invalid"), emptyList()))
+            assertEquals(id, dao.getLocalPlaylistBySyncId("cloud-A")!!.id)
+            assertEquals("a@example.invalid", dao.getLocalPlaylist(id)!!.ownerEmail)
+            assertEquals(listOf("song"), dao.getLocalPlaylist(id)!!.tracks)
+            assertFalse(dao.restoreCloudPlaylist("A", playlist.copy(ownerEmail = "other@example.invalid"), emptyList()))
+            assertEquals("a@example.invalid", dao.getLocalPlaylist(id)!!.ownerEmail)
+            assertFails { dao.restoreCloudPlaylist("B", playlist.copy(ownerEmail = "b@example.invalid"), emptyList()) }
+            assertEquals("a@example.invalid", dao.getLocalPlaylist(id)!!.ownerEmail)
         }
     }
 }

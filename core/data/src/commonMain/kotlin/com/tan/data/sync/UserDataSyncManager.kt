@@ -97,6 +97,8 @@ class UserDataSyncManager(
             if (!previous.isNullOrBlank() && previous != userId) dataStoreManager.setCookie("", null)
             activeOwner = userId
             dataStoreManager.putString(KEY_LAST_SYNCED_USER_ID, userId)
+            // Playlist filtering must have this account's identity before the restore job starts.
+            dataStoreManager.putString("AccountEmail", supabase.auth.currentUserOrNull()?.email.orEmpty())
             if (waitForCloud) try {
                 withTimeoutOrNull(LOGIN_SYNC_TIMEOUT_MS) {
                     syncDown(userId)

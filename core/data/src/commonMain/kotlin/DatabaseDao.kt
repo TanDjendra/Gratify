@@ -500,6 +500,9 @@ interface DatabaseDao {
     @Query("SELECT * FROM local_playlist WHERE sync_id = :syncId LIMIT 1")
     suspend fun getLocalPlaylistBySyncId(syncId: String): LocalPlaylistEntity?
 
+    @Query("UPDATE local_playlist SET owner_email = :ownerEmail WHERE id = :id AND (owner_email IS NULL OR owner_email = '')")
+    suspend fun bindRestoredPlaylistEmail(id: Long, ownerEmail: String)
+
     @Query("DELETE FROM local_playlist WHERE sync_id = :syncId")
     suspend fun deletePlaylistBySyncId(syncId: String)
 
@@ -526,7 +529,13 @@ interface DatabaseDao {
         check(getLibraryOwner() == ownerId) { "Account ownership changed" }
         val syncId = requireNotNull(playlist.syncId)
         require(songs.map { it.videoId }.distinct().size == songs.size) { "Duplicate playlist tracks" }
-        if (getLocalPlaylistBySyncId(syncId) != null) return false
+        getLocalPlaylistBySyncId(syncId)?.let { existing ->
+            // Only a matching cloud identity in this owner's active database can repair the login race.
+            if (existing.ownerEmail.isNullOrBlank() && !playlist.ownerEmail.isNullOrBlank()) {
+                bindRestoredPlaylistEmail(existing.id, playlist.ownerEmail!!)
+            }
+            return false
+        }
         if (getLibraryRemovals(ownerId, "cloud_playlists").any { it.itemId == syncId }) return false
         val id = insertLocalPlaylist(playlist)
         check(id > 0) { "Playlist could not be restored" }
