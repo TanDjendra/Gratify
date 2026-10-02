@@ -5,11 +5,15 @@ import hashlib
 import json
 import xml.etree.ElementTree as ET
 import zipfile
+import argparse
 
 root = Path(__file__).resolve().parents[2]
 evidence = root / 'artifacts/launch-audit'
 package = root / 'desktopApp/build/compose/binaries/main-release/app/Gratify'
-build_log = evidence / 'desktop-final-build.log'
+parser = argparse.ArgumentParser()
+parser.add_argument('--build-log', default='desktop-final-build.log')
+options = parser.parse_args()
+build_log = evidence / options.build_log
 assert 'BUILD SUCCESSFUL' in build_log.read_text(encoding='utf-8', errors='replace')
 exe = package / 'Gratify.exe'
 assert exe.is_file() and exe.stat().st_size > 0
@@ -47,6 +51,9 @@ for xml in (root / 'composeApp/build/test-results/jvmTest').glob('TEST-*.xml'):
 assert sum(s['failures'] + s['errors'] for s in suites) == 0
 desktop = next(s for s in suites if s['name'].startswith('DesktopDeepLinkTest'))
 assert desktop['tests'] == 10
+google = next((s for s in suites if s['name'].startswith('GoogleLoginControllerTest')), None)
+if options.build_log == 'google-login-fix-build.log':
+    assert google and google['tests'] == 6, 'Missing Google login regression checks'
 report = {
     'time_utc': datetime.now(timezone.utc).isoformat(), 'status': 'PACKAGE_AND_REGRESSION_TESTS_VERIFIED',
     'package': str(package.relative_to(root)), 'exe_sha256': hashlib.sha256(exe.read_bytes()).hexdigest(),
@@ -54,6 +61,7 @@ report = {
     'vlc_plugins': len(plugins), 'jar_count': len(classpath), 'classpath': classpath,
     'packaged_legal_source_sha256': documents, 'legal_status': 'DRAFT_NOT_OFFICIAL',
     'desktop_regression_tests': desktop['tests'], 'compose_jvm_tests': sum(s['tests'] for s in suites),
+    'google_login_regression_tests': google['tests'] if google else 0,
     'failures': 0, 'native_ui_verified': False,
     'desktop_sentry_event_verified': False, 'full_desktop_uat_verified': False,
     'scope': 'Local Windows release packaging; SDK callbacks tested against a disposable local HTTP server, not a real mailbox or live Supabase reset.',

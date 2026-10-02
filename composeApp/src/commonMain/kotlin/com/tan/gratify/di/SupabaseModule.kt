@@ -32,6 +32,7 @@ val supabaseModule = module {
                 // sehingga login stuck setelah memilih akun.
                 scheme = "com.tan.gratify"
                 host = "login-callback"
+                configureExternalAuthPlatform()
             }
             install(Postgrest)
             install(Storage)

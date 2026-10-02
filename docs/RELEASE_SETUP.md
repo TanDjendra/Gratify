@@ -18,16 +18,16 @@ Pelaksana memverifikasi sertifikat dan nama host server (`verify-full`). Bila pr
 
 Perbaikan sudah diterapkan pada proyek Gratify `bnabldxsqpvkyqpjcsdv` melalui SQL Editor admin. Skema aktif memakai UUID; paket yang sesuai adalah `artifacts/launch-audit/supabase-launch-fixes-uuid.sql`. Paket TEXT `supabase-launch-fixes.sql` tidak sesuai untuk proyek aktif ini. Jangan menjalankan paket TEXT atau potongan migrasi secara terpisah pada skema UUID.
 
-Laporan `database-deployment.json` mencatat 14 RPC, tidak ada kebijakan terbuka yang diperiksa, dan 13 akun asli dipertahankan. Pengujian SQL/RLS dan login Auth/PostgREST dua akun sementara lulus. Migrasi Storage/avatar 008 sudah diterapkan; enam pemeriksaan upload, upsert, batas file, isolasi pemilik dan penghapusan lulus. Pengiriman email pemulihan dan sinkronisasi dua perangkat belum dibuktikan. Cache URL avatar yang sudah diminta dapat bertahan setelah penghapusan origin. Klien lama perlu diperbarui karena jalur mutasi lama sudah dibatasi.
+Laporan `database-deployment.json` mencatat 14 RPC, tidak ada kebijakan terbuka yang diperiksa, dan 13 akun asli dipertahankan. Pengujian SQL/RLS dan login Auth/PostgREST dua akun sementara lulus. Migrasi Storage/avatar 008 sudah diterapkan; enam pemeriksaan upload, upsert, batas file, isolasi pemilik dan penghapusan lulus. Satu email pemulihan dikonfirmasi masuk inbox; callback/password diuji terpisah tanpa email tambahan. Pemulihan cloud pada dua emulator, 1.025 lagu, isolasi akun dan retry offline lulus pada APK `5f04ebe7` / source `f1664925`; hasil tersebut tidak otomatis berlaku pada APK berikutnya. Cache URL avatar yang sudah diminta dapat bertahan setelah penghapusan origin. Klien lama perlu diperbarui karena jalur mutasi lama sudah dibatasi.
 
 ## 2. Sentry untuk versi full
 
 1. Buat atau buka proyek Android/Kotlin Gratify di Sentry.
 2. Buka **Project Settings → Client Keys (DSN)** dan salin DSN proyek.
 3. Tambahkan `SENTRY_DSN=<DSN proyek>` ke `local.properties`.
-4. Secret `SENTRY_AUTH_TOKEN` sudah ada di GitHub; token sudah terbukti valid untuk organisasi `calestaan` melalui upload mapping pada CI `36879360981`. Workflow Launch verification memeriksa upload mapping pada build penuh. DSN Android sudah dikonfigurasi secara privat.
+4. Secret `SENTRY_AUTH_TOKEN` sudah ada di GitHub; token sudah terbukti valid untuk organisasi `calestaan` melalui upload mapping pada CI `36944868214`. Workflow Launch verification memeriksa upload mapping pada build penuh. DSN Android sudah dikonfigurasi secara privat.
 
-[Panduan Android Sentry](https://docs.sentry.io/platforms/android/). Event uji Android diterima dan redaksi pesan exception diverifikasi. Mapping APK sebelum perubahan profil cocok dengan mapping yang diunggah pada CI `36879360981`; build terbaru perlu mapping baru. Runtime desktop belum diperiksa. Versi FOSS tidak memakai Sentry.
+[Panduan Android Sentry](https://docs.sentry.io/platforms/android/). Event uji Android diterima dan redaksi pesan exception diverifikasi. Mapping APK `5f04ebe7` adalah `8d7fc4eb-2026-325f-8375-c8363c97e07b` dan cocok dengan unggahan nyata pada CI `36944868214`; build setelahnya memerlukan pemeriksaan mapping tersendiri. Desktop belum menginisialisasi SDK Sentry dan belum memiliki bukti event. Versi FOSS tidak memakai Sentry.
 
 ## 3. Penandatanganan APK
 
@@ -62,3 +62,7 @@ Gunakan dua akun uji dan dua perangkat/emulator yang diizinkan:
 - Pasang APK bertanda tangan di atas versi yang sudah dibagikan; periksa data tetap ada, startup, crash, ANR dan frame saat scrolling.
 
 Laporan lokal tidak menggantikan pengujian Auth, Storage, email, perangkat dan CI nyata.
+
+## 6. Login Google desktop
+
+Supabase Authentication → URL Configuration harus mengizinkan `http://localhost:*` untuk server callback desktop yang memilih port acak. Alamat tersebut telah ditambahkan pada proyek Gratify setelah persetujuan pemilik; callback Android tetap tersedia dan Site URL tidak diganti. Pengguna mengonfirmasi berhasil masuk pada percobaan baru setelah perubahan ini. Batas penantian aplikasi/server adalah lima menit dengan pembatalan dan retry. Bukti: `artifacts/launch-audit/google-login-verification.json`.

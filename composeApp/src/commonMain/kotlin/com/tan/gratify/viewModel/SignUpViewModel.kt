@@ -61,6 +61,20 @@ class SignUpViewModel(
     private var cooldownJob: Job? = null
     private var verifiedEmail: String? = null
 
+    private val googleLogin = com.tan.gratify.viewModel.auth.GoogleLoginController(
+        scope = viewModelScope,
+        launchBrowser = { supabase.auth.signInWith(io.github.jan.supabase.auth.providers.Google) },
+        awaitSession = {
+            supabase.auth.sessionStatus.first {
+                it is io.github.jan.supabase.auth.status.SessionStatus.Authenticated &&
+                    supabase.auth.currentUserOrNull() != null
+            }
+        },
+        hasSession = { supabase.auth.currentUserOrNull() != null },
+        waitsForCallback = com.tan.gratify.di.externalAuthWaitsForCallback,
+    )
+    val googleLoginState = googleLogin.state
+
     // ── Form Field Updates ───────────────────────────────────────────────────
 
     fun updateEmail(email: String) {
@@ -257,18 +271,10 @@ class SignUpViewModel(
     }
 
     fun logInWithGoogle() {
-        viewModelScope.launch {
-            _authState.value = AuthUiState.Loading("Menghubungkan ke Google...")
-            try {
-                supabase.auth.signInWith(io.github.jan.supabase.auth.providers.Google)
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                _authState.value = AuthUiState.Idle
-            } catch (e: Throwable) {
-                log("Google login failed: [details omitted]", com.tan.logger.LogLevel.ERROR)
-                _authState.value = AuthUiState.Error("Google Login gagal. Silakan coba lagi.")
-            }
-        }
+        googleLogin.start()
     }
+
+    fun cancelGoogleLogin() = googleLogin.cancel()
 
     // ── Private Helpers ──────────────────────────────────────────────────────
 

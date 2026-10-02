@@ -1,7 +1,7 @@
 {
   "status": "PASS",
   "signed_apk": "D:\\Tan\\Gratify\\androidApp\\build\\outputs\\apk\\release\\Gratify-release-signed.apk",
-  "sha256": "5f04ebe76538c8537bc1e2db8b75d23377ecd33ea746813ea61c5b4d527e06c8",
+  "sha256": "959a1dc90b56ac6e9a0a26e805ae75c1ba79586b15dbe8912c882ab1dae109f4",
   "release_package_correct": true,
   "debuggable": false,
   "abis": [
@@ -11,7 +11,7 @@
   ],
   "elf_64bit_libraries_checked": 30,
   "elf_load_segments_16k_aligned": true,
-  "page_size_device_runtime_tested": true,
+  "page_size_device_runtime_tested": false,
   "libraries": [
     {
       "library": "lib/arm64-v8a/libandroidx.graphics.path.so",
@@ -267,7 +267,7 @@
     }
   ],
   "r8_removed_unused_insecure_pipepipe_initializers": true,
-  "r8_usage_sha256": "f819043ec750381566b290dc2df30d1bfcdea58bcbcf8e277becd3921502177d",
+  "r8_usage_sha256": "f73025c41b64fb50278a761d0f807050cc9d4d52f9ca58b3321a1dc2eeddda2f",
   "lint_errors": 0,
   "lint_issues_by_id": {
     "OldTargetApi": 1,
@@ -281,5 +281,5 @@
     "IconLocation": 2,
     "IconDuplicates": 6
   },
-  "installed_application_update_tested": true
+  "installed_application_update_tested": false
 }

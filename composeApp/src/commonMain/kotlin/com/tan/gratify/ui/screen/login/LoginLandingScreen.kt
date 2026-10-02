@@ -24,6 +24,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import com.tan.gratify.viewModel.auth.GoogleLoginState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -85,6 +87,8 @@ fun LoginLandingScreen(
     onGoogleClick: () -> Unit = { signUpViewModel.logInWithGoogle() },
 ) {
     val authState by signUpViewModel.authState.collectAsStateWithLifecycle()
+    val googleState by signUpViewModel.googleLoginState.collectAsStateWithLifecycle()
+    val googleWaiting = googleState is GoogleLoginState.Waiting
     var hasNavigated by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -221,6 +225,7 @@ fun LoginLandingScreen(
 
     DisposableEffect(Unit) {
         onDispose {
+            signUpViewModel.cancelGoogleLogin()
             showBottomNavigation()
         }
     }
@@ -270,6 +275,7 @@ fun LoginLandingScreen(
             // ── Tombol Utama: Sign up free (Hijau Brand) ─────────────────────
             Button(
                 onClick = onSignUpClick,
+                enabled = !googleWaiting,
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 52.dp),
@@ -294,6 +300,7 @@ fun LoginLandingScreen(
             // ── Tombol Log In (Email + Password) ─────────────────────────────
             OutlinedButton(
                 onClick = onEmailLoginClick,
+                enabled = !googleWaiting,
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 52.dp),
@@ -320,9 +327,20 @@ fun LoginLandingScreen(
             SocialLoginButton(
                 iconRes = Res.drawable.ic_google,
                 iconTint = null,
-                label = "Continue with Google",
+                label = if (googleWaiting) "Menunggu login Google…" else "Continue with Google",
+                enabled = !googleWaiting,
                 onClick = onGoogleClick,
             )
+            if (googleWaiting) {
+                Text("Selesaikan login di browser, lalu kembali ke Gratify.",
+                    color = GratifyColors.TextSecondary, textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp))
+                TextButton(onClick = { signUpViewModel.cancelGoogleLogin() }) { Text("Batalkan") }
+            }
+            (googleState as? GoogleLoginState.Failed)?.let { failure ->
+                Text(failure.message, color = GratifyColors.TextSecondary,
+                    textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 12.dp))
+            }
 
 
             // Catatan: Tombol "Continue with Apple" telah dihapus sepenuhnya sesuai permintaan
@@ -338,9 +356,11 @@ private fun SocialLoginButton(
     iconTint: Color?,
     label: String,
     onClick: () -> Unit,
+    enabled: Boolean = true,
 ) {
     OutlinedButton(
         onClick = onClick,
+        enabled = enabled,
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 52.dp),

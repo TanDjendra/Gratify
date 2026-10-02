@@ -1,0 +1,950 @@
+{
+  "time_utc": "2026-10-02T01:54:54.962109+00:00",
+  "status": "PACKAGE_AND_REGRESSION_TESTS_VERIFIED",
+  "package": "desktopApp\\build\\compose\\binaries\\main-release\\app\\Gratify",
+  "exe_sha256": "be514f9de1284ad9bde1eb044a0408a21a9d831448d11de4b0b74f2fff517d39",
+  "build_log": "google-login-fix-build.log",
+  "bundled_runtime": true,
+  "bundled_vlc": true,
+  "vlc_plugins": 363,
+  "jar_count": 231,
+  "classpath": [
+    {
+      "name": "desktopApp-jvm-2.1.0.jar",
+      "sha256": "bb595d3db089d3ade0db46bebeee0f51fc8522139f3ef89268c81a2b05149b64"
+    },
+    {
+      "name": "aboutlibraries-compose-jvm-12b48a2bd0ffa036c763224e52f72f4.jar",
+      "sha256": "54fd85a27bf3c28b6b82e8866f4cdaf78c389d0181f13dd5bba62fc75b33db3f"
+    },
+    {
+      "name": "aboutlibraries-compose-m3-jvm-5d4c82b21d3b5f4df568dacfe2213a4.jar",
+      "sha256": "af8fd4cb66909383908277e1836c24f52dc3a18ceaed96af5dd46a579c9df5b3"
+    },
+    {
+      "name": "aboutlibraries-core-jvm-225ee93bf4d2373655a49ac991ca0a7.jar",
+      "sha256": "cfc27aaab07cc76c5b979ca56a73502deaf4d5b278b37a54a5f881cf53af166c"
+    },
+    {
+      "name": "adaptive-desktop-1.2.0-c068d1b43073144bda49faa9aebe8eb1.jar",
+      "sha256": "3f294849660b8e5ea29d167ac7b455c167694901ebf9f916e9b2f0ceeea69a3a"
+    },
+    {
+      "name": "aiService-jvm-2e1280f29319b12e88906c6aff329974.jar",
+      "sha256": "b2106ea7b59d6c389a05545c5a7d70e4935743c642390d0045712a4de7db15c8"
+    },
+    {
+      "name": "androidx-palette-jvm-d28692a4b316e5cb9ea1dbfe6ee56cd.jar",
+      "sha256": "3bfd11a19df9bffdbd0b54580365844e8662175512fbbc9038759e043debe81e"
+    },
+    {
+      "name": "animation-core-desktop-1.12.0-alpha01-672b244cc8c3d655606f33d9412fea6.jar",
+      "sha256": "2637ea3049dfad5e5c71fefd83feba0754b0be14718edec7a01f5d809d71d962"
+    },
+    {
+      "name": "animation-desktop-1.12.0-alpha01-d1846ca4875777c2449a858a31a33e1.jar",
+      "sha256": "803d6fff66df7fde02de91d0c74381b6ba8084cc07a5574ac62747942d958913"
+    },
+    {
+      "name": "annotation-jvm-1.9.1-1d6a04b3b9847638d0529df8ef76a.jar",
+      "sha256": "51f23a5bdf023afec9167b845ba8c849dd79c6582ed903b6801c7f2b0923e075"
+    },
+    {
+      "name": "annotations-26.1.0-29c6b7959db13e3ac5ef35cf815368e.jar",
+      "sha256": "4ebbcd259069d4551c391baf7285603c2d770987196ac54ba28d8c5b807ce58f"
+    },
+    {
+      "name": "atomicfu-jvm-0.28.0-70921245a0aed3c3e3d17c34ca3dbd87.jar",
+      "sha256": "8e6864d2dc905fc40032afc148465fd5e16f93d5b5a9b7ae22f51dbbe90433a5"
+    },
+    {
+      "name": "auth-kt-jvm-3.0.3-eed169d05e20daaf7bdbe08e4ca6d85c.jar",
+      "sha256": "afcd905610c404a2a347399cee78c256943f423e411dd6923b6775a9fe386714"
+    },
+    {
+      "name": "autolink-0.10.0-be771f6d4d82b998596afa3b4f48ea.jar",
+      "sha256": "d851c4a38bc2f93c912c5fbf3e4ed31d09bf7768d236ef456755d159c3e35dc5"
+    },
+    {
+      "name": "backdrop-desktop-fb85ed384b6bad5d5ae83177108db8f4.jar",
+      "sha256": "80fb80f14799c8c60328cf76ce98eed899fa596a214ff000307bceba96857a5b"
+    },
+    {
+      "name": "BravePipeExtractor-v0.26.3-2d10bd8ba0f1e92f9b24318761da2af.jar",
+      "sha256": "68a2e57b0e99ad04cce4ed9cf68a08f7f7856b2da8a0e2d92975bed4cbaa55a2"
+    },
+    {
+      "name": "calf-core-desktop-0.12.0-46d1d45c1336eccf55ab46c353e1f772.jar",
+      "sha256": "769cea73664b3dcececbe53b88961c11f8405f5bbde586365d3b3347b7769029"
+    },
+    {
+      "name": "calf-file-picker-desktop-0.12.0-302bcca96abcb290a172b2d287f3781b.jar",
+      "sha256": "662892ab660e8e4327f60c11b5642b1f1a0bb23ea75b30523b6d4b29ab54b26b"
+    },
+    {
+      "name": "calf-io-desktop-0.12.0-9c62bfaa78404d6ac5913b39ae3e08f.jar",
+      "sha256": "5d4616dd9617cce3d3537c50344adb56071003b25e086403a071659b3078ce68"
+    },
+    {
+      "name": "cmpToast-jvm-2d8d99fada829aa139c426913a12a4.jar",
+      "sha256": "f11ae69f2ab5a7a75e838f0875d4b48c315c9eb22399a19af2e12492a652104b"
+    },
+    {
+      "name": "coil-compose-core-jvm-3.4.0-199e6040e8221af5ffbd158866ca281e.jar",
+      "sha256": "bc7e3d72856156e15baf2052a09f6af749927ee91b58c09bc79fc42a3ab66c5b"
+    },
+    {
+      "name": "coil-compose-jvm-3.4.0-77eda153948d554a9d14ac7385c62d4.jar",
+      "sha256": "87b6b98972e3d75a1aa26bd6cc959ca42f372c32a341b2a135d038031ec35ffb"
+    },
+    {
+      "name": "coil-core-jvm-3.4.0-f9c9db60d042f1ecc8178a0f6f31d.jar",
+      "sha256": "28a7b141eec92eb72dd99bcfc436037252878cb8856d7978b5946b2ec40e986a"
+    },
+    {
+      "name": "coil-jvm-3.4.0-f5f39e2c8016e25cd7eda41c8193c86.jar",
+      "sha256": "2544ad9273a1528991a730b1b60d3ce4d520f9dce7ef649da3dae251eab1a616"
+    },
+    {
+      "name": "coil-network-core-jvm-3.4.0-c7788be2dc2b72bbd97432b7a850c07.jar",
+      "sha256": "a7c9c01d28507f66f0ce826b4ad1db08bda8468b703b8ed5074a558fa9ebe05b"
+    },
+    {
+      "name": "coil-network-okhttp-jvm-3.4.0-c8535bc5cca197888f7329dbf7e4794d.jar",
+      "sha256": "07e6ab2af98aaa8abfde4f2f22fd17423b8ac15c000635c2d95519678406991e"
+    },
+    {
+      "name": "collection-jvm-1.5.0-4421442c114a4f8c8fe587cf2d668237.jar",
+      "sha256": "3b38dffda9cdfc74e3fc60d518c894bca3feb25af9dfa005654195924d37cdbb"
+    },
+    {
+      "name": "common-jvm-eaf6197de628f0855280db7edca88850.jar",
+      "sha256": "406e07d9dd0a1ab59412826acf8e99fefa687a13fd2b9c07e4c09c2ad9abe2dd"
+    },
+    {
+      "name": "commons-codec-1.22.0-f14b9146cd553f4e8c5c3f5c9e2be611.jar",
+      "sha256": "54d41c992fdb1879716afcc0b6aa672540ac5cf96f757dd87da74971e865395a"
+    },
+    {
+      "name": "commons-io-2.5-e2d74794fba570ec2115fb9d5b5dc9b.jar",
+      "sha256": "29efbf878a2d1e20cd671a606712fea9b59806ce31f7833339bc86f02e00f4a4"
+    },
+    {
+      "name": "commons-lang3-3.8.1-54b1256d887a6993ecbef23371a332.jar",
+      "sha256": "7b9720a1899196e967e83ff1a1bf8226de63c003ece0ea510068ad49783e3449"
+    },
+    {
+      "name": "composeApp-jvm-f4fc6aa777d92f9613631ec8dd3d2c5.jar",
+      "sha256": "77a017d1dc5d17bed4f48bbf8235ce8969293fb3101f362080ed38fdee534aef"
+    },
+    {
+      "name": "ComposeNativeTray-jvm-5ae5e328b757486c3993dc64b8be7a5.jar",
+      "sha256": "12b10d2c2227515dac8ed166f7db4ff18be19dccece445089a14ead5a7cdb043"
+    },
+    {
+      "name": "compottie-core-desktop-2.2.1-1fed124d1e8344e2de84909fb044a5b8.jar",
+      "sha256": "bc4318fd376011cc4b31c24f7ed846544fa925147d25f355260d90ab0934591e"
+    },
+    {
+      "name": "compottie-desktop-2.2.1-d891f3e36b97f0c9a7a0aa15fde6af2e.jar",
+      "sha256": "e99ec2aa3d2ebb4c9686924dcff8de30bfa194e484f788e5d7c0fc3b17627f14"
+    },
+    {
+      "name": "compottie-dot-desktop-2.2.1-72bdca95ff7c167c679b4f175d59828.jar",
+      "sha256": "7c0cecc8f1500ce1ea54afffe83d62dbff5a362ed9bf1cf3fba26323c8a36dfb"
+    },
+    {
+      "name": "compottie-network-core-desktop-2.2.1-99aaa55af9cebb5c783967c04ce79189.jar",
+      "sha256": "c7ccec3282c3d364c62412e3548d3346cef242efb67b4f08436fb658677b1315"
+    },
+    {
+      "name": "compottie-network-desktop-2.2.1-64f529763850f96f7682dcabc9918b3e.jar",
+      "sha256": "d6a5b208f76401376d19e7c6c14da89c461c4d7faae49e9b80c911583f212fc1"
+    },
+    {
+      "name": "compottie-resources-desktop-2.2.1-b5974acbcf41e290ab8e4794d73159.jar",
+      "sha256": "dec0c4717df6811d545db733e51edf8e597b4f222516c2a6953b60493c32034f"
+    },
+    {
+      "name": "config-1.4.3-1c572a33999ed337c9b256a4d68eee7.jar",
+      "sha256": "3c7dd7e78ac993bce73f4f8fc6b36af632b11a26cc75016f5eb6e70d96b4e32c"
+    },
+    {
+      "name": "core-3.5.3-b5269d7bf1eea1d06424c342829b117.jar",
+      "sha256": "5e433512ea97032793c6fdabdc83ba67a51b7722d7e27f5185733cba34defbd2"
+    },
+    {
+      "name": "core-common-2.2.0-2212d240dfe1e8a7598ee117ccc316d.jar",
+      "sha256": "1240093968fdcd720f69c42d391b328338778153b89a62343e8c95c4291495be"
+    },
+    {
+      "name": "core-jvm-0.7.5-a9ce3af0d2bba1496360aa1d3adc24.jar",
+      "sha256": "964d5b1021e76fce2c6691ab9d7b47353f6e6c4a13c28d82b23b79df5cfe73a1"
+    },
+    {
+      "name": "core-jvmcommon-0.91.3-60562fd962fec46ecfaa98b2e4fb3da0.jar",
+      "sha256": "5efaecc4af575ded6c376a4bd18e21c24c54d24edbb0ee93e0df555307adc052"
+    },
+    {
+      "name": "data-jvm-f2ee8953ffcfda520be7f3b2d585eba.jar",
+      "sha256": "e1ecb05cb321df32f9850e5f71fffcc7f51149faa2c1d0f5b1eabf554c96cd3d"
+    },
+    {
+      "name": "datastore-core-jvm-1.2.1-68bd30a82462b130b953a7a0ade6b318.jar",
+      "sha256": "162676956bcd9a6a237291c574ddc840e9ebb94f469515bb9b4318dd6fdc85a1"
+    },
+    {
+      "name": "datastore-core-okio-jvm-1.2.1-38c87b659b5e43255f87474fab30457f.jar",
+      "sha256": "ada9d07dd57ccc4b242b8462796bbae1a84abf3018e7b6ec6719b146c1c70651"
+    },
+    {
+      "name": "datastore-jvm-1.2.1-64873d5cfe3f83e57d1a8ba9fd633d48.jar",
+      "sha256": "69f81ddee53277b8d62b88f1b594870101f170e3290c57e22daa5a7212b0d376"
+    },
+    {
+      "name": "datastore-preferences-core-jvm-1.2.1-a71e7c68fc6dd85f6237335722cd925.jar",
+      "sha256": "bda8f4d3020140b1520adfe03e3e258ff6e86f0aab875ab6dd6accbb3264e013"
+    },
+    {
+      "name": "datastore-preferences-external-protobuf-1.2.1-80e72813e22e9695eaf82ff9ccb727e0.jar",
+      "sha256": "e9695c6dfd11eca1ab0b866a833044c92f59e643f940a75d0678fd1b541c2f66"
+    },
+    {
+      "name": "datastore-preferences-jvm-1.2.1-35eb615e54a9f74657b74b5ec836e377.jar",
+      "sha256": "89c366135e07433a655416817a4890e85c135e4cea7bab0f2744f8129361f360"
+    },
+    {
+      "name": "datastore-preferences-proto-1.2.1-f7b9c81898907447e4911df25f047.jar",
+      "sha256": "661d6c65a599125f82cfbb2115bf1584246b386e78e1c23ebf15e51bb839fe71"
+    },
+    {
+      "name": "dbus-java-core-5.0.0-cfb33e273c92d9ee852bb52219db9010.jar",
+      "sha256": "1d28af6257849554b9014e3f1564a6c2b6c92cd96db48525782d45677e40560d"
+    },
+    {
+      "name": "dbus-java-transport-native-unixsocket-5.0.0-169b1551f55d4cc5f75d08b369ebc73.jar",
+      "sha256": "7067f1d7a6bc787fb084a8f4eb3cc7f3abf100c1a56e7172b82016833d97a93a"
+    },
+    {
+      "name": "dec-0.1.2-4b1cd14cf29733941cc536b27e6aedfa.jar",
+      "sha256": "48d8c8214acf0a867597e9bfeed794cbc2ae3bf0ce523c39c85275f14ba0c771"
+    },
+    {
+      "name": "desktop-jvm-1.11.1-853ec1ce1542426c233c62225bcd3895.jar",
+      "sha256": "138b4f6bab0a86359b9b011485a00754e3930333343fa7ab236c1465d3ff4308"
+    },
+    {
+      "name": "domain-jvm-7f6dcdd88c19716a4c538512797cb749.jar",
+      "sha256": "e7ea828c4c302a53b08b6cf6e17b0647f89a5ea1f19dd57b39e1ec588002533b"
+    },
+    {
+      "name": "extensions-bytearray-jvm-9ce7997362098b422a162c14874a7.jar",
+      "sha256": "082616cd8af69924b1f3f236ac99d5f9a9992bd2d30883cc7815c9543134bc61"
+    },
+    {
+      "name": "extensions-network-jvm-864e9ceabf3191614e867945825d2d5.jar",
+      "sha256": "bbe021793d3061d7b7b7e891712cf595a0500ec6ed25d81710014e50c3717cd6"
+    },
+    {
+      "name": "extractor-c3139c584d-d885481d3222d75faba973172569ae6.jar",
+      "sha256": "a7e2f9d0591e9d10d5be672e2ca058fc2d7452cdfa0735ca06afc7641a5bdd07"
+    },
+    {
+      "name": "fastdoubleparser-2.0.1-1010de7c1107a7891c6221db5cbafd.jar",
+      "sha256": "3d5c94941c79eefccf6d53b5c4c1462192a22d3e23456bdcc2c8a58208738796"
+    },
+    {
+      "name": "foundation-desktop-1.12.0-alpha01-774cd9bad26e861a4fdf4f2dd1dd7e4.jar",
+      "sha256": "612edce9976afc5bf6546c01c308e8b66146e43f602a84c55c854b47998afd60"
+    },
+    {
+      "name": "foundation-layout-desktop-1.12.0-alpha01-1be17b935ae5bc1830cb8543c78cb20.jar",
+      "sha256": "a20650565c4d303541e2118cbdfa905ff07bd01c6d220a022e61629b6f241eb4"
+    },
+    {
+      "name": "graphics-shapes-desktop-1.1.0-dee1da92dcd95a52b7faca62f4f942.jar",
+      "sha256": "0b64e32f27bb3b0352f27f3fc5349b06547a042133c1ec4b47071af849b2e015"
+    },
+    {
+      "name": "haze-jvm-ce76cb75fcdfbbd88572981877d8dad.jar",
+      "sha256": "9195bdfe7318eedc25e056f85a8af7c0602ffc22cd843dfc148573b477c69429"
+    },
+    {
+      "name": "haze-materials-jvm-eadb1b7ec931f774d6c5c551bb1bb8.jar",
+      "sha256": "be36571d5c2563300ceb177544978417fce1b6bd10284651f41fb5bd9317179a"
+    },
+    {
+      "name": "hlsdownloader-1.0.0-aaa5f7ac3547edd6e80cc6fc97715d.jar",
+      "sha256": "d8a87f8750542b7bd1908edcc39d6a7d9f67a1c13384c5427e279c2b32ee1b1f"
+    },
+    {
+      "name": "jansi-2.4.1-10c133cc584325f2e2f9d231c764.jar",
+      "sha256": "b4fbb6b4b77bab3adf3e3754e72743cc0639dd6cd9c7647513a152982bdc49cb"
+    },
+    {
+      "name": "Java-WebSocket-1.4.1-f6b793fa3c394cf16a43f789d623dd64.jar",
+      "sha256": "697b5a057907d32bea5fbc47c430eea09ec1ec671031e75023a4039b9a025630"
+    },
+    {
+      "name": "jbr-api-1.9.0-4ae6ce27bcafb233efdbf54395d03.jar",
+      "sha256": "1d6e14ede04449906377e523b9019b769f6e665def7b590e7b4c2c6543a96e31"
+    },
+    {
+      "name": "jmtc-2b2d61d5558418f7e3387585edc2eda5.jar",
+      "sha256": "9397542f8e7845b9eaaf8f744e115762d02b8e28f5fe0ff8df7b7821bfbc1d7e"
+    },
+    {
+      "name": "jna-5.19.0-cbcd49cbb79b4a84da867daab1b5bc54.jar",
+      "sha256": "dfdd0830a69f04c0488970536abddad62819b1ad6be5562eaee3e5a5366b57b6"
+    },
+    {
+      "name": "jna-jpms-5.16.0-4fa464ff29a3c96579426ba1c75370.jar",
+      "sha256": "c857ea2cfc37d473d196db583cf6bc9f3779f312d101d599b81d78c28218eeaf"
+    },
+    {
+      "name": "jna-platform-5.19.0-5fe9bfd295da6556d24796c8e461e2c7.jar",
+      "sha256": "de492924e0d72808c69f6816cbf615a7bd3c42766591bd46e8cc0bd6e4cf2116"
+    },
+    {
+      "name": "jna-platform-jpms-5.16.0-75e653b248156f95377e820b8db635.jar",
+      "sha256": "768d5947bd1783e0ba0313c905a23926c8508c11c7d1e8f243c6eeac85e76c69"
+    },
+    {
+      "name": "json-20231013-1a72c57783ce9e948252c34644f328.jar",
+      "sha256": "bca415bf72598d39f37ff549d788f0e951e518cfaacdfe8cc27e93c20017ed13"
+    },
+    {
+      "name": "jsoup-1.22.2-e3ceba301c43333ac7715fab5595d85b.jar",
+      "sha256": "033ae32c12b6241b6229f942c0a44fe820a37b45e9f4b4327bafdb949757eda2"
+    },
+    {
+      "name": "jspecify-1.0.0-9133aba420d0ca3b01dbb6ae9992cf6.jar",
+      "sha256": "94182d599f35ba3d5a8e87053c85377a4dbd6824dbbe4b4b341fe63b372c2de9"
+    },
+    {
+      "name": "jsr305-3.0.2-dd83accb899363c32b7d7a1b2e4ce40.jar",
+      "sha256": "566d49155b7716eadc05166038d76b552e31584e00c2c7af016c54ffb6413549"
+    },
+    {
+      "name": "kds-jvm-4.0.10-85561bc75b2e8bfee29bdd7b4be37763.jar",
+      "sha256": "3b3635a37282fd827a7d901fb0276459950a2ecfc813fd791abaaaf71c5e6db1"
+    },
+    {
+      "name": "keight-core-jvm-0.0.05-5421356183ea1d76e45e19d4a7d01415.jar",
+      "sha256": "dd09085c469dbf7c7b86e452f500b22818f7b4f7e2d3785baba364dadd2a1bfe"
+    },
+    {
+      "name": "keight-jvm-0.0.05-b56294a079f79a1beeb4d6c887f655a.jar",
+      "sha256": "61a63e3a2905b866c79f6ee7d7b0b987121e662f84a937a4a7c677bfdcbb028e"
+    },
+    {
+      "name": "kermit-core-jvm-2.1.0-997f3a2f865e12c29dfbd89588d96b96.jar",
+      "sha256": "05c5a447b1866c848961c2f747bc576649a5f64310ede16999da3db14afed952"
+    },
+    {
+      "name": "kermit-jvm-2.1.0-a5aeaf70775915eaa08a9976bf21bd.jar",
+      "sha256": "6f57c706ee28f654f31d57d600d5c909c61eb71e4a3dd0c6eba507fe48f41c2e"
+    },
+    {
+      "name": "kizzy-jvm-d698c061215db2b8a59aa726ddf2043.jar",
+      "sha256": "831226748b6582fc2f2a20cefe246567b9afe7b4e4cb0965d2826810e6bc827f"
+    },
+    {
+      "name": "klock-jvm-4.0.10-669bd538f86df82be434bf97cf21ac.jar",
+      "sha256": "3dbc208f184f087a1714d1632a086dfc0275eb21c90d3c2fbf00ed361050abd8"
+    },
+    {
+      "name": "klogger-jvm-4.0.10-82e13f6298b22f1b8a9c1f0e57b95b7.jar",
+      "sha256": "c518a3e9443018eaa7eece9cb86656ff81c656ac2c68046f144e79527c7bbb86"
+    },
+    {
+      "name": "kmem-jvm-4.0.10-a79df1b632be83f49b868bfd287f5db.jar",
+      "sha256": "764716572a7831736d0319e7c62ea24b9113b43f88bcef91e806e13b11472b98"
+    },
+    {
+      "name": "kmpalette-bitmap-loader-jvm-6d9dde4fddea2311b977e1d4bd4bf17b.jar",
+      "sha256": "009b9778dff0cd90850244be6c6bcf419fb9804e45ae195c2ae5a14525fc4063"
+    },
+    {
+      "name": "kmpalette-core-jvm-ef6d5255d59e41796aa197a1c234155.jar",
+      "sha256": "ca1970ad1e0297d9ca02aa78850f7191fe28a63a61be60664799be2cbc93024b"
+    },
+    {
+      "name": "koin-compose-jvm-4.2.1-fef56dff985d468e4bc99dd050d584.jar",
+      "sha256": "fbf99c29f987bcbd3696d37155bd87f41d70798912d1397d761ba5c671547f11"
+    },
+    {
+      "name": "koin-compose-viewmodel-jvm-4.2.1-c219d0948f3f524caef2e4b76b7e67.jar",
+      "sha256": "cfa0d90af5451723d4f67100761a8452f15c3b6a9ec2d9dd6509b5f1fa5d36c5"
+    },
+    {
+      "name": "koin-core-jvm-4.2.1-95465146da9fc4b0d2b8bfdafaffa95.jar",
+      "sha256": "a66499c0897c266f6b553adbdba5ebd433dd5b631e488cf508fa05484b8498dc"
+    },
+    {
+      "name": "koin-core-viewmodel-jvm-4.2.1-9d8fc51aa74cc5daa565f319e370e12a.jar",
+      "sha256": "496c87af1c035d913afb976638a6656a4839cef8c6d366af0b5f1c1aeae0c92e"
+    },
+    {
+      "name": "korcoutines-jvm-4.0.10-4cc153c5733e9d21737fd2f6ef5ca8.jar",
+      "sha256": "9867e30a293af25257d8e1e437e7f992c92850a2fb3266e8773b5f6b3f674539"
+    },
+    {
+      "name": "korim-jvm-4.0.10-5df1e199fc4f5910d526b717ff2db.jar",
+      "sha256": "02799fab43e90018b65cd93cac78904e369002f25799e5b02f59169c43ed3ce0"
+    },
+    {
+      "name": "korio-jvm-4.0.10-83328321a1a6c2908fa0d087b58b8269.jar",
+      "sha256": "ea687ba8f3ab7aa2b518d00e9d98b6cc7b0e0d9ff1122176f076a99eb8c27d1e"
+    },
+    {
+      "name": "korma-jvm-4.0.10-e11ed42cfb5bca55b7ef99d1996b773.jar",
+      "sha256": "7ea51afd3370301be5e189d54bcfbc215b1df0baaf5ca9f6bfcb0b1fb1768d23"
+    },
+    {
+      "name": "kotlin-onetimepassword-3.0.0-aaee9db3b5227fb5d31b34022c455c3.jar",
+      "sha256": "28d218891bc6f47d60e0d69efc458b51311eac7d6c6e6637602fb888a68340af"
+    },
+    {
+      "name": "kotlin-reflect-2.4.0-968c19825295e705a967bdb973b1c8.jar",
+      "sha256": "e3f880ae263c5b28f39795b8525f49412e3127a0d4e13a4f46cffb3c9fe74e54"
+    },
+    {
+      "name": "kotlin-stdlib-2.4.0-c4332c733a8dfa2687d8f119dc43.jar",
+      "sha256": "59dfc495ade899d7b9de0eb4e47539e831ae9cd478d703b614e8d6cdcb0b59e7"
+    },
+    {
+      "name": "kotlin-stdlib-jdk7-1.9.0-da269e4d8ff4ad661fef2b48449865c7.jar",
+      "sha256": "7c9ffbdbd693c5c6aa682d1bf411cbf2504f58ccac208a8d08a5a42749be93bf"
+    },
+    {
+      "name": "kotlin-stdlib-jdk8-1.9.0-839527b2163b53e249924f77ad207216.jar",
+      "sha256": "08cf5b5e36dd8830b0dbc2af02f2de369aac16c6b82ccd3a7acba24aba712295"
+    },
+    {
+      "name": "kotlin-test-2.4.0-427ff99857a49e4d21cae22dbf31b8.jar",
+      "sha256": "4c938ca9d98a1c12685dac28418b9ab1807fcd3cd0281e587a0dee82cf7389d3"
+    },
+    {
+      "name": "kotlinx-collections-immutable-jvm-0.4.0-8f33105b4925dda1ce211bcb54ab58.jar",
+      "sha256": "4b51c50d92c30a3666d341e78a720790a78d6c8e8a05003c54785df46a5db0fe"
+    },
+    {
+      "name": "kotlinx-coroutines-core-jvm-1.11.0-41a5e9a2f2c9affb9d9ab254be5a984f.jar",
+      "sha256": "0f8fc6ea5a37d5471a68b5c35c74d2a7f911b5b4bba7870dd1f502c9ff230526"
+    },
+    {
+      "name": "kotlinx-coroutines-slf4j-1.11.0-aa9f8a4e70944e6a49f380574b7648a.jar",
+      "sha256": "e8548f879e0ee0ce671d1ea64b16611ec3453a1aa52dfb39f117701afc8f7678"
+    },
+    {
+      "name": "kotlinx-coroutines-swing-1.11.0-e2b21cfe6937a29f4b6eb63570c77085.jar",
+      "sha256": "04e77d4a584b9a606119f47b05d3ed9d794f96a7317c60c2d88b7f7366d9fea9"
+    },
+    {
+      "name": "kotlinx-datetime-jvm-0.6.1-caf753e32a0b028450eaf38bb43c7b.jar",
+      "sha256": "67ff9f8eeea135ec44881f629e8001a98b819e185587bde601a3d26eda927fd2"
+    },
+    {
+      "name": "kotlinx-io-bytestring-jvm-0.9.0-8527d04e723d4dbf24324fd478fdaab.jar",
+      "sha256": "614a4997b392fca2e62bbd9fec5ac65641f352aedc221f45a44744e5f42e5f7c"
+    },
+    {
+      "name": "kotlinx-io-core-jvm-0.9.0-7dd3de7e14c1ef9cdd08bf69f4d491c.jar",
+      "sha256": "d87c113cc305eed053a38662327ae5cad36104639347d842d6678c25a7364c38"
+    },
+    {
+      "name": "kotlinx-serialization-core-jvm-1.11.0-cce19040b3217192d383e28af7ffcb58.jar",
+      "sha256": "1e93018b3b864c7c7b1842c48f80c0125c3b46162312821b305d337e8df40955"
+    },
+    {
+      "name": "kotlinx-serialization-json-io-jvm-1.11.0-18fa3980a634626154439afcf274a88.jar",
+      "sha256": "c648da3c3a3eae1a96f358d728ed0e5bf6c694cae90b578c5052e1a3343255c0"
+    },
+    {
+      "name": "kotlinx-serialization-json-jvm-1.11.0-22c7504f2965bec48288d5efa4886c52.jar",
+      "sha256": "99f759effc564635fa7d85f1ee8ec0b818f85bfbd8c0e1f5dd32a750f53d2e7a"
+    },
+    {
+      "name": "kotlinx-serialization-protobuf-jvm-1.11.0-d03e453aa6a29d57ce7c3822e962120.jar",
+      "sha256": "81c09544ff108f3e285e9722c095e81cf4209852d67d98835a9c0cd90b327bef"
+    },
+    {
+      "name": "kotlinYtmusicScraper-jvm-8f3efca72d9a6ce73f59838b0579164.jar",
+      "sha256": "e398918cb97f486b294b3229af04c4bfabac1959d21a60c8646c1c6d1b253d88"
+    },
+    {
+      "name": "krypto-jvm-4.0.10-dd45830a7418d39a21b6c41dbfbc8d7.jar",
+      "sha256": "3fc2f5d167920f7b1226428147ee3aa799c8cbba4d33d670bac2af88af7e2ee3"
+    },
+    {
+      "name": "ksoup-entities-jvm-0.6.0-dfb9049efbba4c8cc8ce1efc51a770.jar",
+      "sha256": "164d983ec3290c5d5a68a3967370c34da3ed00299acea52d5e2bddaa654ee398"
+    },
+    {
+      "name": "ksoup-html-jvm-0.6.0-29977367ab45b7361bb8064a522c4a6.jar",
+      "sha256": "7d01c836fe7793ff713073ea5042822b12444fdd20cfaf8bb94b738c31ceee59"
+    },
+    {
+      "name": "ktor-client-cio-jvm-3.5.0-9040ec9f5a873dbd18073f0e01cf0f9.jar",
+      "sha256": "0760678a78efb5c7dc0925ff294de396a04c13f93fc41d07191a1ae5122889fa"
+    },
+    {
+      "name": "ktor-client-content-negotiation-jvm-3.5.0-586613df11b478584744d3b2a341d9f8.jar",
+      "sha256": "a0ec10b265554aad5ce1f8cf66e98005fd4de4b465d9b32952e8ae3aa70cc0a7"
+    },
+    {
+      "name": "ktor-client-core-jvm-3.5.0-abcbd896a9538e367415729e62352c65.jar",
+      "sha256": "e723ffdc61d291b3803b65160067af1bca5b0eb382d53df8a65c802c73a4da7e"
+    },
+    {
+      "name": "ktor-client-encoding-jvm-3.5.0-3c6eb79ed5f979af891252ae5489c2.jar",
+      "sha256": "fb2c785bfd89ac8847b35b47769a1cbed55d56ac71b9e99e0bd84fe5f84324bc"
+    },
+    {
+      "name": "ktor-client-logging-jvm-3.5.0-1d1946441dc1f1b1efb564f9778fe870.jar",
+      "sha256": "b1b6247565144294bef625dbcc050815d50b6d5f7a1ee416592f2ba8d4c6376d"
+    },
+    {
+      "name": "ktor-client-okhttp-jvm-3.5.0-61206ef9abdca1764ba78b1b1c7e61.jar",
+      "sha256": "d2d9bad1d42a5300834d09a8ff06d2797fb4739747b73d4dbf9df0409e01de5a"
+    },
+    {
+      "name": "ktor-events-jvm-3.5.0-c32845634841a9c8f6ad9591a1b1bab3.jar",
+      "sha256": "e5f2e6ce8299f4a730fced124360f41616027b66a6bd3640fb48159ce7b6f80f"
+    },
+    {
+      "name": "ktor-http-cio-jvm-3.5.0-231fbcee65b745fb972489d947225176.jar",
+      "sha256": "328ccec6ffd2c8da3e303fadc736049005260a56abad196cb12126ea3a8fe560"
+    },
+    {
+      "name": "ktor-http-jvm-3.5.0-c3d1c1836c1e48b28b2414446b3651b.jar",
+      "sha256": "240687f333eeb46bf5126937998e203217992e263037bef5465e0e56fd850ff9"
+    },
+    {
+      "name": "ktor-io-jvm-3.5.0-2896bb8f14d8ed98ff0a9d1b834d5d3.jar",
+      "sha256": "0beb0c4fbbeba1a59677245ef4f6ecd70160909ef6db9fc09547ba3d3e32d43b"
+    },
+    {
+      "name": "ktor-network-jvm-3.5.0-fbb8fcaf92bba5502b8e69a25a43f9.jar",
+      "sha256": "47c9abc1d6c67899799f6b03cd70c19585f53b6f03fd2638a1f09409aa8f35aa"
+    },
+    {
+      "name": "ktor-network-tls-jvm-3.5.0-6ce9b5ceaa3e225688a52321f59d44e.jar",
+      "sha256": "c9414350ba88986d2b3faffdd0647c0d34089d172b2f85d5ffb898a9bca57f42"
+    },
+    {
+      "name": "ktor-serialization-jvm-3.5.0-1c834eb5e916b4d9f7ccc03859792fa3.jar",
+      "sha256": "2a9ca274769de788a1d2584d1e768b91316dc6ce6942f5c97c9c1cb72a60d36c"
+    },
+    {
+      "name": "ktor-serialization-kotlinx-json-jvm-3.5.0-b051c0e57efe6ac657feffac203d6f53.jar",
+      "sha256": "6648bd268b2171f08daaa749f618e48804323dc6c856ce4ebe12ee77667ceb48"
+    },
+    {
+      "name": "ktor-serialization-kotlinx-jvm-3.5.0-183b70ed579d162945928b4463079d0.jar",
+      "sha256": "795c5afa8ae09776b01a26ee7764c047e7284b97f1586391d73770493a62f9e4"
+    },
+    {
+      "name": "ktor-serialization-kotlinx-protobuf-jvm-3.5.0-4ad77f321bbf3e3097c88296e2a88cf8.jar",
+      "sha256": "a07a190624ba3f0be1095319c940b359a6f9b8e3d543a81a69aeb4f422717f45"
+    },
+    {
+      "name": "ktor-serialization-kotlinx-xml-jvm-3.5.0-15beefea6ceee4841028791e8b645bb1.jar",
+      "sha256": "807623705c9b2ded76d38c3c56e67e78e521028c7a96c80475037b1768969cc7"
+    },
+    {
+      "name": "ktor-server-cio-jvm-3.0.2-444f6d76302b3b236745749eb2828df.jar",
+      "sha256": "759f99bcce1759a560a657d97d3a3938820c08e36015762bb4249ccd047626de"
+    },
+    {
+      "name": "ktor-server-core-jvm-3.0.2-4ddb2a70b3c9a17883663c8ae7c3b1.jar",
+      "sha256": "bec60039b4b337ba57cea451361cbb62f209841fc16801f51b576feb6e672074"
+    },
+    {
+      "name": "ktor-sse-jvm-3.5.0-68e5667858f3aac99d5e7b564e7682aa.jar",
+      "sha256": "cc25804daa2fad1ca19f4da7a10326ff02020e2bb7f2f106deac24bbfe3d18ab"
+    },
+    {
+      "name": "ktor-utils-jvm-3.5.0-fcb2fe17f882c18e1042cc64ff236e59.jar",
+      "sha256": "cab43897afe18f208d237357733480607a701e217cca2ff707de37329286f37f"
+    },
+    {
+      "name": "ktor-websocket-serialization-jvm-3.5.0-586c66b4136c4cb5c4d3c6374ecaa3.jar",
+      "sha256": "c2914fa4354e48ccbc32255e36c1c38ed32360b3c0cfd2c856f215fc517ede44"
+    },
+    {
+      "name": "ktor-websockets-jvm-3.5.0-b6f64897936efd79dae581e0de294547.jar",
+      "sha256": "9ecaddeec3772c35cb1d8c8985264e0cd2134eea112a8ed10267de138630d27c"
+    },
+    {
+      "name": "ktorExt-jvm-5a273af413eaef16cdf69b91b77c8.jar",
+      "sha256": "cbcd3c585ee5b388c1073ec6e2ed555cc3f966bce0db4b311fea069053b76c08"
+    },
+    {
+      "name": "library-desktop-1.11.1-297a54414da4a367efb3223fc064d2bb.jar",
+      "sha256": "3d8ed85a172b62dc2f8df2f3ccf18bec49e3fd49f3c765d78cd79e3d3e9c8f7d"
+    },
+    {
+      "name": "lifecycle-common-jvm-2.11.0-beta01-a959fe40f2d0f5fec386bea6b823d740.jar",
+      "sha256": "b8c4aed165f5fa9bdad8ba57c8b007b9e60bd285dc12c419b1bc3288066509b0"
+    },
+    {
+      "name": "lifecycle-runtime-compose-desktop-2.11.0-beta01-de578d01d15f2c99ea8bbd993fd5.jar",
+      "sha256": "7631802fba5df6211bd7c6fd7d11dec46ddedd42e59afe408da7f7a2bba3a043"
+    },
+    {
+      "name": "lifecycle-runtime-compose-desktop-2.11.0-beta01-ffb54211a8c3862a8cd05279f4117790.jar",
+      "sha256": "426e3df5b7074519ac200f2224fe15b2ba91a44b5abc64cc1fcf02d1bd935a76"
+    },
+    {
+      "name": "lifecycle-runtime-desktop-2.11.0-beta01-f14af19f336c43981285f2b83ea88f.jar",
+      "sha256": "c784747cf748206970094aa7efb72ccc47cb87f4735a0ea028e9db3abe1dc10b"
+    },
+    {
+      "name": "lifecycle-viewmodel-compose-desktop-2.11.0-beta01-8c8b5c8d71759d5b1f927a06b97a278.jar",
+      "sha256": "df7d65d484f227a4ea5cb0e9b0b94e47eb131bf23ccf12e028b7873ca80c2a4d"
+    },
+    {
+      "name": "lifecycle-viewmodel-compose-desktop-2.11.0-beta01-a2efd9d8a4363bdc03bb7bdb822e3bb.jar",
+      "sha256": "c739fbf69c77f3bca720f74ce8bc465d42c1383a77affcdba6bf62fd4cea01c0"
+    },
+    {
+      "name": "lifecycle-viewmodel-desktop-2.11.0-beta01-6765f67c2afce1a337a3726e1d1139bb.jar",
+      "sha256": "8bb08bed23a383d7143f41b30a5903f7d9ac6a7ac8ae1f0f91105b3eeaea0cb1"
+    },
+    {
+      "name": "lifecycle-viewmodel-savedstate-desktop-2.11.0-beta01-e927c27c498a1960d6d61db71a30338.jar",
+      "sha256": "122a481d5f9956ff9f9300e0cdb1f853ca85ec8cd211fb1e7592dd0a25fd6b8f"
+    },
+    {
+      "name": "lyricsService-jvm-d4315626b9282769a92da96e02e867d.jar",
+      "sha256": "b9a3b65df5e212d1b554500fb76871e0807d663088ce01ae8260bdd9709b59ee"
+    },
+    {
+      "name": "markdown-jvm-0.7.3-26e066c4816f12a82495b8dc3956ff.jar",
+      "sha256": "e30eb2e79ff6d5177ab4185f9c61df39b521f4a3ca42d0e1d7162c5a95b5160a"
+    },
+    {
+      "name": "material-desktop-1.11.1-25436e0596588ad39cc6841e571bd6.jar",
+      "sha256": "74abd4a2e8cd264e610f69e5d7f34cefa98051258cc98c562fae9552a37d20cd"
+    },
+    {
+      "name": "material-icons-core-desktop-1.7.3-23eaca5d2a4caa3e4077a0e9fd549d68.jar",
+      "sha256": "3ce3b309633a64de57e974f6bb9c95c7324c3f7b629f495511dad57e1d90b217"
+    },
+    {
+      "name": "material-icons-extended-desktop-1.7.3-848bc0f13628d5b3accc94dd3afdfa27.jar",
+      "sha256": "3d12cb7c9dee263473ab39c48ca2736c45431fdfaa81855cddc7381379099856"
+    },
+    {
+      "name": "material-ripple-desktop-1.12.0-alpha01-25262e12df3eab6a74d96e5c5f1e35d4.jar",
+      "sha256": "887ab9e19bbe70b424368d85726a5390935f5418e06571ad15c5ab1d5b2d5fcf"
+    },
+    {
+      "name": "material3-desktop-1.12.0-alpha01-c2737777bbfeffd5ddcd214f6c92971.jar",
+      "sha256": "aa3c7ebabdeabd9c99e826d0a819751474ed39b9e9252e8e74ea0db1d11dd61e"
+    },
+    {
+      "name": "media-jvm-fb6e5d5fac6bebe4496716d6fbf9cbf3.jar",
+      "sha256": "c933d63ecf6d328b8cd748e78b2935ab8b569a69bdbe2898cf6ff9dedd5d523e"
+    },
+    {
+      "name": "media-jvm-ui-fe3c8185c61d9c6f7bf7ab90ac981d97.jar",
+      "sha256": "ddb87d42cab5a930a1cb05e8460a90f1340de964024c10d0aee63dbd9aac3a6b"
+    },
+    {
+      "name": "multiplatform-markdown-renderer-jvm-0.41.0-c12f9270f2a1e771e1783f971a3f2670.jar",
+      "sha256": "903dad6e908b398424df71b46c1175856b4c051f7d5bad454a1a64d5cb20ce73"
+    },
+    {
+      "name": "multiplatform-markdown-renderer-m3-jvm-0.41.0-72876bdc63ae77740bdcd3a1a84af72.jar",
+      "sha256": "e99005bbb693425f1054eb22e583d599dd88d3f22654286123ebdf253934b730"
+    },
+    {
+      "name": "multiplatform-settings-coroutines-jvm-1.3.0-e96711e8f8cb1dc5195f6583c636ceae.jar",
+      "sha256": "e444817edda667c12e82df6c59a1452db89a22d4875d94288426a67abdbf30ad"
+    },
+    {
+      "name": "multiplatform-settings-jvm-1.3.0-936d440938a78ec9681a68c29d0d7.jar",
+      "sha256": "0c18fd6f7cd1dbdfa77090a6d9bba343a0170afedaf486a7cf81a9306fc3dc57"
+    },
+    {
+      "name": "multiplatform-settings-no-arg-jvm-1.3.0-9ee2fda5bcce350493144760f5175a.jar",
+      "sha256": "faf6a54b9a0f47f5df22f1b9929261e2f6eaa1bad7c5c93d3ba5bf843a7d5276"
+    },
+    {
+      "name": "nanojson-c7a6c1c08d16b6d5ecded34758e6415e07be2166-39cff031c364c72fe1d0423512779fb9.jar",
+      "sha256": "cc8fdd65de70d4b09980342b2514dc75faf82c1525ac4654d484ea10d675845b"
+    },
+    {
+      "name": "navigation-common-desktop-2.9.2-1cae4bb4b95dc01be89b94a52ada44.jar",
+      "sha256": "f3cfaba40520e040c533540942d70308e16c81a516d926a24acef367f8aac14a"
+    },
+    {
+      "name": "navigation-compose-desktop-2.9.2-eed346de20eee57d271369ecd7d75058.jar",
+      "sha256": "6248c9dbfc1fcd0560dd0efc9d17ef22fd3b9f802e6b0e3bc3a5e976810a2296"
+    },
+    {
+      "name": "navigation-runtime-desktop-2.9.2-47af2171d793e6f74b68b45d9e1089.jar",
+      "sha256": "df6fd26ec074ed3b507c2c56b068793fc8eea55b3a92d2aaf59dc0105c327bd2"
+    },
+    {
+      "name": "navigationevent-compose-desktop-1.1.0-6370d5c46488f619be7b5e63333545d2.jar",
+      "sha256": "7bb98d51f18f4be1ada0489f24c6e307dd55d0cf10617e50bbb7091b4bf8fae9"
+    },
+    {
+      "name": "navigationevent-compose-desktop-1.1.1-7c81c6a8aa54e8beed4bae895cb91.jar",
+      "sha256": "842cfb2c3f35d5ef2a4d7ff32f257b59dc82d5cd7ddcd6914b095c964dd3dbb0"
+    },
+    {
+      "name": "navigationevent-desktop-1.1.1-5d6b5b7abab9bd6abdc6485ffd91541.jar",
+      "sha256": "32a3be57e08e05de46ba95a401b42025209bca2f4bda1a77af80d3bab8356862"
+    },
+    {
+      "name": "nowplayingcenter-54958a931c1d7f48df8ef535726f8b3.jar",
+      "sha256": "25c43c9740fe948d0c2db3b8976c69a6181844c7640322f966f27b988019a30a"
+    },
+    {
+      "name": "nucleus.core-runtime-1.12.0-d823c926517530d98a683dc79c21a71.jar",
+      "sha256": "3015bd1ef8e72ef45974f4b0744b82a814e784c79e08207efae9876ef44fb50c"
+    },
+    {
+      "name": "nucleus.darkmode-detector-1.12.0-458182b4a75d9d8187730504fed38bb.jar",
+      "sha256": "7d1a852c5fcb65fffbd6473413031476ba4bcc207ddc30d008d655bb0fc92560"
+    },
+    {
+      "name": "okhttp-jvm-5.3.2-827a887aa959c1f1d6b12f3345df2484.jar",
+      "sha256": "b85af0b7c2dc85c287b9a5be3911a968b76dcd5fe33aee8f140a1fd6aaa44ff1"
+    },
+    {
+      "name": "okio-jvm-3.17.0-96ad357689fd2841747aec56e94a7162.jar",
+      "sha256": "3fd8b507f28d2efe8d3ae81d6453bc24ea7bb2f9208b23997ff19bf4b086e7c0"
+    },
+    {
+      "name": "paging-common-desktop-3.5.0-f614993487ef2fab708f3568fa171d4.jar",
+      "sha256": "c347b20b8791c58a8833994da138290b3d271804e668f0fa1373804811ee240f"
+    },
+    {
+      "name": "paging-compose-desktop-3.5.0-4222c20c485244079515964e2af3de.jar",
+      "sha256": "165b4b0b8008eaedf62354532ace740f5457c4adcdc0a17ace3bd092ea8d3c0a"
+    },
+    {
+      "name": "PipePipeExtractor-c3139c584d-7b5994ab7dd243eb07ea559f2d5b9b8.jar",
+      "sha256": "3f6665ffe13b842fcb8c97ba72a3252f3ec05e96c19780a052250db2131d9b4a"
+    },
+    {
+      "name": "PipePipeExtractor-c3139c584d-f43436d6bec32129f6af228ad60264.jar",
+      "sha256": "1240093968fdcd720f69c42d391b328338778153b89a62343e8c95c4291495be"
+    },
+    {
+      "name": "poko-annotations-jvm-0.15.2-554c56459ca0655e2fb1bdec9653461.jar",
+      "sha256": "d8e501d028c49d737eaf734ff858f52eaa6ebb47f623a1065b68c91c34619f1b"
+    },
+    {
+      "name": "postgrest-kt-jvm-3.0.3-527c1ea22ae1bba86a6a271bb6995fec.jar",
+      "sha256": "9fc4ae4af899f48b1032dd0158f6d42fe013f8bdd78f5b89ba60825dc38f0815"
+    },
+    {
+      "name": "protobuf-javalite-4.35.0-e899f979f2d77ac157bec29ba684ee71.jar",
+      "sha256": "42ec2b55e6d3016e3c6bb97d64e4413c8e81c3c05f4fc13061862cc4e3697387"
+    },
+    {
+      "name": "rhino-1.8.1-63864e2c2a0877af054ae9a34668991.jar",
+      "sha256": "9123654dc27a99f0ae5ee5c13360a7db7477d74f24aaa05092a94b4ce4e944db"
+    },
+    {
+      "name": "rhino-engine-1.8.1-a4e862e55ee6c44b43db60c199528cd.jar",
+      "sha256": "25a227e780de045579dd17920a22d494b27ce24cf4ee822c57a408a32a78e36a"
+    },
+    {
+      "name": "room-common-jvm-2.8.4-5ee5be9053cc7fa3d06ed94db878e317.jar",
+      "sha256": "83f95a7480f1f6e01046f5522692faf6336c085311c1467a73dac85de1617f1c"
+    },
+    {
+      "name": "room-migration-jvm-2.8.4-ebb8b6f3941872d1e6cb055bc44a352.jar",
+      "sha256": "42901794e05b8029863362edd96b4f8e5cf1b2ffbe116581cb9fcb596490577d"
+    },
+    {
+      "name": "room-runtime-jvm-2.8.4-9a2f62f3672489f217fe904f6216b381.jar",
+      "sha256": "b99fbe9932fdea7662a5df33caa0981c4ce5e71a69c79e95679f9a8c1a49aaf9"
+    },
+    {
+      "name": "runtime-annotation-jvm-1.12.0-alpha02-6963b878fcc7f76320564cfd61b7e881.jar",
+      "sha256": "84f71d819ae2741600c97593aad0f099283bd9bee1e94c9b640083c868d23cc0"
+    },
+    {
+      "name": "runtime-desktop-1.12.0-alpha01-f530f7ee1fb51ca01a95c1bbb0ef3a7d.jar",
+      "sha256": "403c1678883fe6b4c9c4cb560f471b7e87264f5da738b83685c0076426873526"
+    },
+    {
+      "name": "runtime-desktop-1.12.0-alpha02-b9c9c87968b787f42ea579923f81de6.jar",
+      "sha256": "fb935d59c2d50934279ad8c1b8cc3d66371e389094eca58bcd871a5a0bc4b253"
+    },
+    {
+      "name": "runtime-retain-desktop-1.12.0-alpha02-1a6731c44f232c5d9e1fb10edac28de.jar",
+      "sha256": "3338d9191e3bd16a1636f402bf979540ca2edb4fb7430b4bd475840cbc405005"
+    },
+    {
+      "name": "runtime-saveable-desktop-1.12.0-alpha01-eea89111a01dbed26b76bf2f1fd3.jar",
+      "sha256": "cfff06db9aef333a7a7c2981504c3d0a5269255c77a8965de7c4d2857f1a350d"
+    },
+    {
+      "name": "runtime-saveable-desktop-1.12.0-alpha02-37b1d5c15b1bcc96239336f99013271.jar",
+      "sha256": "d5d857610873ddced61666ea47dd0fe8894a436a0a53d3433eb1f77f4f7574dd"
+    },
+    {
+      "name": "savedstate-compose-desktop-1.3.6-8de11644e97845eaa45d9e74fdec755.jar",
+      "sha256": "24d067b9e56da10d65eab922bd523f3596dd3e4f30d7923bceadb7cf4333cc2d"
+    },
+    {
+      "name": "savedstate-compose-desktop-1.4.0-84ed9710e312be7017fd7498fe747a.jar",
+      "sha256": "3a28c53373cb1da7ba6bce9640c6cc1c067b604f26eb1fc599bf48ddf0ee1e5a"
+    },
+    {
+      "name": "savedstate-desktop-1.4.0-e2a50762f9c6de234b04b12926df6b3.jar",
+      "sha256": "390d46aaf8e525bdd0f086c9fa0d97fb0ea38ddbc50b5071cd78334cb20e5ae9"
+    },
+    {
+      "name": "secure-random-jvm-0.3.2-b6cecb732a798c7abcfac217728329f.jar",
+      "sha256": "9147402a66765a76607a486a6624fad83867d00579fa0e9b0dfe07ac3a96f0ec"
+    },
+    {
+      "name": "serialization-jvm-0.91.3-23b2dcfc274f50279852c693276e40.jar",
+      "sha256": "10a979e09413b15961dabbd9d0cc779c0ba3379cce3b631d8b9a70d3c9922cfb"
+    },
+    {
+      "name": "shapes-desktop-eba59dc5f3171cf62ee7575a37c13352.jar",
+      "sha256": "3cc5341a35005f2bdf3c7ac9d1022131eba65498ac569661558c846427ce0dd7"
+    },
+    {
+      "name": "skiko-awt-0.148.1-26a94824687dab32cfbc0f732a081b8.jar",
+      "sha256": "121ee3bd44bbf965ceab628afc7511441cd93dfe64301612ece6a69338029493"
+    },
+    {
+      "name": "skiko-awt-runtime-windows-x64-0.148.1-852bdba2b0a5c3b46e27ea922e43f056.jar",
+      "sha256": "7c8d9eafd002b482a1e72e8b213be7b892f97e1a7ac568c989eefdd3421dcb4c"
+    },
+    {
+      "name": "slf4j-android-1.7.36-95a3f7d84c988ba64b36908dd95cfb.jar",
+      "sha256": "0ce5f5ef0205463ea745d127a0982fcf32939c2a20dd00523f966fe6e7cba53d"
+    },
+    {
+      "name": "slf4j-api-2.0.18-fe2837bd49bfb7665741902fed2ca9.jar",
+      "sha256": "fd5cae751b9fd8ea9f6537ee9567a1a8b5381e0f29a57988c1cbb6346e04adc2"
+    },
+    {
+      "name": "spotbugs-annotations-4.8.3-cd5917b77643c3a7ba5420aea78f94c.jar",
+      "sha256": "c07674342eb78c8475ad4c49c283476416160a6d8a3c717b20d31b3702128cdd"
+    },
+    {
+      "name": "spotify-jvm-74431c7e596c76af4fb78cd8b698db22.jar",
+      "sha256": "eef95f10b3fda0ec1adf82f53c1f84e18eae12231035f76caa59fa4cda3dbefb"
+    },
+    {
+      "name": "sqlite-bundled-jvm-2.6.2-f8b4bb97ea271aeddcf2e2bc10bf66eb.jar",
+      "sha256": "7d0c264412f8eb926c431155c2f265767229a3a75010af0a3b9321a57ebf4980"
+    },
+    {
+      "name": "sqlite-jvm-2.6.2-a1a253a3ca3fe8eb27ca2e46254f81b4.jar",
+      "sha256": "69d516fc2c6c589b396a6925be1b05eea9cc8dae72cd7d890551e8da0cc401bd"
+    },
+    {
+      "name": "stability-runtime-jvm-f81b3cad4cb21e671f1ec1736070b7.jar",
+      "sha256": "df5e59852715d0a7a315cdb57ea53cc3b5846ba063018dbb29f3103cf28dbced"
+    },
+    {
+      "name": "stately-concurrency-jvm-2.1.0-caa3a637b3459827e138cf78b9f31c55.jar",
+      "sha256": "7c34aecf472fdecdbc3a9f0cad0aec79f991ef7259fd841c3d6dc00457d595a2"
+    },
+    {
+      "name": "stately-concurrent-collections-jvm-2.1.0-b7acc01ab9a6662528925fb79d422dd1.jar",
+      "sha256": "b5b015e373be6fcec8ae53cefce33496cca431b46c0b1bde90f6f2ef7ed50e47"
+    },
+    {
+      "name": "stately-strict-jvm-2.1.0-4aa938e33acc448c4ebd7f76848d22.jar",
+      "sha256": "184178a10de5e64407eda30788b61d04e647cac571322172f3d20a0429f8a12f"
+    },
+    {
+      "name": "storage-kt-jvm-3.0.3-c8b83aa961fb9a0d0bc97d55ea5a.jar",
+      "sha256": "f83c15a4d44fa08d9ab83c308587f841f70e5eb792c565067786b47f3a864e10"
+    },
+    {
+      "name": "supabase-kt-jvm-3.0.3-7a3b6ab58c87af649f5a4c84a57ec7e.jar",
+      "sha256": "cc34250ff9a2ba0447a4685be681463fb8d24d5a16084301b56e23e8c7ff1814"
+    },
+    {
+      "name": "timeago-parser-c3139c584d-c8cb70ac36fda8b730341b6328b4912f.jar",
+      "sha256": "7026c25499528189fd3f94d30249d10125f30fe99d8809ccf30dc52e7e3daa17"
+    },
+    {
+      "name": "ui-backhandler-desktop-1.12.0-alpha01-8666962b61ebbd4ecbdb22fdab65e182.jar",
+      "sha256": "3c169035a638e907c1de46a4a22fda6bd2855a54a11e35d0f9ac96034f62071d"
+    },
+    {
+      "name": "ui-desktop-1.12.0-alpha01-4cf4db25f1184e5c5568f35e277b33a.jar",
+      "sha256": "8e0aa8e98e037d90e366a654b692c251cde627234f89930983ddd9e35da4cc10"
+    },
+    {
+      "name": "ui-geometry-desktop-1.12.0-alpha01-50f2f5ca194395b3639e4e26be66d2ae.jar",
+      "sha256": "3b92919bfe15f60d5b6d43376be806303d81e005214833d469a60cd3f7e63deb"
+    },
+    {
+      "name": "ui-graphics-desktop-1.12.0-alpha01-6e497380735bdd2c833950b55b4b83c1.jar",
+      "sha256": "c79cb37e2f4f3d95292a4c8d1d4a5a2f437839d8311fbc67856c806c82ce1a10"
+    },
+    {
+      "name": "ui-text-desktop-1.12.0-alpha01-49a5ca7f60bced251e2c7733bf1b6313.jar",
+      "sha256": "085b9a190520b628b7403252fd080b9e82f7d1f47b11f32cb07ee9d5b4d5075e"
+    },
+    {
+      "name": "ui-tooling-preview-desktop-1.12.0-alpha01-01d7244c6fd4e064ddb8b4815b9941.jar",
+      "sha256": "da244c3ef4b0cabd260fb0460e6d55484113f5be8f573ce50ab80c6460197b61"
+    },
+    {
+      "name": "ui-tooling-preview-jvmstubs-1.11.2-4f26806641a57c54536a9e646b38287.jar",
+      "sha256": "ea6a784145be0b6e81068a06b44b51d2ee37e244aa2d0c2b65ea43356ea23f9d"
+    },
+    {
+      "name": "ui-unit-desktop-1.12.0-alpha01-8094e1f7598e2ea25171537a24ab0.jar",
+      "sha256": "59903ecc788cf9802bc600e28f1ab38a22aa18e24792830ad14a92a08a765a18"
+    },
+    {
+      "name": "ui-util-desktop-1.12.0-alpha01-4acc4435b9b1c62da975d3cc6425edd.jar",
+      "sha256": "f5a28d9696853453e9e11899b9a5c77d96aebd0d032d0c877aa45ffaa25a1687"
+    },
+    {
+      "name": "uri-jvm-0.0.21-78bdaf5bbe2f2f51756a5f361c1afd5.jar",
+      "sha256": "214567a4da8dbfc1bf56965326a4b77d877f7cf3d637bcfe71a9a2538fa73e97"
+    },
+    {
+      "name": "vlcj-4.12.1-9f236be7c3701b99df4a5ab3f672878b.jar",
+      "sha256": "1bd97eb7189da2bd7ae693c0940fbd2248e67d57d5a28ce560d43291298ed040"
+    },
+    {
+      "name": "vlcj-natives-4.12.0-3f8ceea3c1549977a895498770ba4065.jar",
+      "sha256": "e9b306e89b69b85b60d180ca45ea8c71580cc5c85560ea3c48adeba7579b8d02"
+    },
+    {
+      "name": "window-core-desktop-1.4.0-4c7cb54f48522fa2a99bc6d1047bac2.jar",
+      "sha256": "d9ce33c6d13ce43508ea8395cd8845fd9e5eb0a67caceb42cd4568a32420f7e1"
+    },
+    {
+      "name": "wire-runtime-jvm-6.4.0-3eab3e875ecf5fd3720188ac996df1f.jar",
+      "sha256": "8fcfa9d4bfa13e32455399f06148334ec16c2d64d0dda36c24e07e09eb3e15dd"
+    }
+  ],
+  "packaged_legal_source_sha256": {
+    "terms-of-use.md": "fc7b0632c0692c27884c675fe4ec58b5b8c7a437578b81b6f18367b68a6635ac",
+    "privacy-policy.md": "2bca0dcc981c28fdeb83b32288975e287f1661b17f4bd019ff7fe95861d5174b"
+  },
+  "legal_status": "DRAFT_NOT_OFFICIAL",
+  "desktop_regression_tests": 10,
+  "compose_jvm_tests": 27,
+  "google_login_regression_tests": 6,
+  "failures": 0,
+  "native_ui_verified": false,
+  "desktop_sentry_event_verified": false,
+  "full_desktop_uat_verified": false,
+  "scope": "Local Windows release packaging; SDK callbacks tested against a disposable local HTTP server, not a real mailbox or live Supabase reset."
+}
