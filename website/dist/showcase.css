@@ -1,0 +1,110 @@
+/* The active player leads the composition. Other screens become a swipeable
+   gallery on smaller displays; screenshots always keep their native ratio. */
+.hero {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  gap: 32px;
+}
+.app-showcase {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  min-width: 0;
+  height: 540px;
+}
+.showcase-disc {
+  position: absolute;
+  z-index: -1;
+  inset: 55px auto auto 50%;
+  transform: translateX(-50%);
+  width: min(440px, 92%);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--green);
+}
+.showcase-stage { position: relative; height: 100%; }
+.screen-preview { position: absolute; margin: 0; }
+.screen-preview img {
+  width: 100%;
+  height: auto;
+  border: 6px solid #292929;
+  border-radius: 27px;
+  background: var(--bg);
+  box-shadow: 0 20px 32px #0006;
+}
+.screen-preview figcaption {
+  padding-top: 14px;
+  text-align: center;
+  font-size: .875rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.screen-playing {
+  width: 218px;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+}
+.screen-playing figcaption { color: var(--text); }
+.screen-home {
+  width: 174px;
+  left: 0;
+  top: 64px;
+  transform: rotate(-10deg);
+  z-index: 1;
+}
+.screen-library {
+  width: 174px;
+  right: 0;
+  top: 64px;
+  transform: rotate(10deg);
+  z-index: 1;
+}
+.showcase-hint { display: none; }
+@media (min-width: 761px) {
+  .screen-home figcaption, .screen-library figcaption { display: none; }
+}
+@media (max-width: 1050px) and (min-width: 761px) {
+  .hero { gap: 18px; }
+  .app-showcase { height: 480px; }
+  .screen-playing { width: 186px; top: 18px; }
+  .screen-home, .screen-library { width: 143px; top: 76px; }
+  .showcase-disc { top: 62px; }
+}
+@media (max-width: 760px) {
+  .hero { gap: 34px; }
+  .app-showcase { width: 100%; height: auto; }
+  .showcase-disc { top: 60px; width: min(320px, 100%); }
+  .showcase-stage {
+    display: flex;
+    gap: 22px;
+    height: auto;
+    padding: 12px 18px 18px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 18px;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #626262 transparent;
+    border-radius: 16px;
+  }
+  .screen-preview {
+    position: relative;
+    flex: 0 0 min(218px, 80%);
+    width: auto;
+    left: auto;
+    right: auto;
+    top: auto;
+    transform: none;
+    scroll-snap-align: start;
+  }
+  .screen-preview img { box-shadow: 0 12px 20px #0004; }
+  .showcase-hint {
+    display: block;
+    margin: 16px 0 0;
+    font-size: .875rem;
+    line-height: 1.6;
+    color: var(--muted);
+    text-align: center;
+  }
+}
