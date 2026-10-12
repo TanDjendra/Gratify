@@ -39,7 +39,7 @@ fun BlogPromoDialog(
         confirmButton = {
             TextButton(onClick = {
                 onVisitBlog.invoke()
-                uriHandler.openUri("https://tanweb.vercel.app")
+                uriHandler.openUri("https://tanheradhe.my.id")
             }) {
                 Text(
                     stringResource(Res.string.visit_blog),
