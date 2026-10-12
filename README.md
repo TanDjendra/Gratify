@@ -5,6 +5,7 @@
 **A free YouTube Music client for Android** — background playback, synced
 lyrics, offline caching, and cross-device sync.
 
+[![Latest release](https://img.shields.io/github/v/release/TanDjendra/Gratify?label=latest)](https://github.com/TanDjendra/Gratify/releases/latest)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Fork of SimpMusic](https://img.shields.io/badge/fork%20of-maxrave--dev%2FSimpMusic-8A2BE2)](https://github.com/maxrave-dev/SimpMusic)
 [![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/Rq5tWHg)
@@ -46,7 +47,7 @@ where the work happens.
 | **Notifications** | In-app announcement feed pulled from a JSON endpoint, so notices ship without cutting a release |
 | **Build** | Desktop packaging fixes (ProGuard / kotlinx-datetime), CI keystore handling, and a guard against shipping builds with empty Supabase credentials |
 
-Package id: `com.tan.gratify`
+Package id: `com.tan.gratify.next`
 
 ---
 
@@ -83,7 +84,7 @@ Inherited from SimpMusic unless marked:
 | Desktop (Windows / macOS / Linux) | ⏳ In development |
 
 Release page with FAQ and install notes:
-**https://tanweb.vercel.app/gratify.html**
+**https://tanheradhe.my.id/gratify.html**
 
 ---
 
