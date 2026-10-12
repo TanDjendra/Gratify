@@ -13,6 +13,20 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.LocalDateTime
 
 interface LocalPlaylistRepository {
+    /** Materialize/refresh a member's cache without allocating a second playlist identity. */
+    suspend fun cacheCanonicalPlaylist(owner: String, canonicalId: String, syncId: String?, title: String,
+        thumbnail: String?, songs: List<SongEntity>, sharedId:String?=null): Long = error("Canonical cache unavailable")
+    suspend fun reconcileCanonicalPlaylists(owner: String, memberIds: List<String>) { }
+    suspend fun ensureOwnedPlaylistSyncId(id: Long, owner: String): String = error("Playlist identity unavailable")
+    /** Save the name and optional new cover together, for the initiating account only. */
+    suspend fun updatePlaylistDetailsForOwner(id: Long, title: String, thumbnail: String?, owner: String?)
+
+    /** Append atomically and queue updates without changing public visibility. */
+    suspend fun addTracksToLocalPlaylistForOwner(id: Long, songs: List<SongEntity>, owner: String?): Int
+
+    /** Remove atomically for the initiating owner and queue the same public playlist update. */
+    suspend fun removeTrackFromLocalPlaylistForOwner(id: Long, song: SongEntity, owner: String?): Boolean
+
     fun getLocalPlaylist(id: Long): Flow<LocalResource<LocalPlaylistEntity?>>
 
     fun getAllLocalPlaylists(): Flow<List<LocalPlaylistEntity>>
@@ -93,6 +107,9 @@ interface LocalPlaylistRepository {
     suspend fun insertLocalPlaylistAndGetId(localPlaylist: LocalPlaylistEntity): Long
 
     suspend fun createLocalPlaylistWithSongs(localPlaylist: LocalPlaylistEntity, songs: List<SongEntity>): Long
+
+    /** Check the draft's captured library owner inside the creation transaction. */
+    suspend fun createLocalPlaylistWithSongsForOwner(localPlaylist: LocalPlaylistEntity, songs: List<SongEntity>, ownerId: String?): Long
 
     fun insertLocalPlaylist(
         localPlaylist: LocalPlaylistEntity,

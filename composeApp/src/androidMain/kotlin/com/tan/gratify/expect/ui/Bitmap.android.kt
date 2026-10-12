@@ -16,3 +16,11 @@ actual fun ImageBitmap.toByteArray(): ByteArray? {
 }
 
 actual fun Image.toImageBitmap(): ImageBitmap = this.toBitmap().asImageBitmap()
+actual fun ImageBitmap.toReadableBitmap(width: Int, height: Int): ImageBitmap {
+    val original = asAndroidBitmap()
+    val software = if (original.config == android.graphics.Bitmap.Config.HARDWARE)
+        original.copy(android.graphics.Bitmap.Config.ARGB_8888, false) else original
+    val scaled = android.graphics.Bitmap.createScaledBitmap(software, width, height, true)
+    if (software !== original && software !== scaled) software.recycle()
+    return scaled.asImageBitmap()
+}

@@ -41,18 +41,21 @@ import com.tan.gratify.viewModel.ArtistViewModel
 import com.tan.gratify.viewModel.SearchScreenUIState
 import com.tan.gratify.viewModel.SearchViewModel
 import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.qualifier.named
+import androidx.compose.runtime.saveable.rememberSaveable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ArtistSelectionScreen(
     navController: NavController,
-    searchViewModel: SearchViewModel = koinInject(),
-    artistViewModel: ArtistViewModel = koinInject()
+    searchViewModel: SearchViewModel = koinViewModel(qualifier = named("artist-picker")),
+    artistViewModel: ArtistViewModel = koinViewModel()
 ) {
     val searchScreenState by searchViewModel.searchScreenState.collectAsStateWithLifecycle()
     val searchUIState by searchViewModel.searchScreenUIState.collectAsStateWithLifecycle()
 
-    var searchQuery by remember { mutableStateOf("") }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
     
     // Track followed artists locally for immediate UI update in this screen
     val followedArtistsIds = remember { mutableStateListOf<String>() }
@@ -66,7 +69,7 @@ fun ArtistSelectionScreen(
     Scaffold(
         containerColor = GratifyColors.Background, // Dark background mimicking the screenshot
         floatingActionButton = {
-            if (followedArtistsIds.isNotEmpty()) {
+            run {
                 Button(
                     onClick = { navController.navigateUp() },
                     colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black),
@@ -95,6 +98,9 @@ fun ArtistSelectionScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                IconButton(onClick = { navController.navigateUp() }) {
+                    Icon(Icons.Rounded.Close, contentDescription = "Tutup pilihan artis", tint = Color.White)
+                }
                 Text(
                     text = "Pilih artis lain yang kamu suka.",
                     style = typo().headlineMedium.copy(fontWeight = FontWeight.Bold),

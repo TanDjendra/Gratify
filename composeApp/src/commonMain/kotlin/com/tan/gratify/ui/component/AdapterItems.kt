@@ -132,6 +132,7 @@ fun HomeItem(
             onClick = channelId?.let { id -> { navController.navigate(ArtistDestination(channelId = id)) } },
         )
         LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
             state = lazyListState,
             flingBehavior = snapperFlingBehavior,
         ) {

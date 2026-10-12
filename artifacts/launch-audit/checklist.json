@@ -1,0 +1,1759 @@
+[
+  {
+    "id": "01-01",
+    "section": "01",
+    "criterion": "Semua fitur yang dijanjikan sudah tersedia",
+    "status": "FAIL",
+    "evidence_or_limit": "Ada recovery/queue cloud yang belum lengkap dan klaim Apple pada changelog tidak sesuai UI; F08, F11, L05."
+  },
+  {
+    "id": "01-02",
+    "section": "01",
+    "criterion": "Scope aplikasi sudah jelas",
+    "status": "PASS",
+    "evidence_or_limit": "README menjelaskan aplikasi musik Android beta dan status desktop WIP; E7. Bukan bukti semua requirement terpenuhi."
+  },
+  {
+    "id": "01-03",
+    "section": "01",
+    "criterion": "Tidak ada fitur penting yang masih setengah jadi",
+    "status": "FAIL",
+    "evidence_or_limit": "Reset password, pemulihan antrean dan sejumlah aksi belum lengkap; F08, F11, F20."
+  },
+  {
+    "id": "01-04",
+    "section": "01",
+    "criterion": "User flow utama sudah diuji",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Navigasi dan Home nyata pernah diuji; akun, streaming, sync dan restore belum end to end; E1, E3."
+  },
+  {
+    "id": "01-05",
+    "section": "01",
+    "criterion": "Semua requirement client sudah terpenuhi",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum ada matriks requirement yang disetujui dan UAT lengkap; E1, E2."
+  },
+  {
+    "id": "01-06",
+    "section": "01",
+    "criterion": "Fitur yang belum tersedia sudah didokumentasikan",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Desktop/iOS/F-Droid dijelaskan; tidak semua keterbatasan fitur dicatat pada dokumen produk; E7, E1."
+  },
+  {
+    "id": "01-07",
+    "section": "01",
+    "criterion": "Tidak ada placeholder/test data yang tertinggal",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Activity data contoh tidak ada dalam manifest release; masih ada aksi TODO tanpa fungsi; E4, F20."
+  },
+  {
+    "id": "02-01",
+    "section": "02",
+    "criterion": "Layout konsisten",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Token/komponen bersama diterapkan; bukti visual hanya layar terpilih Android; E3."
+  },
+  {
+    "id": "02-02",
+    "section": "02",
+    "criterion": "Font konsisten",
+    "status": "PASS",
+    "evidence_or_limit": "Tema memakai tipografi bersama Poppins; bukti layar yang diperiksa tersedia; E3."
+  },
+  {
+    "id": "02-03",
+    "section": "02",
+    "criterion": "Warna konsisten",
+    "status": "PASS",
+    "evidence_or_limit": "Palet gelap/hijau dan token warna bersama diterapkan; E3."
+  },
+  {
+    "id": "02-04",
+    "section": "02",
+    "criterion": "Icon benar",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Ikon layar utama ditinjau; audit semantik seluruh ikon belum lengkap; E3."
+  },
+  {
+    "id": "02-05",
+    "section": "02",
+    "criterion": "Logo dan branding benar",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Nama/logo Gratify tersedia; seluruh variasi aset/store belum dicocokkan; E3, E8."
+  },
+  {
+    "id": "02-06",
+    "section": "02",
+    "criterion": "Tidak ada typo",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum ada proofreading semua bahasa, pesan error, dan metadata."
+  },
+  {
+    "id": "02-07",
+    "section": "02",
+    "criterion": "Tidak ada elemen yang terpotong",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Home/Settings font 1,3x dan Home tablet diperiksa; seluruh layar/ukuran belum; E3."
+  },
+  {
+    "id": "02-08",
+    "section": "02",
+    "criterion": "Loading state",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Loading dan timeout ada; Mood/Genre bisa berhenti tanpa hasil/error; F27."
+  },
+  {
+    "id": "02-09",
+    "section": "02",
+    "criterion": "Empty state",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Empty state Home/Library tersedia; pagination dapat membuat kosong palsu; F21, F22."
+  },
+  {
+    "id": "02-10",
+    "section": "02",
+    "criterion": "Error state",
+    "status": "FAIL",
+    "evidence_or_limit": "Kegagalan beberapa operasi ditelan atau dilaporkan sukses; F05, F09, F24, F27."
+  },
+  {
+    "id": "02-11",
+    "section": "02",
+    "criterion": "Success state",
+    "status": "FAIL",
+    "evidence_or_limit": "Success dapat tampil ketika cloud/download gagal; F05, F16, F24."
+  },
+  {
+    "id": "02-12",
+    "section": "02",
+    "criterion": "Offline/no internet state",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Komponen OfflineErrorState tersedia; recovery akun/offline belum lulus; F01, F31."
+  },
+  {
+    "id": "02-13",
+    "section": "02",
+    "criterion": "Disabled button/state",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Form menyediakan loading/enabled guard; semua state belum diuji; E3."
+  },
+  {
+    "id": "02-14",
+    "section": "02",
+    "criterion": "Semua tombol berfungsi",
+    "status": "FAIL",
+    "evidence_or_limit": "Tombol More profil publik masih TODO; F20. Ada aksi lain yang salah hasil; F08."
+  },
+  {
+    "id": "02-15",
+    "section": "02",
+    "criterion": "Form mudah digunakan",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Form email/OTP diperiksa secara visual; completion dengan akun nyata belum; E3."
+  },
+  {
+    "id": "02-16",
+    "section": "02",
+    "criterion": "Keyboard tidak menutupi input penting",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Form email dapat digulir saat keyboard terbuka pada emulator; form lain belum seluruhnya; E3."
+  },
+  {
+    "id": "02-17",
+    "section": "02",
+    "criterion": "Back navigation bekerja",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Navigasi tab/drawer/Settings/Profile pernah diperiksa; stack/deep link lengkap belum; E3."
+  },
+  {
+    "id": "02-18",
+    "section": "02",
+    "criterion": "Dialog/modal dapat ditutup",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Dialog memakai komponen bersama; semua modal/skenario dismiss belum diuji; E3."
+  },
+  {
+    "id": "02-19",
+    "section": "02",
+    "criterion": "Double-click/tap tidak menyebabkan duplicate action",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Bukti UI mencakup sebagian layar Android; seluruh state/aksi belum diuji; E3."
+  },
+  {
+    "id": "03-01",
+    "section": "03",
+    "criterion": "Register",
+    "status": "FAIL",
+    "evidence_or_limit": "Update password sesudah OTP gagal dapat tetap dianggap authenticated; F09."
+  },
+  {
+    "id": "03-02",
+    "section": "03",
+    "criterion": "Login",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Email/Google tersedia di client; login produksi belum diuji; E1."
+  },
+  {
+    "id": "03-03",
+    "section": "03",
+    "criterion": "Logout",
+    "status": "FAIL",
+    "evidence_or_limit": "Logout gagal backup dapat mempertahankan data akun lama; F01."
+  },
+  {
+    "id": "03-04",
+    "section": "03",
+    "criterion": "Forgot password",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Request recovery tersedia; completion melalui email/deep link belum berhasil dibuktikan; F08."
+  },
+  {
+    "id": "03-05",
+    "section": "03",
+    "criterion": "Reset password",
+    "status": "FAIL",
+    "evidence_or_limit": "State Ready/form password baru tidak tersambung lengkap; F08."
+  },
+  {
+    "id": "03-06",
+    "section": "03",
+    "criterion": "Email/phone verification jika diperlukan",
+    "status": "FAIL",
+    "evidence_or_limit": "OTP ada, tetapi kegagalan lanjutan tidak memblokir sukses signup; F09."
+  },
+  {
+    "id": "03-07",
+    "section": "03",
+    "criterion": "Session expiration",
+    "status": "PARTIAL",
+    "evidence_or_limit": "SDK session manager digunakan; expiry/recovery nyata belum diuji; E1."
+  },
+  {
+    "id": "03-08",
+    "section": "03",
+    "criterion": "Token refresh",
+    "status": "PARTIAL",
+    "evidence_or_limit": "SDK Auth menangani sesi; refresh token invalid/revoked belum diuji; E1."
+  },
+  {
+    "id": "03-09",
+    "section": "03",
+    "criterion": "Account deletion",
+    "status": "FAIL",
+    "evidence_or_limit": "Tidak ditemukan alur hapus akun Supabase beserta data; hapus Google account hanya lokal; L01."
+  },
+  {
+    "id": "03-10",
+    "section": "03",
+    "criterion": "Login gagal ditangani dengan benar",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Error login ditangani pada client; respons akun tidak ada/disabled belum diuji nyata."
+  },
+  {
+    "id": "03-11",
+    "section": "03",
+    "criterion": "Brute-force/rate limiting diperhatikan",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Implementasi ada, tetapi skenario akun Supabase nyata belum dijalankan; E1."
+  },
+  {
+    "id": "03-12",
+    "section": "03",
+    "criterion": "Password tidak disimpan sebagai plaintext",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Tidak ditemukan persist password pengguna oleh alur auth yang ditinjau; SDK/backend dan dump backup belum diaudit lengkap."
+  },
+  {
+    "id": "03-13",
+    "section": "03",
+    "criterion": "Password salah",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Implementasi ada, tetapi skenario akun Supabase nyata belum dijalankan; E1."
+  },
+  {
+    "id": "03-14",
+    "section": "03",
+    "criterion": "Email/user tidak ditemukan",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Implementasi ada, tetapi skenario akun Supabase nyata belum dijalankan; E1."
+  },
+  {
+    "id": "03-15",
+    "section": "03",
+    "criterion": "Account disabled",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Implementasi ada, tetapi skenario akun Supabase nyata belum dijalankan; E1."
+  },
+  {
+    "id": "03-16",
+    "section": "03",
+    "criterion": "Token expired",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Implementasi ada, tetapi skenario akun Supabase nyata belum dijalankan; E1."
+  },
+  {
+    "id": "03-17",
+    "section": "03",
+    "criterion": "Token invalid",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Implementasi ada, tetapi skenario akun Supabase nyata belum dijalankan; E1."
+  },
+  {
+    "id": "03-18",
+    "section": "03",
+    "criterion": "Login dari device berbeda",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Implementasi ada, tetapi skenario akun Supabase nyata belum dijalankan; E1."
+  },
+  {
+    "id": "04-01",
+    "section": "04",
+    "criterion": "User A tidak dapat membaca data User B",
+    "status": "FAIL",
+    "evidence_or_limit": "Isolasi aplikasi saat pergantian akun gagal: data A dapat muncul/terunggah sebagai B; F01. RLS server belum diuji."
+  },
+  {
+    "id": "04-02",
+    "section": "04",
+    "criterion": "User A tidak dapat mengubah data User B",
+    "status": "PARTIAL",
+    "evidence_or_limit": "SQL lokal menerapkan ownership auth.uid; enforcement server aktif belum dibuktikan; E5."
+  },
+  {
+    "id": "04-03",
+    "section": "04",
+    "criterion": "User A tidak dapat menghapus data User B",
+    "status": "PARTIAL",
+    "evidence_or_limit": "SQL lokal menerapkan ownership delete; server aktif belum dibuktikan; E5."
+  },
+  {
+    "id": "04-04",
+    "section": "04",
+    "criterion": "Role permission bekerja",
+    "status": "FAIL",
+    "evidence_or_limit": "Kontrol privasi profil tidak diterapkan pada pembacaan publik; F03. Role private-data server belum diuji."
+  },
+  {
+    "id": "04-05",
+    "section": "04",
+    "criterion": "Admin permission bekerja",
+    "status": "N/A",
+    "evidence_or_limit": "Tidak ada role/admin panel produk; admin Supabase adalah fungsi operasional di luar client."
+  },
+  {
+    "id": "04-06",
+    "section": "04",
+    "criterion": "Endpoint API memvalidasi authorization",
+    "status": "PARTIAL",
+    "evidence_or_limit": "SDK Auth/RLS dirancang untuk endpoint cloud; policy aktif belum diperiksa; E5."
+  },
+  {
+    "id": "04-07",
+    "section": "04",
+    "criterion": "ID/resource ownership diverifikasi di backend",
+    "status": "PARTIAL",
+    "evidence_or_limit": "USING/WITH CHECK auth.uid ada pada hotfix lokal; belum membuktikan deployment; E5."
+  },
+  {
+    "id": "04-08",
+    "section": "04",
+    "criterion": "Hidden UI bukan satu-satunya mekanisme keamanan",
+    "status": "PARTIAL",
+    "evidence_or_limit": "RLS backend tertulis di SQL, bukan hanya UI; flags privasi tetap lokal; E5, F03."
+  },
+  {
+    "id": "05-01",
+    "section": "05",
+    "criterion": "Semua endpoint menggunakan HTTPS",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Endpoint bawaan umumnya HTTPS; URL AI kustom belum dibatasi HTTPS dan TLS bermasalah; F07."
+  },
+  {
+    "id": "05-02",
+    "section": "05",
+    "criterion": "Authentication diterapkan",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Supabase SDK Auth/Bearer digunakan; pengujian guest/token invalid belum; E1, E5."
+  },
+  {
+    "id": "05-03",
+    "section": "05",
+    "criterion": "Authorization diterapkan",
+    "status": "FAIL",
+    "evidence_or_limit": "Privasi sosial dan isolasi akun client gagal; F01, F03. RLS live belum diverifikasi."
+  },
+  {
+    "id": "05-04",
+    "section": "05",
+    "criterion": "Input validation",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Validasi form/query sebagian tersedia; seluruh input/batas server belum diuji."
+  },
+  {
+    "id": "05-05",
+    "section": "05",
+    "criterion": "Output validation",
+    "status": "FAIL",
+    "evidence_or_limit": "Parser dapat gagal atau tidak mengeluarkan state; F26, F27, F33, F34."
+  },
+  {
+    "id": "05-06",
+    "section": "05",
+    "criterion": "Rate limiting",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Kontrak client ditinjau; konfigurasi dan respons server aktif belum diverifikasi; E1, E5."
+  },
+  {
+    "id": "05-07",
+    "section": "05",
+    "criterion": "Pagination",
+    "status": "FAIL",
+    "evidence_or_limit": "Refresh/cursor playlist dapat melewatkan data; F21, F22. Batas query cloud belum diuji pada data besar."
+  },
+  {
+    "id": "05-08",
+    "section": "05",
+    "criterion": "Error response aman",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Error client ditangani sebagian; beberapa ditelan; respons server belum diaudit; F05, F12, F27."
+  },
+  {
+    "id": "05-09",
+    "section": "05",
+    "criterion": "Tidak membocorkan stack trace",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum memeriksa respons error server terhadap seluruh skenario malformed/authorization."
+  },
+  {
+    "id": "05-10",
+    "section": "05",
+    "criterion": "Tidak membocorkan database information",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum memeriksa kebocoran detail database pada respons server aktif."
+  },
+  {
+    "id": "05-11",
+    "section": "05",
+    "criterion": "API tidak menerima parameter berbahaya",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Query SDK/Room memakai parameter; fuzzing dan ownership server aktif belum; E2, E5."
+  },
+  {
+    "id": "05-12",
+    "section": "05",
+    "criterion": "HTTP methods sesuai kebutuhan",
+    "status": "PARTIAL",
+    "evidence_or_limit": "SDK memakai operasi select/insert/update/delete; atomicity replacement gagal; F05."
+  },
+  {
+    "id": "05-13",
+    "section": "05",
+    "criterion": "CORS dikonfigurasi dengan benar",
+    "status": "N/A",
+    "evidence_or_limit": "Audit ini mencakup client native Android; tidak ada frontend browser yang diuji. CORS layanan web lain belum dinilai."
+  },
+  {
+    "id": "05-14",
+    "section": "05",
+    "criterion": "API versioning jika diperlukan",
+    "status": "PASS",
+    "evidence_or_limit": "API SDK Supabase /auth/v1, /rest/v1, /storage/v1 dan endpoint AI memiliki versi; bukan bukti kompatibilitas setiap layanan."
+  },
+  {
+    "id": "06-01",
+    "section": "06",
+    "criterion": "Schema sudah final",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Schema/Room dan SQL tersedia; kesesuaian versi deployment belum diverifikasi; E2, E5."
+  },
+  {
+    "id": "06-02",
+    "section": "06",
+    "criterion": "Relationship benar",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Relasi entity dan SQL ditinjau; data orphan/live belum diuji; E2, E5."
+  },
+  {
+    "id": "06-03",
+    "section": "06",
+    "criterion": "Foreign key benar",
+    "status": "PARTIAL",
+    "evidence_or_limit": "FK lokal/cloud dideklarasikan; seluruh cascade dan server aktif belum diuji; E2, E5."
+  },
+  {
+    "id": "06-04",
+    "section": "06",
+    "criterion": "Constraint diterapkan",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Constraint tersedia pada source; atomicity/penggunaan query tetap salah; F05, F23."
+  },
+  {
+    "id": "06-05",
+    "section": "06",
+    "criterion": "Unique field diterapkan jika diperlukan",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Key unik dideklarasikan; query set_video_id mengabaikan bagian key; F23."
+  },
+  {
+    "id": "06-06",
+    "section": "06",
+    "criterion": "Index pada query penting",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Indeks ada pada schema; EXPLAIN dan index server aktif belum; E2, E5."
+  },
+  {
+    "id": "06-07",
+    "section": "06",
+    "criterion": "Tidak ada duplicate data",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Tidak ada pemeriksaan dataset produksi dan operasi serentak."
+  },
+  {
+    "id": "06-08",
+    "section": "06",
+    "criterion": "Migration sudah diuji",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum melakukan migrasi database/upgrade APK dari versi sebelumnya pada data nyata."
+  },
+  {
+    "id": "06-09",
+    "section": "06",
+    "criterion": "Seed/test data dipisahkan",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Data pratinjau hanya debug dan activity tidak ada di release; seed server belum diperiksa; E4."
+  },
+  {
+    "id": "06-10",
+    "section": "06",
+    "criterion": "Database production terpisah",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "DDL/Room ditinjau; schema dan data Supabase aktif belum diperiksa; E2, E5."
+  },
+  {
+    "id": "06-11",
+    "section": "06",
+    "criterion": "Backup tersedia",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Backup lokal/cloud diimplementasikan; kebijakan backup database server belum diketahui; E10."
+  },
+  {
+    "id": "06-12",
+    "section": "06",
+    "criterion": "Restore backup sudah diuji",
+    "status": "FAIL",
+    "evidence_or_limit": "Restore Android memiliki risiko traversal pada OS lama; backup desktop gagal; uji restore lengkap belum; F04, F15."
+  },
+  {
+    "id": "07-01",
+    "section": "07",
+    "criterion": "API key tidak hardcode di APK",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Public Supabase/Firebase client key memang masuk build; bukan admin secret. Private token/API key dan log masih berisiko; F06. APK bukan tempat menyimpan admin secret."
+  },
+  {
+    "id": "07-02",
+    "section": "07",
+    "criterion": "Secret tidak masuk Git",
+    "status": "PARTIAL",
+    "evidence_or_limit": "0 nama file credential sensitif ditemukan dalam git ls-files; belum scan seluruh nilai dan riwayat Git; E6."
+  },
+  {
+    "id": "07-03",
+    "section": "07",
+    "criterion": "Password database tidak masuk source code",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Tidak ditemukan file password DB yang dilacak pada pemeriksaan nama file; ini bukan scan nilai/history lengkap; E6."
+  },
+  {
+    "id": "07-04",
+    "section": "07",
+    "criterion": "Production secrets menggunakan environment/secret management",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Workflow utama memakai GitHub secrets; dev workflow kehilangan Supabase config; E6, L04."
+  },
+  {
+    "id": "07-05",
+    "section": "07",
+    "criterion": "Debug credentials sudah dihapus",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Activity preview tidak ada di release; belum ada scan seluruh credential/test-account dalam APK; E4."
+  },
+  {
+    "id": "07-06",
+    "section": "07",
+    "criterion": "Input validation",
+    "status": "FAIL",
+    "evidence_or_limit": "Nama ekspor dan path ZIP belum divalidasi lengkap; F04, F14."
+  },
+  {
+    "id": "07-07",
+    "section": "07",
+    "criterion": "SQL injection protection",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Room/SDK menggunakan query parameter; belum ada uji injection pada backend live/custom SQL."
+  },
+  {
+    "id": "07-08",
+    "section": "07",
+    "criterion": "XSS protection jika aplikasi web",
+    "status": "N/A",
+    "evidence_or_limit": "Tidak ada frontend web produksi dalam cakupan; teks native bukan DOM browser."
+  },
+  {
+    "id": "07-09",
+    "section": "07",
+    "criterion": "CSRF protection jika relevan",
+    "status": "N/A",
+    "evidence_or_limit": "API akun native memakai Bearer, bukan auth cookie browser; endpoint berbasis cookie/web di luar scope belum dinilai."
+  },
+  {
+    "id": "07-10",
+    "section": "07",
+    "criterion": "File upload validation",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum ada uji enforcement upload/avatar pada bucket server aktif."
+  },
+  {
+    "id": "07-11",
+    "section": "07",
+    "criterion": "File size limit",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Batas ukuran server/upload/arsip belum diverifikasi dengan berkas besar."
+  },
+  {
+    "id": "07-12",
+    "section": "07",
+    "criterion": "MIME/type validation",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum ada uji spoof MIME, ekstensi dan konten berkas pada storage live."
+  },
+  {
+    "id": "07-13",
+    "section": "07",
+    "criterion": "Debug mode OFF",
+    "status": "PASS",
+    "evidence_or_limit": "Manifest APK release tidak memiliki debuggable; build release default non-debug; activity preview tidak ada; E4."
+  },
+  {
+    "id": "07-14",
+    "section": "07",
+    "criterion": "Production logging aman",
+    "status": "FAIL",
+    "evidence_or_limit": "Logger sensitif dan CurlLogging ALL masih tersedia; penghapusan log release belum aktif; F06."
+  },
+  {
+    "id": "07-15",
+    "section": "07",
+    "criterion": "Sensitive data tidak muncul di log",
+    "status": "FAIL",
+    "evidence_or_limit": "Token/cookie dicatat eksplisit; F06. Service FCM juga mencatat token; E9."
+  },
+  {
+    "id": "07-16",
+    "section": "07",
+    "criterion": "HTTPS aktif",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Network security config menolak cleartext dan memakai CA sistem; trustEveryone tetap melemahkan jalur TLS; F07, E11."
+  },
+  {
+    "id": "07-17",
+    "section": "07",
+    "criterion": "Certificate/TLS configuration diperiksa",
+    "status": "FAIL",
+    "evidence_or_limit": "Dependency mengubah default HttpsURLConnection dengan trustEveryone; F07. Tidak terbukti semua OkHttp/Supabase ikut terpengaruh."
+  },
+  {
+    "id": "07-18",
+    "section": "07",
+    "criterion": "Dependency vulnerability diperiksa",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Lint dan bytecode trust manager ditinjau; belum ada scan advisory/CVE seluruh dependensi; E1, E4."
+  },
+  {
+    "id": "07-19",
+    "section": "07",
+    "criterion": "Permission aplikasi diminimalkan",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Manifest masih memuat WRITE_EXTERNAL_STORAGE tanpa pembatasan OS dan READ_MEDIA_AUDIO; kebutuhan minimum tiap permission belum dibuktikan; E11."
+  },
+  {
+    "id": "08-01",
+    "section": "08",
+    "criterion": "Data yang dikumpulkan sudah ditentukan",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Entity/cloud mencatat profil, follow, library, history dan presence; belum ada inventaris data resmi; E1, E5."
+  },
+  {
+    "id": "08-02",
+    "section": "08",
+    "criterion": "Hanya mengumpulkan data yang diperlukan",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum ada dokumentasi privasi dan verifikasi menyeluruh; L02."
+  },
+  {
+    "id": "08-03",
+    "section": "08",
+    "criterion": "Sensitive data terlindungi",
+    "status": "FAIL",
+    "evidence_or_limit": "Log sensitif, privasi sosial dan pemisahan akun bermasalah; F01, F03, F06."
+  },
+  {
+    "id": "08-04",
+    "section": "08",
+    "criterion": "Privacy policy tersedia jika diperlukan",
+    "status": "FAIL",
+    "evidence_or_limit": "Consent menyebut Terms/Privacy sebagai teks tanpa tautan; dokumen/URL kebijakan tidak ditemukan di repo/UI; L02."
+  },
+  {
+    "id": "08-05",
+    "section": "08",
+    "criterion": "Data deletion tersedia jika diperlukan",
+    "status": "FAIL",
+    "evidence_or_limit": "Hapus akun beserta data Supabase belum tersedia; L01."
+  },
+  {
+    "id": "08-06",
+    "section": "08",
+    "criterion": "Data retention jelas",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Retensi akun/history/cloud/log dan pemusnahan backup belum didokumentasikan."
+  },
+  {
+    "id": "08-07",
+    "section": "08",
+    "criterion": "Third-party services terdokumentasi",
+    "status": "PARTIAL",
+    "evidence_or_limit": "README/credits/dependencies menyebut layanan; tujuan pemrosesan data belum dijelaskan sebagai privacy policy; E7, L02."
+  },
+  {
+    "id": "08-08",
+    "section": "08",
+    "criterion": "Permission device dijelaskan",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Permission dan dialog sistem ada; rationale semua izin belum ditinjau; E11."
+  },
+  {
+    "id": "08-09",
+    "section": "08",
+    "criterion": "User mengetahui penggunaan datanya",
+    "status": "FAIL",
+    "evidence_or_limit": "Label privasi tidak sesuai enforcement dan persetujuan tidak membuka policy; F03, L02."
+  },
+  {
+    "id": "09-01",
+    "section": "09",
+    "criterion": "Startup cepat",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Startup/UI pernah berjalan di emulator; cold-start p50/p95 perangkat nyata belum diukur; E3."
+  },
+  {
+    "id": "09-02",
+    "section": "09",
+    "criterion": "Tidak ada freeze",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Ada runBlocking pada setter UI dan penundaan playback; perlu profiling, belum terbukti ANR; F18, F35."
+  },
+  {
+    "id": "09-03",
+    "section": "09",
+    "criterion": "Tidak ada memory leak yang diketahui",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Lifecycle scope Discord bermasalah; belum ada heap/leak measurement; F32."
+  },
+  {
+    "id": "09-04",
+    "section": "09",
+    "criterion": "RAM usage diperiksa",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum ada pengukuran/profiling dengan target dan ambang penerimaan."
+  },
+  {
+    "id": "09-05",
+    "section": "09",
+    "criterion": "Battery usage diperiksa",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum ada pengukuran/profiling dengan target dan ambang penerimaan."
+  },
+  {
+    "id": "09-06",
+    "section": "09",
+    "criterion": "APK/App Bundle tidak unnecessarily besar",
+    "status": "PARTIAL",
+    "evidence_or_limit": "APK universal 49.4 MiB; ABI-specific sekitar 24–26 MiB; belum ada size-budget/baseline untuk menilai pemborosan; E4."
+  },
+  {
+    "id": "09-07",
+    "section": "09",
+    "criterion": "API response time diperiksa",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum ada pengukuran/profiling dengan target dan ambang penerimaan."
+  },
+  {
+    "id": "09-08",
+    "section": "09",
+    "criterion": "Slow query diperiksa",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum ada pengukuran/profiling dengan target dan ambang penerimaan."
+  },
+  {
+    "id": "09-09",
+    "section": "09",
+    "criterion": "Database index diperiksa",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum ada pengukuran/profiling dengan target dan ambang penerimaan."
+  },
+  {
+    "id": "09-10",
+    "section": "09",
+    "criterion": "Caching digunakan bila diperlukan",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Cache Media3/Room tersedia; resolver partial cache bermasalah; F31."
+  },
+  {
+    "id": "09-11",
+    "section": "09",
+    "criterion": "Concurrent request diuji",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum ada pengukuran/profiling dengan target dan ambang penerimaan."
+  },
+  {
+    "id": "09-12",
+    "section": "09",
+    "criterion": "Server resource cukup",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum ada pengukuran/profiling dengan target dan ambang penerimaan."
+  },
+  {
+    "id": "09-13",
+    "section": "09",
+    "criterion": "Normal load test",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum ada pengukuran/profiling dengan target dan ambang penerimaan."
+  },
+  {
+    "id": "09-14",
+    "section": "09",
+    "criterion": "High traffic test",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum ada pengukuran/profiling dengan target dan ambang penerimaan."
+  },
+  {
+    "id": "09-15",
+    "section": "09",
+    "criterion": "Concurrent user test",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum ada pengukuran/profiling dengan target dan ambang penerimaan."
+  },
+  {
+    "id": "09-16",
+    "section": "09",
+    "criterion": "Rate limit test",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum ada pengukuran/profiling dengan target dan ambang penerimaan."
+  },
+  {
+    "id": "10-01",
+    "section": "10",
+    "criterion": "Internet normal",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Home nyata memuat data musik di emulator; auth/audio/cloud belum lengkap; E3."
+  },
+  {
+    "id": "10-02",
+    "section": "10",
+    "criterion": "Internet lambat",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum ada pengujian gangguan jaringan menyeluruh dengan akun/perangkat nyata."
+  },
+  {
+    "id": "10-03",
+    "section": "10",
+    "criterion": "Internet terputus",
+    "status": "FAIL",
+    "evidence_or_limit": "Gagal/offline saat pindah akun dapat mencampur data; F01. Recovery jaringan umum belum diuji."
+  },
+  {
+    "id": "10-04",
+    "section": "10",
+    "criterion": "Request timeout",
+    "status": "FAIL",
+    "evidence_or_limit": "Metadata tambahan dan Discord send tidak mempunyai batas yang memadai; F18, F32."
+  },
+  {
+    "id": "10-05",
+    "section": "10",
+    "criterion": "Retry mechanism",
+    "status": "FAIL",
+    "evidence_or_limit": "Download gagal dapat menghalangi retry atau membawa lastException lama; F25."
+  },
+  {
+    "id": "10-06",
+    "section": "10",
+    "criterion": "Duplicate request protection",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Home/search punya cancellation/pagination guard; semua operasi tulis/double tap belum diuji; E3."
+  },
+  {
+    "id": "10-07",
+    "section": "10",
+    "criterion": "Offline state",
+    "status": "FAIL",
+    "evidence_or_limit": "Partial cache dapat mengembalikan video ID sebagai URL saat upstream dibutuhkan; F31."
+  },
+  {
+    "id": "10-08",
+    "section": "10",
+    "criterion": "Data synchronization",
+    "status": "FAIL",
+    "evidence_or_limit": "Prune snapshot dan penggantian playlist berisiko hilang data; F01, F02, F05, F10, F11, F17."
+  },
+  {
+    "id": "10-09",
+    "section": "10",
+    "criterion": "API timeout handling",
+    "status": "FAIL",
+    "evidence_or_limit": "Sebagian jalur bisa menunggu tanpa deadline ketat; F18, F32. Belum ada chaos test lengkap."
+  },
+  {
+    "id": "11-01",
+    "section": "11",
+    "criterion": "Low-end device",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum diuji pada kombinasi perangkat/OS ini; E3."
+  },
+  {
+    "id": "11-02",
+    "section": "11",
+    "criterion": "Mid-range device",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum diuji pada kombinasi perangkat/OS ini; E3."
+  },
+  {
+    "id": "11-03",
+    "section": "11",
+    "criterion": "High-end device",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum diuji pada kombinasi perangkat/OS ini; E3."
+  },
+  {
+    "id": "11-04",
+    "section": "11",
+    "criterion": "Small screen",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum diuji pada kombinasi perangkat/OS ini; E3."
+  },
+  {
+    "id": "11-05",
+    "section": "11",
+    "criterion": "Standard screen",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Emulator ponsel viewport 720x1600 pernah diperiksa; bukan perangkat fisik kelas menengah; E3."
+  },
+  {
+    "id": "11-06",
+    "section": "11",
+    "criterion": "Large screen",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Home tablet 1920x1200 pernah diperiksa; seluruh halaman tablet belum; E3."
+  },
+  {
+    "id": "11-07",
+    "section": "11",
+    "criterion": "Different aspect ratio",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Dua viewport dan font 1,3x pada layar terpilih; belum seluruh aspect ratio; E3."
+  },
+  {
+    "id": "11-08",
+    "section": "11",
+    "criterion": "Portrait",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Layar utama ponsel diperiksa portrait; detail/landscape belum lengkap; E3."
+  },
+  {
+    "id": "11-09",
+    "section": "11",
+    "criterion": "Landscape jika didukung",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Home viewport tablet landscape diperiksa; rotation/state dan seluruh layar belum; E3."
+  },
+  {
+    "id": "11-10",
+    "section": "11",
+    "criterion": "Minimum supported version",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "minSdk 26 terkonfirmasi, tetapi belum runtime test API 26; E4. F04 relevan OS lama."
+  },
+  {
+    "id": "11-11",
+    "section": "11",
+    "criterion": "Current OS version",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Bukti emulator API 37 tersedia; bukan bukti seluruh OS pengguna saat ini; E3."
+  },
+  {
+    "id": "11-12",
+    "section": "11",
+    "criterion": "Latest supported OS",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Compile SDK 37/target 36; emulator API 37 diuji terbatas. Penetapan dukungan OS lengkap belum; E3, E4."
+  },
+  {
+    "id": "12-01",
+    "section": "12",
+    "criterion": "Input kosong",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Form mempunyai validasi dasar; semua API/parser empty input belum diuji."
+  },
+  {
+    "id": "12-02",
+    "section": "12",
+    "criterion": "Input terlalu panjang",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Skenario kegagalan ini belum diuji menyeluruh dalam aplikasi nyata."
+  },
+  {
+    "id": "12-03",
+    "section": "12",
+    "criterion": "Karakter aneh",
+    "status": "FAIL",
+    "evidence_or_limit": "Non-BMP HTML entity dapat melempar exception; cookie/LRC/nama slash salah ditangani; F14, F26, F33, F34."
+  },
+  {
+    "id": "12-04",
+    "section": "12",
+    "criterion": "Data duplicate",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Skenario kegagalan ini belum diuji menyeluruh dalam aplikasi nyata."
+  },
+  {
+    "id": "12-05",
+    "section": "12",
+    "criterion": "Data tidak ditemukan",
+    "status": "FAIL",
+    "evidence_or_limit": "Mood/Genre parse failure/empty bisa menghasilkan tidak ada state; F27."
+  },
+  {
+    "id": "12-06",
+    "section": "12",
+    "criterion": "User tidak memiliki permission",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Skenario kegagalan ini belum diuji menyeluruh dalam aplikasi nyata."
+  },
+  {
+    "id": "12-07",
+    "section": "12",
+    "criterion": "Token expired",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Skenario kegagalan ini belum diuji menyeluruh dalam aplikasi nyata."
+  },
+  {
+    "id": "12-08",
+    "section": "12",
+    "criterion": "Server mati",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Skenario kegagalan ini belum diuji menyeluruh dalam aplikasi nyata."
+  },
+  {
+    "id": "12-09",
+    "section": "12",
+    "criterion": "Database error",
+    "status": "FAIL",
+    "evidence_or_limit": "Delete+insert cloud non-atomik dan kegagalan insert disembunyikan; F05."
+  },
+  {
+    "id": "12-10",
+    "section": "12",
+    "criterion": "Internet mati",
+    "status": "FAIL",
+    "evidence_or_limit": "Pemulihan akun/cache pada kegagalan jaringan belum aman; F01, F31."
+  },
+  {
+    "id": "12-11",
+    "section": "12",
+    "criterion": "Request timeout",
+    "status": "FAIL",
+    "evidence_or_limit": "Deadline metadata/Discord tidak memadai; F18, F32."
+  },
+  {
+    "id": "12-12",
+    "section": "12",
+    "criterion": "Upload gagal",
+    "status": "FAIL",
+    "evidence_or_limit": "Upload/sync failure bisa terlihat sukses atau mencampur data; F01, F05, F16."
+  },
+  {
+    "id": "12-13",
+    "section": "12",
+    "criterion": "Download gagal",
+    "status": "FAIL",
+    "evidence_or_limit": "Terminal failure download dianggap selesai; retry bermasalah; F24, F25."
+  },
+  {
+    "id": "12-14",
+    "section": "12",
+    "criterion": "User menekan tombol berkali-kali",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Skenario kegagalan ini belum diuji menyeluruh dalam aplikasi nyata."
+  },
+  {
+    "id": "12-15",
+    "section": "12",
+    "criterion": "App ditutup saat proses berjalan",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Skenario kegagalan ini belum diuji menyeluruh dalam aplikasi nyata."
+  },
+  {
+    "id": "13-01",
+    "section": "13",
+    "criterion": "Upload file",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Avatar/cloud upload terimplementasi; akses/batas/gagal upload live belum diuji; E1."
+  },
+  {
+    "id": "13-02",
+    "section": "13",
+    "criterion": "Download file",
+    "status": "FAIL",
+    "evidence_or_limit": "Status terminal failure dan retry download salah; F24, F25, F31."
+  },
+  {
+    "id": "13-03",
+    "section": "13",
+    "criterion": "File type validation",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Implementasi storage ada; uji akses, batas, dan kegagalan nyata belum lengkap."
+  },
+  {
+    "id": "13-04",
+    "section": "13",
+    "criterion": "File size limit",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Implementasi storage ada; uji akses, batas, dan kegagalan nyata belum lengkap."
+  },
+  {
+    "id": "13-05",
+    "section": "13",
+    "criterion": "Filename validation",
+    "status": "FAIL",
+    "evidence_or_limit": "Sanitizer ekspor tidak menghapus slash; validasi canonical ZIP kurang pada OS lama; F04, F14."
+  },
+  {
+    "id": "13-06",
+    "section": "13",
+    "criterion": "Storage permission",
+    "status": "PARTIAL",
+    "evidence_or_limit": "MediaStore/SAF dan izin tersedia; runtime deny/revoke semua OS belum diuji; E10, E11."
+  },
+  {
+    "id": "13-07",
+    "section": "13",
+    "criterion": "File tidak dapat diakses user yang tidak berhak",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Policy bucket aktif belum diperiksa; backup settings/database perlu threat-model akses; E5, E10."
+  },
+  {
+    "id": "13-08",
+    "section": "13",
+    "criterion": "Temporary files dibersihkan",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Worker menghapus temp backup setelah menyimpan; crash/full-disk/download cleanup belum diuji; E10."
+  },
+  {
+    "id": "13-09",
+    "section": "13",
+    "criterion": "Storage backup jika diperlukan",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Opsi backup file download tersedia; restore semua aset belum diuji; E10, F04, F15."
+  },
+  {
+    "id": "14-01",
+    "section": "14",
+    "criterion": "Push notification",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Firebase messaging/service ada; tidak ditemukan registrasi token ke server pada onNewToken; pengiriman live belum; E9."
+  },
+  {
+    "id": "14-02",
+    "section": "14",
+    "criterion": "Notification permission",
+    "status": "PARTIAL",
+    "evidence_or_limit": "POST_NOTIFICATIONS dan request UI tersedia; grant/deny/revoke belum diuji; E11."
+  },
+  {
+    "id": "14-03",
+    "section": "14",
+    "criterion": "Notification content benar",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Service membaca title/body dan menyimpan notifikasi; payload produksi belum diuji; E9."
+  },
+  {
+    "id": "14-04",
+    "section": "14",
+    "criterion": "Deep link benar",
+    "status": "PARTIAL",
+    "evidence_or_limit": "PendingIntent/deep link tersedia; follow back/recovery/live payload belum diuji; F08, F12, E9."
+  },
+  {
+    "id": "14-05",
+    "section": "14",
+    "criterion": "Notification ketika app terbuka",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Service FCM ada; belum ada uji pengiriman end to end pada perangkat; E9."
+  },
+  {
+    "id": "14-06",
+    "section": "14",
+    "criterion": "Notification ketika app background",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Service FCM ada; belum ada uji pengiriman end to end pada perangkat; E9."
+  },
+  {
+    "id": "14-07",
+    "section": "14",
+    "criterion": "Notification ketika app ditutup",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Service FCM ada; belum ada uji pengiriman end to end pada perangkat; E9."
+  },
+  {
+    "id": "14-08",
+    "section": "14",
+    "criterion": "Tidak ada spam notification",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Service FCM ada; belum ada uji pengiriman end to end pada perangkat; E9."
+  },
+  {
+    "id": "15-01",
+    "section": "15",
+    "criterion": "API key production",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Konfigurasi layanan produksi belum dapat diverifikasi dari lingkungan lokal."
+  },
+  {
+    "id": "15-02",
+    "section": "15",
+    "criterion": "Webhook production",
+    "status": "N/A",
+    "evidence_or_limit": "Tidak ditemukan integrasi webhook yang menjadi fitur aplikasi; bukan sertifikasi webhook server lain."
+  },
+  {
+    "id": "15-03",
+    "section": "15",
+    "criterion": "Callback URL production",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Scheme com.tan.gratify/login-callback ada; allowlist OAuth/recovery Supabase aktif belum; E12, F08."
+  },
+  {
+    "id": "15-04",
+    "section": "15",
+    "criterion": "Billing/subscription production",
+    "status": "N/A",
+    "evidence_or_limit": "Tidak ditemukan alur pembayaran/subscription produk Gratify; biaya penyedia layanan perlu verifikasi operator."
+  },
+  {
+    "id": "15-05",
+    "section": "15",
+    "criterion": "Third-party dependency aktif",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Dependensi dapat dibuild dan Home musik berfungsi; koneksi semua penyedia belum diuji; E3, E4."
+  },
+  {
+    "id": "15-06",
+    "section": "15",
+    "criterion": "Fallback jika service gagal",
+    "status": "FAIL",
+    "evidence_or_limit": "Fallback/retry dan endpoint Gemini bermasalah; F13, F18, F24, F25, F27, F31."
+  },
+  {
+    "id": "16-01",
+    "section": "16",
+    "criterion": "Application logging",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Logger aplikasi aktif, tetapi belum aman untuk produksi; F06, E9."
+  },
+  {
+    "id": "16-02",
+    "section": "16",
+    "criterion": "Backend logging",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Konfigurasi/operasi monitoring server aktif belum tersedia untuk diperiksa."
+  },
+  {
+    "id": "16-03",
+    "section": "16",
+    "criterion": "Error tracking",
+    "status": "FAIL",
+    "evidence_or_limit": "Implementasi terpilih crashlytics-empty hanya log; DSN kosong; remote error tracking tidak aktif; L03."
+  },
+  {
+    "id": "16-04",
+    "section": "16",
+    "criterion": "Crash monitoring",
+    "status": "FAIL",
+    "evidence_or_limit": "Build full juga memilih crashlyticsEmpty; Sentry auto-init dimatikan; L03."
+  },
+  {
+    "id": "16-05",
+    "section": "16",
+    "criterion": "Server monitoring",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Konfigurasi/operasi monitoring server aktif belum tersedia untuk diperiksa."
+  },
+  {
+    "id": "16-06",
+    "section": "16",
+    "criterion": "Database monitoring",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Konfigurasi/operasi monitoring server aktif belum tersedia untuk diperiksa."
+  },
+  {
+    "id": "16-07",
+    "section": "16",
+    "criterion": "Disk monitoring",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Konfigurasi/operasi monitoring server aktif belum tersedia untuk diperiksa."
+  },
+  {
+    "id": "16-08",
+    "section": "16",
+    "criterion": "CPU/RAM monitoring",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Konfigurasi/operasi monitoring server aktif belum tersedia untuk diperiksa."
+  },
+  {
+    "id": "16-09",
+    "section": "16",
+    "criterion": "Alert ketika service down",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Konfigurasi/operasi monitoring server aktif belum tersedia untuk diperiksa."
+  },
+  {
+    "id": "16-10",
+    "section": "16",
+    "criterion": "Sensitive information tidak masuk log",
+    "status": "FAIL",
+    "evidence_or_limit": "Token/cookie dan token FCM dapat masuk log; F06, E9."
+  },
+  {
+    "id": "17-01",
+    "section": "17",
+    "criterion": "Database backup",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Backup SQLite lokal/cloud sync ada; backup server Supabase bukan dibuktikan oleh sync; E10, F02."
+  },
+  {
+    "id": "17-02",
+    "section": "17",
+    "criterion": "File/storage backup",
+    "status": "PARTIAL",
+    "evidence_or_limit": "File download bisa disertakan backup; backup bucket server belum diverifikasi; E10."
+  },
+  {
+    "id": "17-03",
+    "section": "17",
+    "criterion": "Backup otomatis",
+    "status": "PARTIAL",
+    "evidence_or_limit": "WorkManager harian/mingguan/bulanan tersedia; execution/retention/restore nyata belum; E10."
+  },
+  {
+    "id": "17-04",
+    "section": "17",
+    "criterion": "Backup location aman",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Legacy backup app-specific; modern backup Download/Gratify berupa ZIP, belum ada bukti enkripsi/akses sesuai sensitivitas; E10."
+  },
+  {
+    "id": "17-05",
+    "section": "17",
+    "criterion": "Restore test berhasil",
+    "status": "FAIL",
+    "evidence_or_limit": "Tidak ada restore end to end yang lulus; ada risiko Android dan backup desktop rusak; F04, F15."
+  },
+  {
+    "id": "17-06",
+    "section": "17",
+    "criterion": "Recovery procedure terdokumentasi",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum ditemukan runbook recovery server, owner, RPO/RTO dan bukti drill."
+  },
+  {
+    "id": "17-07",
+    "section": "17",
+    "criterion": "Emergency contact tersedia",
+    "status": "PARTIAL",
+    "evidence_or_limit": "README menyediakan email legal; emergency/on-call dan jalur eskalasi belum disepakati; E7."
+  },
+  {
+    "id": "17-08",
+    "section": "17",
+    "criterion": "Rollback procedure tersedia",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum ditemukan prosedur rollback APK/database yang diuji bersama backup."
+  },
+  {
+    "id": "18-01",
+    "section": "18",
+    "criterion": "Development",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Variant debug dengan suffix .dev tersedia; isolasi backend dev dari produksi belum terbukti; E4, E6."
+  },
+  {
+    "id": "18-02",
+    "section": "18",
+    "criterion": "Staging",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum ada bukti proyek/backend staging terpisah serta akun penguji."
+  },
+  {
+    "id": "18-03",
+    "section": "18",
+    "criterion": "Production",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Variant/workflow release tersedia; server, signing dan deploy production belum diverifikasi; E4, E6."
+  },
+  {
+    "id": "18-04",
+    "section": "18",
+    "criterion": "Production API URL benar",
+    "status": "PARTIAL",
+    "evidence_or_limit": "SUPABASE_URL lokal tersedia dan workflow utama memeriksa nonempty; kesesuaian proyek prod/allowlist belum; E6."
+  },
+  {
+    "id": "18-05",
+    "section": "18",
+    "criterion": "Production database benar",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Tidak ada akses admin/snapshot schema untuk memastikan database produksi; E5."
+  },
+  {
+    "id": "18-06",
+    "section": "18",
+    "criterion": "Production credentials benar",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Public key tersedia lokal; secret CI/signing/live service belum diverifikasi; E6."
+  },
+  {
+    "id": "18-07",
+    "section": "18",
+    "criterion": "Debug mode OFF",
+    "status": "PASS",
+    "evidence_or_limit": "Release APK non-debug berdasarkan manifest/build type; E4."
+  },
+  {
+    "id": "18-08",
+    "section": "18",
+    "criterion": "Test account tidak digunakan production",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum memeriksa daftar akun server produksi; contoh UI hanya debug."
+  },
+  {
+    "id": "18-09",
+    "section": "18",
+    "criterion": "Test data dibersihkan",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum memeriksa/menyetujui pembersihan dataset server; tidak ada data pengguna dihapus."
+  },
+  {
+    "id": "18-10",
+    "section": "18",
+    "criterion": "Environment variables benar",
+    "status": "FAIL",
+    "evidence_or_limit": "Dev release workflow tidak menulis Supabase URL/key; default build kosong; L04. Workflow utama punya guard."
+  },
+  {
+    "id": "19-01",
+    "section": "19",
+    "criterion": "Application ID/package name benar",
+    "status": "PASS",
+    "evidence_or_limit": "APK release: com.tan.gratify; debug berbeda .dev; E4."
+  },
+  {
+    "id": "19-02",
+    "section": "19",
+    "criterion": "App name benar",
+    "status": "PASS",
+    "evidence_or_limit": "Label APK release: Gratify; E4."
+  },
+  {
+    "id": "19-03",
+    "section": "19",
+    "criterion": "Version name benar",
+    "status": "PASS",
+    "evidence_or_limit": "APK release versionName 2.1.0 cocok konfigurasi; E4."
+  },
+  {
+    "id": "19-04",
+    "section": "19",
+    "criterion": "Version code benar",
+    "status": "PASS",
+    "evidence_or_limit": "APK release versionCode 61 cocok konfigurasi; monotonic terhadap store belum diperiksa; E4."
+  },
+  {
+    "id": "19-05",
+    "section": "19",
+    "criterion": "App icon benar",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Icon resource ada; tampilan launcher release/adaptive berbagai perangkat belum; E4, E8."
+  },
+  {
+    "id": "19-06",
+    "section": "19",
+    "criterion": "Splash screen benar",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Tema/logo gelap splash diperiksa pada debug; startup release belum; E3."
+  },
+  {
+    "id": "19-07",
+    "section": "19",
+    "criterion": "Release signing benar",
+    "status": "FAIL",
+    "evidence_or_limit": "APK lokal unsigned; apksigner verify exit 1. CI signing terdefinisi tetapi hasil CI belum diperiksa; E4, E6."
+  },
+  {
+    "id": "19-08",
+    "section": "19",
+    "criterion": "Debug signing tidak digunakan",
+    "status": "PARTIAL",
+    "evidence_or_limit": "APK lokal tidak memakai debug signer karena unsigned; certificate production belum diperiksa; E4."
+  },
+  {
+    "id": "19-09",
+    "section": "19",
+    "criterion": "APK/AAB production berhasil dibuat",
+    "status": "PARTIAL",
+    "evidence_or_limit": "assembleRelease berhasil menghasilkan APK ABI/universal, tetapi belum signed siap distribusi; AAB tidak dibuat; E4."
+  },
+  {
+    "id": "19-10",
+    "section": "19",
+    "criterion": "Install dari build production berhasil",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Tidak menginstal APK unsigned; perlu APK signed pada perangkat uji milik proyek."
+  },
+  {
+    "id": "19-11",
+    "section": "19",
+    "criterion": "Update dari versi sebelumnya berhasil",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum menguji upgrade, signature continuity, session, data dan migration dari versi sebelumnya."
+  },
+  {
+    "id": "19-12",
+    "section": "19",
+    "criterion": "App description",
+    "status": "FAIL",
+    "evidence_or_limit": "Deskripsi/changelog ada tetapi changelog 61 masih menjanjikan Apple login yang sudah dihapus; L05, E8."
+  },
+  {
+    "id": "19-13",
+    "section": "19",
+    "criterion": "Screenshot",
+    "status": "PARTIAL",
+    "evidence_or_limit": "13 phoneScreenshots tersedia di fastlane; belum dicocokkan dengan UI terbaru dan store upload; E8."
+  },
+  {
+    "id": "19-14",
+    "section": "19",
+    "criterion": "App icon",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Icon store tersedia di fastlane; validasi dimensi/branding dan publikasi belum; E8."
+  },
+  {
+    "id": "19-15",
+    "section": "19",
+    "criterion": "Feature graphic jika diperlukan",
+    "status": "PARTIAL",
+    "evidence_or_limit": "featureGraphic.png tersedia; validasi visual/dimensi dan publikasi belum; E8."
+  },
+  {
+    "id": "19-16",
+    "section": "19",
+    "criterion": "Privacy policy",
+    "status": "FAIL",
+    "evidence_or_limit": "Tidak ditemukan policy/URL yang dapat dibuka dari aplikasi/repo; L02."
+  },
+  {
+    "id": "19-17",
+    "section": "19",
+    "criterion": "Content rating",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum ada bukti rating di console store."
+  },
+  {
+    "id": "19-18",
+    "section": "19",
+    "criterion": "Data safety/privacy declarations",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Belum ada deklarasi Data safety yang diverifikasi terhadap data/SDK aktual."
+  },
+  {
+    "id": "19-19",
+    "section": "19",
+    "criterion": "Store category",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Kategori store belum diverifikasi pada console."
+  },
+  {
+    "id": "19-20",
+    "section": "19",
+    "criterion": "Support/contact information",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Contact legal tersedia di README; support listing dan operasional belum; E7."
+  },
+  {
+    "id": "20-01",
+    "section": "20",
+    "criterion": "PASS",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Pilihan hasil UAT belum dipilih karena flow belum dijalankan end to end."
+  },
+  {
+    "id": "20-02",
+    "section": "20",
+    "criterion": "FAIL",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Pilihan hasil UAT belum dipilih karena flow belum dijalankan end to end."
+  },
+  {
+    "id": "20-03",
+    "section": "20",
+    "criterion": "PASS",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Pilihan hasil UAT belum dipilih karena flow belum dijalankan end to end."
+  },
+  {
+    "id": "20-04",
+    "section": "20",
+    "criterion": "FAIL",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Pilihan hasil UAT belum dipilih karena flow belum dijalankan end to end."
+  },
+  {
+    "id": "20-05",
+    "section": "20",
+    "criterion": "PASS",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Pilihan hasil UAT belum dipilih karena flow belum dijalankan end to end."
+  },
+  {
+    "id": "20-06",
+    "section": "20",
+    "criterion": "FAIL",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Pilihan hasil UAT belum dipilih karena flow belum dijalankan end to end."
+  },
+  {
+    "id": "20-07",
+    "section": "20",
+    "criterion": "PASS",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Pilihan hasil UAT belum dipilih karena flow belum dijalankan end to end."
+  },
+  {
+    "id": "20-08",
+    "section": "20",
+    "criterion": "FAIL",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Pilihan hasil UAT belum dipilih karena flow belum dijalankan end to end."
+  },
+  {
+    "id": "20-09",
+    "section": "20",
+    "criterion": "PASS",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Pilihan hasil UAT belum dipilih karena flow belum dijalankan end to end."
+  },
+  {
+    "id": "20-10",
+    "section": "20",
+    "criterion": "FAIL",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Pilihan hasil UAT belum dipilih karena flow belum dijalankan end to end."
+  },
+  {
+    "id": "gate-01",
+    "section": "gate",
+    "criterion": "Tidak ada Critical bug",
+    "status": "FAIL",
+    "evidence_or_limit": "Risiko Critical integritas/privasi/TLS masih terbuka; F01, F02, F03, F06, F07. Tidak ada insiden produksi yang diklaim."
+  },
+  {
+    "id": "gate-02",
+    "section": "gate",
+    "criterion": "Tidak ada High security issue",
+    "status": "FAIL",
+    "evidence_or_limit": "Validasi ZIP OS lama dan logging/TLS belum diperbaiki; F04, F06, F07."
+  },
+  {
+    "id": "gate-03",
+    "section": "gate",
+    "criterion": "Authentication aman",
+    "status": "FAIL",
+    "evidence_or_limit": "Pemisahan akun, OTP dan reset belum lulus; F01, F08, F09."
+  },
+  {
+    "id": "gate-04",
+    "section": "gate",
+    "criterion": "Authorization aman",
+    "status": "FAIL",
+    "evidence_or_limit": "Privasi profil tidak ditegakkan dan RLS aktif belum diuji; F03, E5."
+  },
+  {
+    "id": "gate-05",
+    "section": "gate",
+    "criterion": "Database production siap",
+    "status": "FAIL",
+    "evidence_or_limit": "Atomicity/sync/pagination bermasalah; migration dan backend live belum; F02, F05, F21, F22."
+  },
+  {
+    "id": "gate-06",
+    "section": "gate",
+    "criterion": "Backup tersedia",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Backup client ada; backup server/restore lengkap belum lulus; E10, F04, F15."
+  },
+  {
+    "id": "gate-07",
+    "section": "gate",
+    "criterion": "Production environment benar",
+    "status": "FAIL",
+    "evidence_or_limit": "Dev release workflow kehilangan config dan server produksi belum dibuktikan; L04, E6."
+  },
+  {
+    "id": "gate-08",
+    "section": "gate",
+    "criterion": "Secrets aman",
+    "status": "FAIL",
+    "evidence_or_limit": "Log token/cookie masih tersedia; scan secrets lengkap belum; F06, E6."
+  },
+  {
+    "id": "gate-09",
+    "section": "gate",
+    "criterion": "Monitoring aktif",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Monitoring layanan/server dan alert belum dapat diverifikasi."
+  },
+  {
+    "id": "gate-10",
+    "section": "gate",
+    "criterion": "Crash/error tracking aktif",
+    "status": "FAIL",
+    "evidence_or_limit": "Crash/error tracking remote tidak aktif pada wiring build saat ini; L03."
+  },
+  {
+    "id": "gate-11",
+    "section": "gate",
+    "criterion": "Release build sudah diuji",
+    "status": "PARTIAL",
+    "evidence_or_limit": "Release compile/lint lulus; unsigned, belum install/upgrade/UAT release; E4."
+  },
+  {
+    "id": "gate-12",
+    "section": "gate",
+    "criterion": "Update/rollback plan tersedia",
+    "status": "UNVERIFIED",
+    "evidence_or_limit": "Runbook rollback/update beserta drill belum tersedia."
+  }
+]

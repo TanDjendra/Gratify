@@ -18,6 +18,9 @@ fun NavGraphBuilder.libraryScreenGraph(
     innerPadding: PaddingValues,
     navController: NavController,
 ) {
+    composable<com.tan.gratify.ui.navigation.destination.library.PlaylistWorkspaceDestination> { entry ->
+        com.tan.gratify.ui.screen.library.PlaylistWorkspaceScreen(entry.toRoute(), navController)
+    }
     composable<LibraryDynamicPlaylistDestination> { entry ->
         val data = entry.toRoute<LibraryDynamicPlaylistDestination>()
         LibraryDynamicPlaylistScreen(
@@ -37,6 +40,7 @@ fun NavGraphBuilder.libraryScreenGraph(
         val data = entry.toRoute<AddSongsToPlaylistDestination>()
         AddSongsToPlaylistScreen(
             playlistTitle = data.playlistTitle,
+            targetPlaylistId = data.targetPlaylistId,
             navController = navController,
         )
     }

@@ -31,24 +31,19 @@ import com.tan.common.SUPPORTED_LANGUAGE
 import com.tan.common.SUPPORTED_LOCATION
 import com.tan.domain.data.model.intent.GenericIntent
 import com.tan.domain.mediaservice.handler.MediaPlayerHandler
-import com.tan.domain.mediaservice.handler.ToastType
+import com.tan.gratify.di.AndroidActivityProvider
+import com.tan.gratify.di.androidActivityModule
 import com.tan.logger.Logger
 import com.tan.media3.di.setServiceActivitySession
 import com.tan.gratify.service.test.notification.NotifyWork
-import com.tan.gratify.utils.ComposeResUtils
 import com.tan.gratify.utils.VersionManager
 import com.tan.gratify.viewModel.SharedViewModel
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.handleDeeplinks
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import org.koin.core.context.loadKoinModules
-import org.koin.dsl.module
-import com.tan.gratify.crashlytics.pushPlayerError
-import pub.devrel.easypermissions.EasyPermissions
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
@@ -57,6 +52,10 @@ class MainActivity : AppCompatActivity() {
     val viewModel: SharedViewModel by inject()
     val mediaPlayerHandler by inject<MediaPlayerHandler>()
     private val supabase: SupabaseClient by inject()
+
+    private val notificationPermissionLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+    ) { /* Android settings remain reachable from the notification inbox. */ }
 
     private var mBound = false
     private var shouldUnbind = false
@@ -80,66 +79,54 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
+        AndroidActivityProvider.attach(this)
         startMusicService()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        com.tan.gratify.expect.AndroidAppUpdater.observe()
+        checkForUpdate()
+    }
+
+    override fun onPause() {
+        com.tan.gratify.expect.AndroidAppUpdater.stopObserving()
+        super.onPause()
     }
 
     override fun onStop() {
         super.onStop()
         if (shouldUnbind) {
             unbindService(serviceConnection)
+            shouldUnbind = false
+            mBound = false
         }
     }
 
     private fun handleNotificationIntent(intent: Intent?) {
-        intent?.extras?.let { extras ->
-            val alreadySaved = extras.getBoolean("already_saved", false)
-            if (!alreadySaved) {
-                val title = extras.getString("title") ?: extras.getString("gcm.notification.title")
-                val body = extras.getString("body") ?: extras.getString("gcm.notification.body")
-                val url = extras.getString("url") ?: extras.getString("browseId")
-                
-                if (title != null || body != null) {
-                    saveDeveloperNotificationFromIntent(title ?: "Pesan Pengembang", body ?: "", url)
-                }
-            }
-            intent.removeExtra("is_developer_notification")
-            intent.removeExtra("already_saved")
-            intent.removeExtra("title")
-            intent.removeExtra("body")
-            intent.removeExtra("url")
-            intent.removeExtra("gcm.notification.title")
-            intent.removeExtra("gcm.notification.body")
+        if (intent?.getBooleanExtra("gratify_update", false) == true) {
+            com.tan.gratify.expect.openUpdateStatus()
+            intent.removeExtra("gratify_update")
         }
-    }
-
-    private fun saveDeveloperNotificationFromIntent(title: String, body: String, url: String?) {
-        try {
-            val commonRepository: com.tan.domain.repository.CommonRepository by inject()
-            val entity = com.tan.domain.data.entities.NotificationEntity(
-                channelId = "developer",
-                thumbnail = null,
-                name = title,
-                single = listOf(
-                    mapOf(
-                        "title" to body,
-                        "browseId" to (url ?: "")
-                    )
-                ),
-                album = emptyList(),
-                time = com.tan.domain.extension.now()
-            )
-            lifecycleScope.launch(Dispatchers.IO) {
-                try { commonRepository.insertNotification(entity) }
-                catch (error: Exception) { Logger.e("MainActivity", "Failed to save notification") }
-            }
-        } catch (e: Exception) {
-            Logger.e("MainActivity", "Failed to save notification from intent: ${e.message}")
+        val extras = intent?.extras ?: return
+        val title = extras.getString("title") ?: extras.getString("gcm.notification.title") ?: extras.getString("gcm.n.title")
+        val body = extras.getString("body") ?: extras.getString("gcm.notification.body") ?: extras.getString("gcm.n.body")
+        val isPush = title != null || body != null || extras.containsKey("google.message_id") || extras.getBoolean("is_developer_notification")
+        if (!isPush) return
+        if (!extras.getBoolean("already_saved") && (title != null || body != null)) {
+            com.tan.gratify.service.DeveloperNotificationWorker.enqueue(this, title ?: "Gratify", body.orEmpty(),
+                extras.getString("url") ?: extras.getString("browseId"), show = false)
         }
+        if (intent.data == null) intent.data = "gratify://notification".toUri()
+        listOf("is_developer_notification", "already_saved", "title", "body", "url", "browseId",
+            "gcm.notification.title", "gcm.notification.body", "gcm.n.title", "gcm.n.body", "google.message_id")
+            .forEach(intent::removeExtra)
     }
 
     private fun handleAuthenticationIntent(intent: Intent): Boolean {
         val uri = intent.data ?: return false
-        if (uri.scheme != "com.tan.gratify" || uri.host != "login-callback") return false
+        if (uri.scheme == packageName && uri.host == "youtube-connected") return true
+        if (uri.scheme != packageName || uri.host != "login-callback") return false
         val fragment = "https://callback.invalid/?${uri.fragment.orEmpty()}".toUri()
         val recovery = uri.getQueryParameter("flow") == "recovery" ||
             uri.getQueryParameter("type") == "recovery" || fragment.getQueryParameter("type") == "recovery"
@@ -152,6 +139,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        setIntent(intent)
         Logger.d("MainActivity", "New intent received")
 
         // CRITICAL: Serahkan deep link ke Supabase Auth agar OAuth callback token bisa diproses.
@@ -168,14 +156,18 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        viewModel.intent.value?.data?.toString()?.let { com.tan.domain.utils.parseWorkspaceInvitation(it) }?.let {
+            outState.putString("pending_workspace_invitation", it)
+        }
+        super.onSaveInstanceState(outState)
+    }
+
     @ExperimentalFoundationApi
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        loadKoinModules(
-            module {
-                single<AppCompatActivity> { this@MainActivity }
-            },
-        )
+        AndroidActivityProvider.attach(this)
+        loadKoinModules(androidActivityModule)
         // Application owns the shared definitions; activity recreation preserves playback state.
         VersionManager.initialize()
         checkForUpdate()
@@ -189,10 +181,18 @@ class MainActivity : AppCompatActivity() {
         // CRITICAL: Handle deep link dari cold start (app tidak di memory)
         // saat browser redirect kembali ke app setelah OAuth.
         val authenticationCallback = handleAuthenticationIntent(intent)
+        // Preserve an unopened invite across activity/process recreation during login.
+        // Once Main consumes it, setIntent(null) prevents replay on the next recreation.
+        val pendingInvite = savedInstanceState?.getString("pending_workspace_invitation")
+        if (viewModel.intent.value == null && pendingInvite != null &&
+            com.tan.domain.utils.parseWorkspaceInvitation("gratify-next://invite?token=$pendingInvite") != null) {
+            viewModel.setIntent(GenericIntent(action = Intent.ACTION_VIEW,
+                data = com.eygraber.uri.Uri.parse("gratify-next://invite?token=$pendingInvite")))
+        }
 
-        handleNotificationIntent(intent)
+        if (savedInstanceState == null) handleNotificationIntent(intent)
         val data = (intent?.data ?: intent?.getStringExtra(Intent.EXTRA_TEXT)?.toUri())?.toKmpUriOrNull()
-        if (data != null && !authenticationCallback) {
+        if (data != null && !authenticationCallback && savedInstanceState == null) {
             viewModel.setIntent(
                 GenericIntent(
                     action = intent.action,
@@ -203,47 +203,49 @@ class MainActivity : AppCompatActivity() {
         }
         Logger.d("Italy", "Key: ${Locale.ITALY.toLanguageTag()}")
 
-        // Check if the migration has already been done or not
-        if (getString(FIRST_TIME_MIGRATION) != STATUS_DONE) {
-            Logger.d("Locale Key", "onCreate: ${Locale.getDefault().toLanguageTag()}")
-            if (SUPPORTED_LANGUAGE.codes.contains(Locale.getDefault().toLanguageTag())) {
-                Logger.d(
-                    "Contains",
-                    "onCreate: ${
-                        SUPPORTED_LANGUAGE.codes.contains(
-                            Locale.getDefault().toLanguageTag(),
-                        )
-                    }",
-                )
-                putString(SELECTED_LANGUAGE, Locale.getDefault().toLanguageTag())
-                if (SUPPORTED_LOCATION.items.contains(Locale.getDefault().country)) {
-                    putString("location", Locale.getDefault().country)
+        lifecycleScope.launch {
+            // Check if the migration has already been done or not
+            if (getString(FIRST_TIME_MIGRATION) != STATUS_DONE) {
+                Logger.d("Locale Key", "onCreate: ${Locale.getDefault().toLanguageTag()}")
+                if (SUPPORTED_LANGUAGE.codes.contains(Locale.getDefault().toLanguageTag())) {
+                    Logger.d(
+                        "Contains",
+                        "onCreate: ${
+                            SUPPORTED_LANGUAGE.codes.contains(
+                                Locale.getDefault().toLanguageTag(),
+                            )
+                        }",
+                    )
+                    putString(SELECTED_LANGUAGE, Locale.getDefault().toLanguageTag())
+                    if (SUPPORTED_LOCATION.items.contains(Locale.getDefault().country)) {
+                        putString("location", Locale.getDefault().country)
+                    } else {
+                        putString("location", "US")
+                    }
                 } else {
-                    putString("location", "US")
+                    putString(SELECTED_LANGUAGE, "en-US")
                 }
-            } else {
-                putString(SELECTED_LANGUAGE, "en-US")
+                // Fetch the selected language from wherever it was stored. In this case its SharedPref
+                getString(SELECTED_LANGUAGE)?.let {
+                    Logger.d("Locale Key", "getString: $it")
+                    // Set this locale using the AndroidX library that will handle the storage itself
+                    val localeList = LocaleListCompat.forLanguageTags(it)
+                    AppCompatDelegate.setApplicationLocales(localeList)
+                    // Set the migration flag to ensure that this is executed only once
+                    putString(FIRST_TIME_MIGRATION, STATUS_DONE)
+                }
             }
-            // Fetch the selected language from wherever it was stored. In this case its SharedPref
-            getString(SELECTED_LANGUAGE)?.let {
-                Logger.d("Locale Key", "getString: $it")
-                // Set this locale using the AndroidX library that will handle the storage itself
-                val localeList = LocaleListCompat.forLanguageTags(it)
-                AppCompatDelegate.setApplicationLocales(localeList)
-                // Set the migration flag to ensure that this is executed only once
-                putString(FIRST_TIME_MIGRATION, STATUS_DONE)
+            if (AppCompatDelegate.getApplicationLocales().toLanguageTags() !=
+                getString(
+                    SELECTED_LANGUAGE,
+                )
+            ) {
+                Logger.d(
+                    "Locale Key",
+                    "onCreate: ${AppCompatDelegate.getApplicationLocales().toLanguageTags()}",
+                )
+                putString(SELECTED_LANGUAGE, AppCompatDelegate.getApplicationLocales().toLanguageTags())
             }
-        }
-        if (AppCompatDelegate.getApplicationLocales().toLanguageTags() !=
-            getString(
-                SELECTED_LANGUAGE,
-            )
-        ) {
-            Logger.d(
-                "Locale Key",
-                "onCreate: ${AppCompatDelegate.getApplicationLocales().toLanguageTags()}",
-            )
-            putString(SELECTED_LANGUAGE, AppCompatDelegate.getApplicationLocales().toLanguageTags())
         }
 
         enableEdgeToEdge(
@@ -261,7 +263,7 @@ class MainActivity : AppCompatActivity() {
             PeriodicWorkRequestBuilder<NotifyWork>(
                 12L,
                 TimeUnit.HOURS,
-            ).addTag("Worker Test")
+            ).addTag("artist-release-notifications")
                 .setConstraints(
                     Constraints
                         .Builder()
@@ -274,24 +276,16 @@ class MainActivity : AppCompatActivity() {
             request,
         )
 
-        if (!EasyPermissions.hasPermissions(this, Manifest.permission.POST_NOTIFICATIONS)) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                val doNotAsk = getString("notification_permission_do_not_ask")
-                if (doNotAsk != "true") {
-                    val wasAsked = getString("notification_permission_asked")
-                    if (wasAsked != "true") {
-                        // First time: request system permission
-                        EasyPermissions.requestPermissions(
-                            this,
-                            runBlocking { ComposeResUtils.getResString(ComposeResUtils.StringType.NOTIFICATION_REQUEST) },
-                            1,
-                            Manifest.permission.POST_NOTIFICATIONS,
-                        )
-                        putString("notification_permission_asked", "true")
-                    } else {
-                        // Already asked before: show custom dialog with "Don't show again"
-                        viewModel.showNotificationPermissionDialog()
-                    }
+        lifecycleScope.launch {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                androidx.core.content.ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                if (getString("notification_permission_asked") != "true") {
+                    putString("notification_permission_asked", "true")
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                } else if (getString("notification_permission_do_not_ask") != "true" &&
+                    getString("notification_permission_reminder_shown") != "true") {
+                    putString("notification_permission_reminder_shown", "true")
+                    viewModel.showNotificationPermissionDialog()
                 }
             }
         }
@@ -303,11 +297,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        val shouldStopMusicService = viewModel.shouldStopMusicService()
-        Logger.w("MainActivity", "onDestroy: Should stop service $shouldStopMusicService")
-
-        // Always unbind service if it was bound to prevent MusicBinder leak
-        if (shouldStopMusicService && shouldUnbind && isFinishing) {
+        AndroidActivityProvider.detach(this)
+        if (isFinishing && !isChangingConfigurations) {
+            com.tan.media3.di.stopService(this)
             viewModel.isServiceRunning = false
         }
         super.onDestroy()
@@ -320,44 +312,34 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startMusicService() {
+        if (shouldUnbind) return
 //        mediaPlayerHandler.startMediaService(this, serviceConnection)
-        com.tan.media3.di
+        val bound = com.tan.media3.di
             .startService(this@MainActivity, serviceConnection)
-        mediaPlayerHandler.pushPlayerError = { it ->
-            pushPlayerError(it)
+        if (!bound) {
+            Logger.w("Service", "Music service binding failed; retry on next Activity start")
+            return
         }
-        mediaPlayerHandler.showToast = { type ->
-            viewModel.makeToast(
-                when (type) {
-                    is ToastType.ExplicitContent -> {
-                        runBlocking { ComposeResUtils.getResString(ComposeResUtils.StringType.EXPLICIT_CONTENT_BLOCKED) }
-                    }
-
-                    is ToastType.PlayerError -> {
-                        runBlocking { ComposeResUtils.getResString(ComposeResUtils.StringType.TIME_OUT_ERROR, type.error) }
-                    }
-                },
-            )
-        }
+        installPlaybackCallbacks(mediaPlayerHandler, viewModel)
         viewModel.isServiceRunning = true
         shouldUnbind = true
         Logger.d("Service", "Service started")
     }
 
     private fun checkForUpdate() {
-        if (viewModel.shouldCheckForUpdate()) {
-            viewModel.checkForUpdate()
+        lifecycleScope.launch {
+            if (viewModel.shouldCheckForUpdate()) viewModel.checkForUpdate()
         }
     }
 
-    private fun putString(
+    private suspend fun putString(
         key: String,
         value: String,
     ) {
-        viewModel.putString(key, value)
+        viewModel.writePreference(key, value)
     }
 
-    private fun getString(key: String): String? = viewModel.getString(key)
+    private suspend fun getString(key: String): String? = viewModel.readPreference(key)
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)

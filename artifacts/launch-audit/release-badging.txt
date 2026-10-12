@@ -1,0 +1,5 @@
+package: name='com.tan.gratify' versionCode='61' versionName='2.1.0' platformBuildVersionName='17' platformBuildVersionCode='37' compileSdkVersion='37' compileSdkVersionCodename='17'
+sdkVersion:'26'
+targetSdkVersion:'36'
+application-label:'Gratify'
+launchable-activity: name='com.tan.gratify.MainActivity'  label='' icon=''

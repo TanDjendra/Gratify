@@ -24,6 +24,13 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.background
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import com.tan.gratify.Platform
+import com.tan.gratify.getPlatform
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -124,6 +131,7 @@ fun SongFullWidthItems(
     modifier: Modifier,
     rightView: @Composable (() -> Unit)? = null,
     collectionStyle: Boolean = false,
+    desktop: Boolean = getPlatform() == Platform.Desktop,
 ) {
     val maxOffset = 360f
     val coroutineScope = rememberCoroutineScope()
@@ -140,11 +148,14 @@ fun SongFullWidthItems(
     }
     val offsetX = remember { Animatable(initialValue = 0f) }
     var heightDp by remember { mutableStateOf(0.dp) }
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
 
-    Box(
+    BoxWithConstraints(
         modifier =
         modifier,
     ) {
+        val showAlbum = desktop && collectionStyle && maxWidth >= 760.dp
         Crossfade(
             offsetX.value >= maxOffset / 2,
         ) { shouldShowAddToQueue ->
@@ -170,11 +181,13 @@ fun SongFullWidthItems(
             modifier =
                 modifier
                     .offset { IntOffset(offsetX.value.roundToInt(), 0) }
+                    .background(if (desktop && hovered) GratifyColors.SurfaceRaised else Color.Transparent)
+                    .hoverable(interaction)
                     .clickable {
                         onClickListener?.invoke(track?.videoId ?: songEntity?.videoId ?: "")
                     }.animateContentSize()
                     .pointerInput(onAddToQueue, isPlaying) {
-                        if (!isPlaying && onAddToQueue != null) {
+                        if (!desktop && !isPlaying && onAddToQueue != null) {
                             detectHorizontalDragGestures(
                                 onHorizontalDrag = { change, dragAmount ->
                                     if (offsetX.value + dragAmount > 0) {
@@ -206,7 +219,7 @@ fun SongFullWidthItems(
         ) {
             Row(
                 Modifier
-                    .padding(vertical = 6.dp, horizontal = 15.dp)
+                    .padding(vertical = if (desktop) 4.dp else 6.dp, horizontal = if (desktop) 24.dp else 15.dp)
                     .fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -329,6 +342,12 @@ fun SongFullWidthItems(
                 if (rightView != null) {
                     rightView()
                 }
+                if (showAlbum) Text(track?.album?.name ?: songEntity?.albumName.orEmpty(),
+                    modifier = Modifier.width(180.dp).padding(end = 12.dp), maxLines = 1,
+                    overflow = TextOverflow.Ellipsis, style = typo().bodySmall, color = GratifyColors.TextSecondary)
+                if (desktop && collectionStyle) Text(track?.duration ?: songEntity?.duration.orEmpty(),
+                    modifier = Modifier.width(52.dp), style = typo().bodySmall, color = GratifyColors.TextSecondary,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (onMoreClickListener != null) {
                     if (collectionStyle) {
                         CollectionDetailAction(androidx.compose.material.icons.Icons.Rounded.MoreHoriz,

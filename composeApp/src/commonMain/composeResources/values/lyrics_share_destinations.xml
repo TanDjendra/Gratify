@@ -1,0 +1,10 @@
+<resources>
+    <string name="share_lyrics_destination">Share to</string>
+    <string name="share_lyrics_gratify_story">Gratify Story</string>
+    <string name="share_lyrics_other_apps">Other apps</string>
+    <string name="share_lyrics_instagram_missing">Instagram is not installed. Save the image or choose another app.</string>
+    <string name="share_lyrics_whatsapp_missing">WhatsApp is not installed. Save the image or choose another app.</string>
+    <string name="share_lyrics_story_unavailable">Play a song in Gratify to share its lyrics to a story.</string>
+    <string name="share_lyrics_story_limit">Choose shorter lyrics for a story (up to 200 characters) and a song at least 8 seconds long.</string>
+    <string name="share_lyrics_story_hint">Selected lyrics become your story caption. Choose the clip duration and audience in the editor.</string>
+</resources>

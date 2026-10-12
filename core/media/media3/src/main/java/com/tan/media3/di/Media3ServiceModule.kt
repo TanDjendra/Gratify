@@ -7,7 +7,6 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
 import androidx.annotation.OptIn
-import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -63,14 +62,17 @@ import com.tan.logger.Logger
 import com.tan.media3.exoplayer.CrossfadeExoPlayerAdapter
 import com.tan.media3.repository.CacheRepositoryImpl
 import com.tan.media3.service.SimpleMediaService
+import com.tan.media3.service.startAndBindMediaService
 import com.tan.media3.service.callback.SimpleMediaSessionCallback
 import com.tan.media3.service.download.DownloadUtils
 import com.tan.media3.service.mediasourcefactory.MergingMediaSourceFactory
 import com.tan.media3.utils.CoilBitmapLoader
+import com.tan.media3.utils.ConfigurableCacheEvictor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.lastOrNull
 import kotlinx.coroutines.launch
@@ -107,12 +109,17 @@ private val mediaServiceModule =
         }
         // Player Cache
         single<SimpleCache>(qualifier = named(PLAYER_CACHE), createdAtStart = true) {
-            provideSimpleCache(
-                context = androidContext(),
-                cacheName = "exoplayer",
-                cacheSize = runBlocking { get<DataStoreManager>().maxSongCacheSize.first() },
-                databaseProvider = get<DatabaseProvider>(),
-            )
+            val evictor = ConfigurableCacheEvictor()
+            val cache = SimpleCache(androidContext().filesDir.resolve("exoplayer"), evictor, get<DatabaseProvider>())
+            val preferences = get<DataStoreManager>()
+            get<CoroutineScope>(named(SERVICE_SCOPE)).launch(Dispatchers.IO) {
+                preferences.maxSongCacheSize.distinctUntilChanged()
+                    .catch { Logger.w("Cache", "Unable to read playback cache budget") }
+                    .collect { size ->
+                        evictor.setMaxBytes(cache, if (size < 0) Long.MAX_VALUE else size * 1024L * 1024L)
+                    }
+            }
+            cache
         }
         // Download Cache
         single<SimpleCache>(qualifier = named(DOWNLOAD_CACHE), createdAtStart = true) {
@@ -183,7 +190,7 @@ private val mediaServiceModule =
         single<MediaPlayerInterface>(createdAtStart = true) {
             CrossfadeExoPlayerAdapter(
                 context = androidContext(),
-                coroutineScope = get(named(SERVICE_SCOPE)),
+                parentScope = get(named(SERVICE_SCOPE)),
                 dataStoreManager = get(),
                 mediaSourceFactory = get(),
                 audioAttributes = get(),
@@ -273,6 +280,7 @@ private fun provideResolvingDataSourceFactory(
             // Instead, let the block be cancellable and rely on the outer
             // catch(Throwable) to convert any CancellationException to IOException.
             runBlocking(Dispatchers.IO) {
+                com.tan.media3.exoplayer.resolveStreamWithDeadline {
                 if (mediaId.contains(MERGING_DATA_TYPE.VIDEO)) {
                 val id = mediaId.removePrefix(MERGING_DATA_TYPE.VIDEO)
                 streamRepository.getNewFormat(id).lastOrNull()?.let {
@@ -285,7 +293,7 @@ private fun provideResolvingDataSourceFactory(
                         if (!is403Url) {
                             dataSpecReturn = dataSpec.withUri(videoUrl.toUri()).subrange(dataSpec.uriPositionOffset, chunkLength)
                             resolved = true
-                            return@runBlocking
+                            return@resolveStreamWithDeadline
                         }
                     }
                 }
@@ -313,7 +321,7 @@ private fun provideResolvingDataSourceFactory(
                         if (!is403Url) {
                             dataSpecReturn = dataSpec.withUri(audioUrl.toUri()).subrange(dataSpec.uriPositionOffset, chunkLength)
                             resolved = true
-                            return@runBlocking
+                            return@resolveStreamWithDeadline
                         }
                     }
                 }
@@ -331,6 +339,7 @@ private fun provideResolvingDataSourceFactory(
                         resolved = true
                     }
             }
+                }
             }
         } catch (e: Throwable) {
             // CRITICAL: Catch Throwable (not just Exception) to intercept
@@ -541,20 +550,18 @@ fun loadMediaService() {
 fun startService(
     context: Context,
     serviceConnection: ServiceConnection,
-) {
+): Boolean {
     val intent = Intent(context, SimpleMediaService::class.java)
-    try {
-        context.startService(intent)
-    } catch (e: IllegalStateException) {
-        // BackgroundServiceStartNotAllowedException (Android 12+)
-        ContextCompat.startForegroundService(context, intent)
-    }
-    context.bindService(intent, serviceConnection, BIND_AUTO_CREATE)
-    Logger.d("Service", "Service started")
+    return startAndBindMediaService(
+        start = { context.startService(intent) },
+        bind = { context.bindService(intent, serviceConnection, BIND_AUTO_CREATE) },
+        onStartRestricted = { Logger.w("Service", "Background start restricted; binding without foreground retry") },
+    )
 }
 
 @OptIn(UnstableApi::class)
 fun stopService(context: Context) {
+    SimpleMediaService.stopRunningPlayback()
     context.stopService(Intent(context, SimpleMediaService::class.java))
 }
 

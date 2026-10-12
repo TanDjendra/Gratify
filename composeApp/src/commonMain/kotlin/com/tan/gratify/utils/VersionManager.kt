@@ -16,7 +16,16 @@ object VersionManager {
         }
     }
 
-    fun getVersionName(): String = removeDevSuffix(versionName ?: String())
+    fun getVersionName(): String {
+        initialize()
+        return removeDevSuffix(versionName.orEmpty())
+    }
+
+    fun getVersionCode(): Long = BuildKonfig.versionCode.toLong()
+
+    fun isUpdateAvailable(update: com.tan.domain.data.model.update.UpdateData): Boolean =
+        update.versionCode?.let { it > getVersionCode() }
+            ?: isVersionLower(getVersionName(), update.tagName)
 
     fun isVersionLower(current: String, target: String): Boolean {
         val currentParts = parseVersion(current) ?: return false

@@ -49,6 +49,7 @@ fun ProfileDrawerContent(
     profileName: String,
     onViewProfileClick: () -> Unit,
     onRecentlyPlayedClick: () -> Unit,
+    onWrappedClick: () -> Unit,
     onNotificationClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onCloseClick: () -> Unit
@@ -96,6 +97,7 @@ fun ProfileDrawerContent(
             HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
             Spacer(modifier = Modifier.height(16.dp))
 
+            DrawerMenuItem(Res.drawable.baseline_history_24, "Wrapped", onWrappedClick)
             // ── Menu Items ──────────────────────────────────────────────
             DrawerMenuItem(
                 iconRes = Res.drawable.baseline_history_24,

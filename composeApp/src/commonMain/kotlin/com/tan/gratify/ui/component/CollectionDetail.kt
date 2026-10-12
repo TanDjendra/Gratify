@@ -23,6 +23,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.tan.gratify.Platform
+import com.tan.gratify.getPlatform
 import com.tan.domain.data.entities.DownloadState
 import com.tan.gratify.ui.theme.GratifyColors
 import com.tan.gratify.ui.theme.typo
@@ -46,20 +49,28 @@ fun CollectionDetailHeader(
     onSubtitleClick: (() -> Unit)? = null,
     description: @Composable (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
+    desktop: Boolean = getPlatform() == Platform.Desktop,
+    compactPlaylist: Boolean = false,
+    onEdit: (() -> Unit)? = null,
+    subtitleContent: @Composable (() -> Unit)? = null,
+    controlsEnabled: Boolean = true,
 ) {
     BoxWithConstraints(
         Modifier.fillMaxWidth().background(
             Brush.verticalGradient(listOf(lerp(accent, GratifyColors.Background, 0.45f), GratifyColors.Background)),
         ),
     ) {
-        val wide = maxWidth >= 600.dp
-        val coverSize = if (wide) 224.dp else (maxWidth * 0.62f).coerceIn(160.dp, 260.dp)
+        val availableWidth = maxWidth
+        val wide = desktop || availableWidth >= 600.dp
+        val coverSize = if (compactPlaylist && !wide) (maxWidth * 0.32f).coerceIn(88.dp, 136.dp) else if (desktop) (maxWidth * 0.25f).coerceIn(144.dp, 208.dp) else if (wide) 224.dp else (maxWidth * 0.62f).coerceIn(160.dp, 260.dp)
         val info: @Composable () -> Unit = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (wide) Text(kind, style = typo().labelMedium, color = GratifyColors.TextPrimary)
-                Text(title, style = if (wide) typo().displayMedium else typo().headlineLarge,
-                    color = GratifyColors.TextPrimary, maxLines = 4, overflow = TextOverflow.Ellipsis)
-                if (subtitle.isNotBlank()) {
+                Text(title, style = if (desktop) typo().displayMedium.copy(fontSize = if (availableWidth >= 760.dp) 48.sp else 34.sp,
+                    lineHeight = if (availableWidth >= 760.dp) 52.sp else 40.sp) else if (wide) typo().displayMedium else if (compactPlaylist) typo().titleLarge else typo().headlineLarge,
+                    color = GratifyColors.TextPrimary, maxLines = if (desktop) 3 else 4, overflow = TextOverflow.Ellipsis)
+                if (subtitleContent != null) subtitleContent()
+                else if (subtitle.isNotBlank()) {
                     Text(subtitle, style = typo().labelLarge, color = GratifyColors.TextPrimary,
                         modifier = if (onSubtitleClick != null) Modifier.clickable(onClick = onSubtitleClick).padding(vertical = 4.dp) else Modifier)
                 }
@@ -68,14 +79,21 @@ fun CollectionDetailHeader(
             }
         }
         Column {
-            Row(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars).padding(horizontal = 8.dp),
+            if (!desktop) Row(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars).padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically) {
-                CollectionDetailAction(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(Res.string.detail_back), onClick = onBack)
+                CollectionDetailAction(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(Res.string.detail_back), enabled = controlsEnabled, onClick = onBack)
+                if (onEdit != null) { Spacer(Modifier.weight(1f)); TextButton(onClick = onEdit, enabled = controlsEnabled) { Text(stringResource(Res.string.playlist_flow_rename)) } }
             }
             if (wide) {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
+                Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = if (desktop) 32.dp else 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.Bottom) {
                     artwork(Modifier.size(coverSize).shadow(16.dp, RoundedCornerShape(4.dp)).clip(RoundedCornerShape(4.dp)))
+                    Box(Modifier.weight(1f)) { info() }
+                }
+            } else if (compactPlaylist) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 24.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    artwork(Modifier.size(coverSize).clip(RoundedCornerShape(4.dp)))
                     Box(Modifier.weight(1f)) { info() }
                 }
             } else {
@@ -86,17 +104,33 @@ fun CollectionDetailHeader(
             }
             Row(Modifier.fillMaxWidth().padding(horizontal = if (wide) 16.dp else 8.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically) {
-                actions()
-                Spacer(Modifier.weight(1f))
-                CollectionDetailAction(Icons.Rounded.Shuffle, stringResource(Res.string.shuffle), enabled = canPlay, onClick = onShuffle)
-                FilledIconButton(onClick = onPlay, enabled = canPlay,
+                val playButton: @Composable () -> Unit = { FilledIconButton(onClick = onPlay, enabled = canPlay && controlsEnabled,
                     modifier = Modifier.padding(start = 4.dp, end = 8.dp).size(56.dp), shape = CircleShape,
                     colors = IconButtonDefaults.filledIconButtonColors(containerColor = GratifyColors.Accent,
                         contentColor = GratifyColors.OnAccent, disabledContainerColor = GratifyColors.SurfaceHighest,
                         disabledContentColor = GratifyColors.TextSecondary)) {
                     Icon(if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                         stringResource(if (isPlaying) Res.string.detail_pause else Res.string.detail_play), Modifier.size(32.dp))
+                } }
+                if (desktop) {
+                    playButton()
+                    Spacer(Modifier.width(16.dp))
+                    CollectionDetailAction(Icons.Rounded.Shuffle, stringResource(Res.string.shuffle), enabled = canPlay && controlsEnabled, onClick = onShuffle)
+                    actions()
+                    Spacer(Modifier.weight(1f))
+                } else {
+                    actions()
+                    Spacer(Modifier.weight(1f))
+                    if (canPlay || !compactPlaylist) {
+                        CollectionDetailAction(Icons.Rounded.Shuffle, stringResource(Res.string.shuffle), enabled = canPlay && controlsEnabled, onClick = onShuffle)
+                        playButton()
+                    }
                 }
+            }
+            if (desktop) Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(Res.string.desktop_title), Modifier.weight(1f), style = typo().labelSmall, color = GratifyColors.TextSecondary)
+                if (availableWidth >= 760.dp) Text(stringResource(Res.string.album), Modifier.width(180.dp), style = typo().labelSmall, color = GratifyColors.TextSecondary)
+                Icon(Icons.Rounded.Schedule, stringResource(Res.string.desktop_duration), Modifier.padding(end = 60.dp).size(18.dp), tint = GratifyColors.TextSecondary)
             }
         }
     }

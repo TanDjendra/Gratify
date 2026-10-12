@@ -36,6 +36,9 @@ data class LocalPlaylistEntity(
     // Stable across devices; the Room primary key is only a device-local row ID.
     @ColumnInfo(name = "sync_id", defaultValue = "NULL")
     val syncId: String? = null,
+    // A device cache of a canonical playlist; never an independent writable copy.
+    @ColumnInfo(name = "canonical_playlist_id", defaultValue = "NULL")
+    val canonicalPlaylistId: String? = null,
 ) : PlaylistType,
     HomeContentType {
     override fun playlistType(): PlaylistType.Type = PlaylistType.Type.LOCAL

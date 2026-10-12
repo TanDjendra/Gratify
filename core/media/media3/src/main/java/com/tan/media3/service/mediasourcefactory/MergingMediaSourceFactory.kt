@@ -13,9 +13,7 @@ import com.tan.logger.Logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 
 @UnstableApi
 internal class MergingMediaSourceFactory(
@@ -23,20 +21,10 @@ internal class MergingMediaSourceFactory(
     private val dataStoreManager: DataStoreManager,
 ) : MediaSource.Factory {
 
-    // Cached preference value — updated reactively via observePreference().
-    // createMediaSource() is called from ExoPlayer's internal playback thread;
-    // the previous runBlocking(Dispatchers.IO) blocked that thread and could
-    // contribute to deadlocks when Dispatchers.IO is contended.
+    // Start audio-only until preferences arrive. Never wait for DataStore on
+    // the main thread during DI initialization or on ExoPlayer's playback thread.
     @Volatile
     private var cachedWatchVideo: Boolean = false
-
-    init {
-        // Seed the cache synchronously so the first createMediaSource call has a value.
-        // This runs once during DI init on Main, which is acceptable.
-        cachedWatchVideo = runBlocking(Dispatchers.IO) {
-            dataStoreManager.watchVideoInsteadOfPlayingAudio.first()
-        } == DataStoreManager.Values.TRUE
-    }
 
     /**
      * Start observing the preference reactively. Call once after construction

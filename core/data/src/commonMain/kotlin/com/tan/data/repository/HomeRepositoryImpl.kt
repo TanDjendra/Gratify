@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.flowOn
 internal class HomeRepositoryImpl(
     private val dataStoreManager: DataStoreManager,
     private val youTube: YouTube,
+    private val contentCache: com.tan.data.cache.JsonContentCache? = null,
 ) : HomeRepository {
     override fun getHomeData(
         params: String?,
@@ -105,8 +106,8 @@ internal class HomeRepositoryImpl(
                                     )?.url
                                     ?.replace("s88", "s352") ?: ""
                             if (accountName != "" && accountThumbUrl != "") {
-                                dataStoreManager.putString("AccountName", accountName)
-                                dataStoreManager.putString("AccountThumbUrl", accountThumbUrl)
+                                dataStoreManager.putString("YouTubeAccountName", accountName)
+                                dataStoreManager.putString("YouTubeAccountThumbUrl", accountThumbUrl)
                             }
                         }
                         val continueParam =
@@ -251,6 +252,11 @@ internal class HomeRepositoryImpl(
         }.flowOn(Dispatchers.IO)
 
     override fun getMoodAndMomentsData(): Flow<Resource<Mood>> =
+        com.tan.data.cache.cachedContent(contentCache,
+            key = { "browse-moods-v1:${dataStoreManager.location.first()}:${dataStoreManager.language.first()}" },
+            freshMs = 24 * 60 * 60 * 1000L, serializer = Mood.serializer(), fetch = ::fetchMoodAndMomentsData)
+
+    private fun fetchMoodAndMomentsData(): Flow<Resource<Mood>> =
         flow {
             runCatching {
                 youTube

@@ -7,8 +7,11 @@ import android.view.TextureView
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.FlagSet
 import androidx.media3.common.util.UnstableApi
 import com.tan.logger.Logger
+import com.tan.domain.mediaservice.player.MediaPlayerInterface
 
 private const val TAG = "DelegatingForwardingPlayer"
 
@@ -78,24 +81,96 @@ internal class DelegatingForwardingPlayer(
      */
     var playlistNavigationProvider: PlaylistNavigationProvider? = null
 
+    // Session commands must use the same focus/crossfade lifecycle as the app UI.
+    var playbackControl: MediaPlayerInterface? = null
+    var onPlaybackTransitionChanged: ((Boolean) -> Unit)? = null
+
+    // Preloaded delegates are deliberately paused. Session play intent belongs
+    // to the queue, and must survive promotion of one of those delegates.
+    override fun getPlayWhenReady(): Boolean = playbackControl?.playWhenReady ?: super.getPlayWhenReady()
+
+    override fun isPlaying(): Boolean = if (playbackControl == null) super.isPlaying()
+        else getPlayWhenReady() && !suppressPlaybackEnded && super.isPlaying()
+
+    override fun getPlayerError(): PlaybackException? =
+        if (suppressPlaybackEnded && getPlayWhenReady()) null else super.getPlayerError()
+
+    override fun play() {
+        playbackControl?.play() ?: super.play()
+    }
+
+    override fun pause() {
+        playbackControl?.pause() ?: super.pause()
+    }
+
+    override fun setPlayWhenReady(playWhenReady: Boolean) {
+        val control = playbackControl
+        if (control != null) control.playWhenReady = playWhenReady else super.setPlayWhenReady(playWhenReady)
+    }
+
+    override fun stop() {
+        playbackControl?.stop() ?: super.stop()
+    }
+
+    override fun getRepeatMode(): Int = playbackControl?.repeatMode ?: super.getRepeatMode()
+
+    override fun setRepeatMode(repeatMode: Int) {
+        val control = playbackControl
+        if (control != null) control.repeatMode = repeatMode else super.setRepeatMode(repeatMode)
+        if (control != null) {
+            trackedListeners.toList().forEach { it.onRepeatModeChanged(repeatMode) }
+            notifyEvents(Player.EVENT_REPEAT_MODE_CHANGED)
+        }
+    }
+
+    override fun getShuffleModeEnabled(): Boolean = playbackControl?.shuffleModeEnabled ?: super.getShuffleModeEnabled()
+
+    override fun setShuffleModeEnabled(shuffleModeEnabled: Boolean) {
+        val control = playbackControl
+        if (control != null) control.shuffleModeEnabled = shuffleModeEnabled else super.setShuffleModeEnabled(shuffleModeEnabled)
+        if (control != null) {
+            trackedListeners.toList().forEach { it.onShuffleModeEnabledChanged(shuffleModeEnabled) }
+            notifyEvents(Player.EVENT_SHUFFLE_MODE_ENABLED_CHANGED)
+        }
+    }
+
+    private fun notifyEvents(vararg flags: Int) {
+        if (trackedListeners.isEmpty()) return
+        val events = Player.Events(FlagSet.Builder().addAll(*flags).build())
+        trackedListeners.toList().forEach { it.onEvents(this, events) }
+    }
+
     // ========== Playback-Ended Suppression ==========
 
     /**
-     * When true, [getPlaybackState] remaps [Player.STATE_ENDED] to [Player.STATE_BUFFERING].
+     * During a handoff/retry, expose buffering until the incoming delegate is
+     * ready to own playback. READY preloads are paused and failed delegates are
+     * IDLE; suppressing only ENDED leaves both gaps visible to the session.
      *
-     * This prevents [androidx.media3.session.MediaLibraryService] from dropping the
-     * foreground-service notification during the gap between one ExoPlayer finishing
-     * and the next ExoPlayer being swapped in via [swapDelegate].
+     * Keeps the session engaged while one ExoPlayer finishes and the next is
+     * swapped in via [swapDelegate], including source recovery delays.
      *
      * Set by [CrossfadeExoPlayerAdapter] before a track-end transition starts,
      * cleared after the next player is swapped in and playing.
      */
     @Volatile
     var suppressPlaybackEnded = false
+        set(value) {
+            if (field == value) return
+            field = value
+            onPlaybackTransitionChanged?.invoke(value)
+            trackedListeners.toList().forEach {
+                it.onPlayWhenReadyChanged(getPlayWhenReady(), Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
+                it.onPlaybackStateChanged(getPlaybackState())
+                it.onIsPlayingChanged(isPlaying())
+            }
+            notifyEvents(Player.EVENT_PLAYBACK_STATE_CHANGED, Player.EVENT_IS_PLAYING_CHANGED,
+                Player.EVENT_PLAY_WHEN_READY_CHANGED)
+        }
 
     override fun getPlaybackState(): Int {
         val state = super.getPlaybackState()
-        if (state == Player.STATE_ENDED && suppressPlaybackEnded) {
+        if (suppressPlaybackEnded && getPlayWhenReady()) {
             return Player.STATE_BUFFERING
         }
         return state
@@ -105,15 +180,30 @@ internal class DelegatingForwardingPlayer(
 
     // Track all externally registered listeners so we can re-register them after delegate swap
     private val trackedListeners = mutableListOf<Player.Listener>()
+    private val sessionListeners = mutableMapOf<Player.Listener, Player.Listener>()
 
     override fun addListener(listener: Player.Listener) {
+        if (sessionListeners.containsKey(listener)) return
         trackedListeners.add(listener)
-        super.addListener(listener)
+        // Media3 caches individual callback arguments; overriding only the getters
+        // still lets an old delegate's ENDED/IDLE overwrite the session's state.
+        val bridge = object : Player.Listener by listener {
+            override fun onPlaybackStateChanged(playbackState: Int) = listener.onPlaybackStateChanged(getPlaybackState())
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) =
+                listener.onPlayWhenReadyChanged(getPlayWhenReady(), reason)
+            override fun onIsPlayingChanged(isPlaying: Boolean) = listener.onIsPlayingChanged(isPlaying())
+            override fun onPlayerError(error: PlaybackException) {
+                if (!suppressPlaybackEnded || !getPlayWhenReady()) listener.onPlayerError(error)
+            }
+            override fun onEvents(player: Player, events: Player.Events) = listener.onEvents(this@DelegatingForwardingPlayer, events)
+        }
+        sessionListeners[listener] = bridge
+        super.addListener(bridge)
     }
 
     override fun removeListener(listener: Player.Listener) {
         trackedListeners.remove(listener)
-        super.removeListener(listener)
+        sessionListeners.remove(listener)?.let { super.removeListener(it) }
     }
 
     // ========== Video Surface Tracking ==========
@@ -354,7 +444,7 @@ internal class DelegatingForwardingPlayer(
         // 3. Remove all listeners from old delegate (ForwardingPlayer removes ForwardingListener wrappers)
         listenersToReAdd.forEach { listener ->
             try {
-                super.removeListener(listener)
+                sessionListeners[listener]?.let { super.removeListener(it) }
             } catch (e: Exception) {
                 Logger.w(TAG, "Error removing listener during swap: ${e.message}")
             }
@@ -365,7 +455,7 @@ internal class DelegatingForwardingPlayer(
 
         // 5. Re-add all listeners (ForwardingPlayer creates new ForwardingListener wrappers for new delegate)
         listenersToReAdd.forEach { listener ->
-            super.addListener(listener)
+            sessionListeners[listener]?.let { super.addListener(it) }
         }
 
         // 6. Re-attach video surface to the new delegate
@@ -405,15 +495,20 @@ internal class DelegatingForwardingPlayer(
 
         Logger.d(TAG, "Manually notifying ${trackedListeners.size} listeners about media item change: ${metadata.title}")
 
-        trackedListeners.forEach { listener ->
+        trackedListeners.toList().forEach { listener ->
             try {
                 listener.onMediaItemTransition(mediaItem, Player.MEDIA_ITEM_TRANSITION_REASON_AUTO)
                 listener.onMediaMetadataChanged(metadata)
                 listener.onAvailableCommandsChanged(commands)
+                listener.onTimelineChanged(player.currentTimeline, Player.TIMELINE_CHANGE_REASON_SOURCE_UPDATE)
             } catch (e: Exception) {
                 Logger.w(TAG, "Error notifying listener about media item change: ${e.message}")
             }
         }
+        // Media3 aggregates individual callbacks in onEvents; a prepared delegate
+        // swap otherwise leaves session metadata/commands stale until another event.
+        notifyEvents(Player.EVENT_MEDIA_ITEM_TRANSITION, Player.EVENT_MEDIA_METADATA_CHANGED,
+            Player.EVENT_AVAILABLE_COMMANDS_CHANGED, Player.EVENT_TIMELINE_CHANGED)
     }
 
     /**
@@ -422,12 +517,13 @@ internal class DelegatingForwardingPlayer(
      */
     fun notifyAvailableCommandsChanged() {
         val commands = getAvailableCommands()
-        trackedListeners.forEach { listener ->
+        trackedListeners.toList().forEach { listener ->
             try {
                 listener.onAvailableCommandsChanged(commands)
             } catch (e: Exception) {
                 Logger.w(TAG, "Error notifying listener about available commands change: ${e.message}")
             }
         }
+        notifyEvents(Player.EVENT_AVAILABLE_COMMANDS_CHANGED)
     }
 }

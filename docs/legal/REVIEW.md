@@ -1,5 +1,7 @@
 # Tinjauan dokumen sebelum rilis
 
+Status terbaru 4 Oktober 2026: pemilik menyetujui isi Privacy yang diperbarui sebagai kebijakan resmi dan pemasangannya di Google. Privacy berlaku mulai 4 Oktober 2026 di https://gratify.web.id/privacy/ serta salinan resource aplikasi yang identik. Terms tetap DRAF. Catatan kebutuhan tinjauan di bawah berasal dari peninjauan sebelumnya dan tetap menjadi daftar peningkatan operasional; jangan memperluas persetujuan Privacy menjadi persetujuan Terms atau mengarang fakta penyedia.
+
 Pengelola dikonfirmasi pemilik: Tan Heradhe Rat Djendra (TanDjendra), developer tunggal, Indonesia.
 Kontak dukungan: supportgratify@gmail.com.
 
@@ -23,3 +25,9 @@ Pada 2 Oktober 2026 pemilik meminta ketentuan standar. Usulan operasional yang d
   - Privacy: https://tandjendra.github.io/Gratify/privacy/
 
 Dokumen tetap berstatus DRAF. Daftar ini tidak menyatakan kepatuhan hukum atau persetujuan pemilik. Salinan resource aplikasi harus identik dengan dokumen yang disetujui sebelum rilis. Label draf hanya boleh dihapus setelah peninjauan dan persetujuan isi selesai. URL web untuk versi draf boleh dibuka dari pembaca dokumen lokal aplikasi.
+
+## Pembaruan 4 Oktober 2026
+
+Draf Privacy diperbarui berdasarkan koneksi resmi Google/YouTube yang aktif di server: izin baca koleksi, pengikatan identitas, token server terenkripsi, putuskan koneksi dan pencabutan izin Google. Draf juga menjelaskan story 24 jam sebagai batas tampilan, pesan tanpa enkripsi end-to-end, Firebase push, region penyedia yang teramati, dan batas klaim penghapusan cadangan. Usulan komitmen penggunaan data Google mencakup Limited Use, tidak menjual data, tidak memakai data untuk iklan personal atau pelatihan AI.
+
+Pemilik menyetujui pembukaan situs untuk umum, lalu menyetujui isi Privacy sebagai kebijakan resmi melalui jawaban terpisah. Ketentuan tetap berupa draf di https://gratify.web.id/terms/. Informasi operator/usia, dasar pemrosesan, retensi dan prosedur yang belum dikonfirmasi di atas tetap perlu ditinjau; jangan mengarang jadwal penyedia atau menjanjikan kepatuhan hukum universal.

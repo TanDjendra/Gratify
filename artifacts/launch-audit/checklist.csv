@@ -1,0 +1,252 @@
+﻿id,section,criterion,status,evidence_or_limit
+01-01,01,Semua fitur yang dijanjikan sudah tersedia,FAIL,"Ada recovery/queue cloud yang belum lengkap dan klaim Apple pada changelog tidak sesuai UI; F08, F11, L05."
+01-02,01,Scope aplikasi sudah jelas,PASS,README menjelaskan aplikasi musik Android beta dan status desktop WIP; E7. Bukan bukti semua requirement terpenuhi.
+01-03,01,Tidak ada fitur penting yang masih setengah jadi,FAIL,"Reset password, pemulihan antrean dan sejumlah aksi belum lengkap; F08, F11, F20."
+01-04,01,User flow utama sudah diuji,PARTIAL,"Navigasi dan Home nyata pernah diuji; akun, streaming, sync dan restore belum end to end; E1, E3."
+01-05,01,Semua requirement client sudah terpenuhi,UNVERIFIED,"Belum ada matriks requirement yang disetujui dan UAT lengkap; E1, E2."
+01-06,01,Fitur yang belum tersedia sudah didokumentasikan,PARTIAL,"Desktop/iOS/F-Droid dijelaskan; tidak semua keterbatasan fitur dicatat pada dokumen produk; E7, E1."
+01-07,01,Tidak ada placeholder/test data yang tertinggal,PARTIAL,"Activity data contoh tidak ada dalam manifest release; masih ada aksi TODO tanpa fungsi; E4, F20."
+02-01,02,Layout konsisten,PARTIAL,Token/komponen bersama diterapkan; bukti visual hanya layar terpilih Android; E3.
+02-02,02,Font konsisten,PASS,Tema memakai tipografi bersama Poppins; bukti layar yang diperiksa tersedia; E3.
+02-03,02,Warna konsisten,PASS,Palet gelap/hijau dan token warna bersama diterapkan; E3.
+02-04,02,Icon benar,PARTIAL,Ikon layar utama ditinjau; audit semantik seluruh ikon belum lengkap; E3.
+02-05,02,Logo dan branding benar,PARTIAL,"Nama/logo Gratify tersedia; seluruh variasi aset/store belum dicocokkan; E3, E8."
+02-06,02,Tidak ada typo,UNVERIFIED,"Belum ada proofreading semua bahasa, pesan error, dan metadata."
+02-07,02,Tidak ada elemen yang terpotong,PARTIAL,"Home/Settings font 1,3x dan Home tablet diperiksa; seluruh layar/ukuran belum; E3."
+02-08,02,Loading state,PARTIAL,Loading dan timeout ada; Mood/Genre bisa berhenti tanpa hasil/error; F27.
+02-09,02,Empty state,PARTIAL,"Empty state Home/Library tersedia; pagination dapat membuat kosong palsu; F21, F22."
+02-10,02,Error state,FAIL,"Kegagalan beberapa operasi ditelan atau dilaporkan sukses; F05, F09, F24, F27."
+02-11,02,Success state,FAIL,"Success dapat tampil ketika cloud/download gagal; F05, F16, F24."
+02-12,02,Offline/no internet state,PARTIAL,"Komponen OfflineErrorState tersedia; recovery akun/offline belum lulus; F01, F31."
+02-13,02,Disabled button/state,PARTIAL,Form menyediakan loading/enabled guard; semua state belum diuji; E3.
+02-14,02,Semua tombol berfungsi,FAIL,Tombol More profil publik masih TODO; F20. Ada aksi lain yang salah hasil; F08.
+02-15,02,Form mudah digunakan,PARTIAL,Form email/OTP diperiksa secara visual; completion dengan akun nyata belum; E3.
+02-16,02,Keyboard tidak menutupi input penting,PARTIAL,Form email dapat digulir saat keyboard terbuka pada emulator; form lain belum seluruhnya; E3.
+02-17,02,Back navigation bekerja,PARTIAL,Navigasi tab/drawer/Settings/Profile pernah diperiksa; stack/deep link lengkap belum; E3.
+02-18,02,Dialog/modal dapat ditutup,PARTIAL,Dialog memakai komponen bersama; semua modal/skenario dismiss belum diuji; E3.
+02-19,02,Double-click/tap tidak menyebabkan duplicate action,UNVERIFIED,Bukti UI mencakup sebagian layar Android; seluruh state/aksi belum diuji; E3.
+03-01,03,Register,FAIL,Update password sesudah OTP gagal dapat tetap dianggap authenticated; F09.
+03-02,03,Login,PARTIAL,Email/Google tersedia di client; login produksi belum diuji; E1.
+03-03,03,Logout,FAIL,Logout gagal backup dapat mempertahankan data akun lama; F01.
+03-04,03,Forgot password,PARTIAL,Request recovery tersedia; completion melalui email/deep link belum berhasil dibuktikan; F08.
+03-05,03,Reset password,FAIL,State Ready/form password baru tidak tersambung lengkap; F08.
+03-06,03,Email/phone verification jika diperlukan,FAIL,"OTP ada, tetapi kegagalan lanjutan tidak memblokir sukses signup; F09."
+03-07,03,Session expiration,PARTIAL,SDK session manager digunakan; expiry/recovery nyata belum diuji; E1.
+03-08,03,Token refresh,PARTIAL,SDK Auth menangani sesi; refresh token invalid/revoked belum diuji; E1.
+03-09,03,Account deletion,FAIL,Tidak ditemukan alur hapus akun Supabase beserta data; hapus Google account hanya lokal; L01.
+03-10,03,Login gagal ditangani dengan benar,PARTIAL,Error login ditangani pada client; respons akun tidak ada/disabled belum diuji nyata.
+03-11,03,Brute-force/rate limiting diperhatikan,UNVERIFIED,"Implementasi ada, tetapi skenario akun Supabase nyata belum dijalankan; E1."
+03-12,03,Password tidak disimpan sebagai plaintext,PARTIAL,Tidak ditemukan persist password pengguna oleh alur auth yang ditinjau; SDK/backend dan dump backup belum diaudit lengkap.
+03-13,03,Password salah,UNVERIFIED,"Implementasi ada, tetapi skenario akun Supabase nyata belum dijalankan; E1."
+03-14,03,Email/user tidak ditemukan,UNVERIFIED,"Implementasi ada, tetapi skenario akun Supabase nyata belum dijalankan; E1."
+03-15,03,Account disabled,UNVERIFIED,"Implementasi ada, tetapi skenario akun Supabase nyata belum dijalankan; E1."
+03-16,03,Token expired,UNVERIFIED,"Implementasi ada, tetapi skenario akun Supabase nyata belum dijalankan; E1."
+03-17,03,Token invalid,UNVERIFIED,"Implementasi ada, tetapi skenario akun Supabase nyata belum dijalankan; E1."
+03-18,03,Login dari device berbeda,UNVERIFIED,"Implementasi ada, tetapi skenario akun Supabase nyata belum dijalankan; E1."
+04-01,04,User A tidak dapat membaca data User B,FAIL,Isolasi aplikasi saat pergantian akun gagal: data A dapat muncul/terunggah sebagai B; F01. RLS server belum diuji.
+04-02,04,User A tidak dapat mengubah data User B,PARTIAL,SQL lokal menerapkan ownership auth.uid; enforcement server aktif belum dibuktikan; E5.
+04-03,04,User A tidak dapat menghapus data User B,PARTIAL,SQL lokal menerapkan ownership delete; server aktif belum dibuktikan; E5.
+04-04,04,Role permission bekerja,FAIL,Kontrol privasi profil tidak diterapkan pada pembacaan publik; F03. Role private-data server belum diuji.
+04-05,04,Admin permission bekerja,N/A,Tidak ada role/admin panel produk; admin Supabase adalah fungsi operasional di luar client.
+04-06,04,Endpoint API memvalidasi authorization,PARTIAL,SDK Auth/RLS dirancang untuk endpoint cloud; policy aktif belum diperiksa; E5.
+04-07,04,ID/resource ownership diverifikasi di backend,PARTIAL,USING/WITH CHECK auth.uid ada pada hotfix lokal; belum membuktikan deployment; E5.
+04-08,04,Hidden UI bukan satu-satunya mekanisme keamanan,PARTIAL,"RLS backend tertulis di SQL, bukan hanya UI; flags privasi tetap lokal; E5, F03."
+05-01,05,Semua endpoint menggunakan HTTPS,PARTIAL,Endpoint bawaan umumnya HTTPS; URL AI kustom belum dibatasi HTTPS dan TLS bermasalah; F07.
+05-02,05,Authentication diterapkan,PARTIAL,"Supabase SDK Auth/Bearer digunakan; pengujian guest/token invalid belum; E1, E5."
+05-03,05,Authorization diterapkan,FAIL,"Privasi sosial dan isolasi akun client gagal; F01, F03. RLS live belum diverifikasi."
+05-04,05,Input validation,PARTIAL,Validasi form/query sebagian tersedia; seluruh input/batas server belum diuji.
+05-05,05,Output validation,FAIL,"Parser dapat gagal atau tidak mengeluarkan state; F26, F27, F33, F34."
+05-06,05,Rate limiting,UNVERIFIED,"Kontrak client ditinjau; konfigurasi dan respons server aktif belum diverifikasi; E1, E5."
+05-07,05,Pagination,FAIL,"Refresh/cursor playlist dapat melewatkan data; F21, F22. Batas query cloud belum diuji pada data besar."
+05-08,05,Error response aman,PARTIAL,"Error client ditangani sebagian; beberapa ditelan; respons server belum diaudit; F05, F12, F27."
+05-09,05,Tidak membocorkan stack trace,UNVERIFIED,Belum memeriksa respons error server terhadap seluruh skenario malformed/authorization.
+05-10,05,Tidak membocorkan database information,UNVERIFIED,Belum memeriksa kebocoran detail database pada respons server aktif.
+05-11,05,API tidak menerima parameter berbahaya,PARTIAL,"Query SDK/Room memakai parameter; fuzzing dan ownership server aktif belum; E2, E5."
+05-12,05,HTTP methods sesuai kebutuhan,PARTIAL,SDK memakai operasi select/insert/update/delete; atomicity replacement gagal; F05.
+05-13,05,CORS dikonfigurasi dengan benar,N/A,Audit ini mencakup client native Android; tidak ada frontend browser yang diuji. CORS layanan web lain belum dinilai.
+05-14,05,API versioning jika diperlukan,PASS,"API SDK Supabase /auth/v1, /rest/v1, /storage/v1 dan endpoint AI memiliki versi; bukan bukti kompatibilitas setiap layanan."
+06-01,06,Schema sudah final,PARTIAL,"Schema/Room dan SQL tersedia; kesesuaian versi deployment belum diverifikasi; E2, E5."
+06-02,06,Relationship benar,PARTIAL,"Relasi entity dan SQL ditinjau; data orphan/live belum diuji; E2, E5."
+06-03,06,Foreign key benar,PARTIAL,"FK lokal/cloud dideklarasikan; seluruh cascade dan server aktif belum diuji; E2, E5."
+06-04,06,Constraint diterapkan,PARTIAL,"Constraint tersedia pada source; atomicity/penggunaan query tetap salah; F05, F23."
+06-05,06,Unique field diterapkan jika diperlukan,PARTIAL,Key unik dideklarasikan; query set_video_id mengabaikan bagian key; F23.
+06-06,06,Index pada query penting,PARTIAL,"Indeks ada pada schema; EXPLAIN dan index server aktif belum; E2, E5."
+06-07,06,Tidak ada duplicate data,UNVERIFIED,Tidak ada pemeriksaan dataset produksi dan operasi serentak.
+06-08,06,Migration sudah diuji,UNVERIFIED,Belum melakukan migrasi database/upgrade APK dari versi sebelumnya pada data nyata.
+06-09,06,Seed/test data dipisahkan,PARTIAL,Data pratinjau hanya debug dan activity tidak ada di release; seed server belum diperiksa; E4.
+06-10,06,Database production terpisah,UNVERIFIED,"DDL/Room ditinjau; schema dan data Supabase aktif belum diperiksa; E2, E5."
+06-11,06,Backup tersedia,PARTIAL,Backup lokal/cloud diimplementasikan; kebijakan backup database server belum diketahui; E10.
+06-12,06,Restore backup sudah diuji,FAIL,"Restore Android memiliki risiko traversal pada OS lama; backup desktop gagal; uji restore lengkap belum; F04, F15."
+07-01,07,API key tidak hardcode di APK,PARTIAL,Public Supabase/Firebase client key memang masuk build; bukan admin secret. Private token/API key dan log masih berisiko; F06. APK bukan tempat menyimpan admin secret.
+07-02,07,Secret tidak masuk Git,PARTIAL,0 nama file credential sensitif ditemukan dalam git ls-files; belum scan seluruh nilai dan riwayat Git; E6.
+07-03,07,Password database tidak masuk source code,PARTIAL,Tidak ditemukan file password DB yang dilacak pada pemeriksaan nama file; ini bukan scan nilai/history lengkap; E6.
+07-04,07,Production secrets menggunakan environment/secret management,PARTIAL,"Workflow utama memakai GitHub secrets; dev workflow kehilangan Supabase config; E6, L04."
+07-05,07,Debug credentials sudah dihapus,PARTIAL,Activity preview tidak ada di release; belum ada scan seluruh credential/test-account dalam APK; E4.
+07-06,07,Input validation,FAIL,"Nama ekspor dan path ZIP belum divalidasi lengkap; F04, F14."
+07-07,07,SQL injection protection,PARTIAL,Room/SDK menggunakan query parameter; belum ada uji injection pada backend live/custom SQL.
+07-08,07,XSS protection jika aplikasi web,N/A,Tidak ada frontend web produksi dalam cakupan; teks native bukan DOM browser.
+07-09,07,CSRF protection jika relevan,N/A,"API akun native memakai Bearer, bukan auth cookie browser; endpoint berbasis cookie/web di luar scope belum dinilai."
+07-10,07,File upload validation,UNVERIFIED,Belum ada uji enforcement upload/avatar pada bucket server aktif.
+07-11,07,File size limit,UNVERIFIED,Batas ukuran server/upload/arsip belum diverifikasi dengan berkas besar.
+07-12,07,MIME/type validation,UNVERIFIED,"Belum ada uji spoof MIME, ekstensi dan konten berkas pada storage live."
+07-13,07,Debug mode OFF,PASS,Manifest APK release tidak memiliki debuggable; build release default non-debug; activity preview tidak ada; E4.
+07-14,07,Production logging aman,FAIL,Logger sensitif dan CurlLogging ALL masih tersedia; penghapusan log release belum aktif; F06.
+07-15,07,Sensitive data tidak muncul di log,FAIL,Token/cookie dicatat eksplisit; F06. Service FCM juga mencatat token; E9.
+07-16,07,HTTPS aktif,PARTIAL,"Network security config menolak cleartext dan memakai CA sistem; trustEveryone tetap melemahkan jalur TLS; F07, E11."
+07-17,07,Certificate/TLS configuration diperiksa,FAIL,Dependency mengubah default HttpsURLConnection dengan trustEveryone; F07. Tidak terbukti semua OkHttp/Supabase ikut terpengaruh.
+07-18,07,Dependency vulnerability diperiksa,PARTIAL,"Lint dan bytecode trust manager ditinjau; belum ada scan advisory/CVE seluruh dependensi; E1, E4."
+07-19,07,Permission aplikasi diminimalkan,PARTIAL,Manifest masih memuat WRITE_EXTERNAL_STORAGE tanpa pembatasan OS dan READ_MEDIA_AUDIO; kebutuhan minimum tiap permission belum dibuktikan; E11.
+08-01,08,Data yang dikumpulkan sudah ditentukan,PARTIAL,"Entity/cloud mencatat profil, follow, library, history dan presence; belum ada inventaris data resmi; E1, E5."
+08-02,08,Hanya mengumpulkan data yang diperlukan,UNVERIFIED,Belum ada dokumentasi privasi dan verifikasi menyeluruh; L02.
+08-03,08,Sensitive data terlindungi,FAIL,"Log sensitif, privasi sosial dan pemisahan akun bermasalah; F01, F03, F06."
+08-04,08,Privacy policy tersedia jika diperlukan,FAIL,Consent menyebut Terms/Privacy sebagai teks tanpa tautan; dokumen/URL kebijakan tidak ditemukan di repo/UI; L02.
+08-05,08,Data deletion tersedia jika diperlukan,FAIL,Hapus akun beserta data Supabase belum tersedia; L01.
+08-06,08,Data retention jelas,UNVERIFIED,Retensi akun/history/cloud/log dan pemusnahan backup belum didokumentasikan.
+08-07,08,Third-party services terdokumentasi,PARTIAL,"README/credits/dependencies menyebut layanan; tujuan pemrosesan data belum dijelaskan sebagai privacy policy; E7, L02."
+08-08,08,Permission device dijelaskan,PARTIAL,Permission dan dialog sistem ada; rationale semua izin belum ditinjau; E11.
+08-09,08,User mengetahui penggunaan datanya,FAIL,"Label privasi tidak sesuai enforcement dan persetujuan tidak membuka policy; F03, L02."
+09-01,09,Startup cepat,PARTIAL,Startup/UI pernah berjalan di emulator; cold-start p50/p95 perangkat nyata belum diukur; E3.
+09-02,09,Tidak ada freeze,UNVERIFIED,"Ada runBlocking pada setter UI dan penundaan playback; perlu profiling, belum terbukti ANR; F18, F35."
+09-03,09,Tidak ada memory leak yang diketahui,PARTIAL,Lifecycle scope Discord bermasalah; belum ada heap/leak measurement; F32.
+09-04,09,RAM usage diperiksa,UNVERIFIED,Belum ada pengukuran/profiling dengan target dan ambang penerimaan.
+09-05,09,Battery usage diperiksa,UNVERIFIED,Belum ada pengukuran/profiling dengan target dan ambang penerimaan.
+09-06,09,APK/App Bundle tidak unnecessarily besar,PARTIAL,APK universal 49.4 MiB; ABI-specific sekitar 24–26 MiB; belum ada size-budget/baseline untuk menilai pemborosan; E4.
+09-07,09,API response time diperiksa,UNVERIFIED,Belum ada pengukuran/profiling dengan target dan ambang penerimaan.
+09-08,09,Slow query diperiksa,UNVERIFIED,Belum ada pengukuran/profiling dengan target dan ambang penerimaan.
+09-09,09,Database index diperiksa,UNVERIFIED,Belum ada pengukuran/profiling dengan target dan ambang penerimaan.
+09-10,09,Caching digunakan bila diperlukan,PARTIAL,Cache Media3/Room tersedia; resolver partial cache bermasalah; F31.
+09-11,09,Concurrent request diuji,UNVERIFIED,Belum ada pengukuran/profiling dengan target dan ambang penerimaan.
+09-12,09,Server resource cukup,UNVERIFIED,Belum ada pengukuran/profiling dengan target dan ambang penerimaan.
+09-13,09,Normal load test,UNVERIFIED,Belum ada pengukuran/profiling dengan target dan ambang penerimaan.
+09-14,09,High traffic test,UNVERIFIED,Belum ada pengukuran/profiling dengan target dan ambang penerimaan.
+09-15,09,Concurrent user test,UNVERIFIED,Belum ada pengukuran/profiling dengan target dan ambang penerimaan.
+09-16,09,Rate limit test,UNVERIFIED,Belum ada pengukuran/profiling dengan target dan ambang penerimaan.
+10-01,10,Internet normal,PARTIAL,Home nyata memuat data musik di emulator; auth/audio/cloud belum lengkap; E3.
+10-02,10,Internet lambat,UNVERIFIED,Belum ada pengujian gangguan jaringan menyeluruh dengan akun/perangkat nyata.
+10-03,10,Internet terputus,FAIL,Gagal/offline saat pindah akun dapat mencampur data; F01. Recovery jaringan umum belum diuji.
+10-04,10,Request timeout,FAIL,"Metadata tambahan dan Discord send tidak mempunyai batas yang memadai; F18, F32."
+10-05,10,Retry mechanism,FAIL,Download gagal dapat menghalangi retry atau membawa lastException lama; F25.
+10-06,10,Duplicate request protection,PARTIAL,Home/search punya cancellation/pagination guard; semua operasi tulis/double tap belum diuji; E3.
+10-07,10,Offline state,FAIL,Partial cache dapat mengembalikan video ID sebagai URL saat upstream dibutuhkan; F31.
+10-08,10,Data synchronization,FAIL,"Prune snapshot dan penggantian playlist berisiko hilang data; F01, F02, F05, F10, F11, F17."
+10-09,10,API timeout handling,FAIL,"Sebagian jalur bisa menunggu tanpa deadline ketat; F18, F32. Belum ada chaos test lengkap."
+11-01,11,Low-end device,UNVERIFIED,Belum diuji pada kombinasi perangkat/OS ini; E3.
+11-02,11,Mid-range device,UNVERIFIED,Belum diuji pada kombinasi perangkat/OS ini; E3.
+11-03,11,High-end device,UNVERIFIED,Belum diuji pada kombinasi perangkat/OS ini; E3.
+11-04,11,Small screen,UNVERIFIED,Belum diuji pada kombinasi perangkat/OS ini; E3.
+11-05,11,Standard screen,PARTIAL,Emulator ponsel viewport 720x1600 pernah diperiksa; bukan perangkat fisik kelas menengah; E3.
+11-06,11,Large screen,PARTIAL,Home tablet 1920x1200 pernah diperiksa; seluruh halaman tablet belum; E3.
+11-07,11,Different aspect ratio,PARTIAL,"Dua viewport dan font 1,3x pada layar terpilih; belum seluruh aspect ratio; E3."
+11-08,11,Portrait,PARTIAL,Layar utama ponsel diperiksa portrait; detail/landscape belum lengkap; E3.
+11-09,11,Landscape jika didukung,PARTIAL,Home viewport tablet landscape diperiksa; rotation/state dan seluruh layar belum; E3.
+11-10,11,Minimum supported version,UNVERIFIED,"minSdk 26 terkonfirmasi, tetapi belum runtime test API 26; E4. F04 relevan OS lama."
+11-11,11,Current OS version,PARTIAL,Bukti emulator API 37 tersedia; bukan bukti seluruh OS pengguna saat ini; E3.
+11-12,11,Latest supported OS,PARTIAL,"Compile SDK 37/target 36; emulator API 37 diuji terbatas. Penetapan dukungan OS lengkap belum; E3, E4."
+12-01,12,Input kosong,PARTIAL,Form mempunyai validasi dasar; semua API/parser empty input belum diuji.
+12-02,12,Input terlalu panjang,UNVERIFIED,Skenario kegagalan ini belum diuji menyeluruh dalam aplikasi nyata.
+12-03,12,Karakter aneh,FAIL,"Non-BMP HTML entity dapat melempar exception; cookie/LRC/nama slash salah ditangani; F14, F26, F33, F34."
+12-04,12,Data duplicate,UNVERIFIED,Skenario kegagalan ini belum diuji menyeluruh dalam aplikasi nyata.
+12-05,12,Data tidak ditemukan,FAIL,Mood/Genre parse failure/empty bisa menghasilkan tidak ada state; F27.
+12-06,12,User tidak memiliki permission,UNVERIFIED,Skenario kegagalan ini belum diuji menyeluruh dalam aplikasi nyata.
+12-07,12,Token expired,UNVERIFIED,Skenario kegagalan ini belum diuji menyeluruh dalam aplikasi nyata.
+12-08,12,Server mati,UNVERIFIED,Skenario kegagalan ini belum diuji menyeluruh dalam aplikasi nyata.
+12-09,12,Database error,FAIL,Delete+insert cloud non-atomik dan kegagalan insert disembunyikan; F05.
+12-10,12,Internet mati,FAIL,"Pemulihan akun/cache pada kegagalan jaringan belum aman; F01, F31."
+12-11,12,Request timeout,FAIL,"Deadline metadata/Discord tidak memadai; F18, F32."
+12-12,12,Upload gagal,FAIL,"Upload/sync failure bisa terlihat sukses atau mencampur data; F01, F05, F16."
+12-13,12,Download gagal,FAIL,"Terminal failure download dianggap selesai; retry bermasalah; F24, F25."
+12-14,12,User menekan tombol berkali-kali,UNVERIFIED,Skenario kegagalan ini belum diuji menyeluruh dalam aplikasi nyata.
+12-15,12,App ditutup saat proses berjalan,UNVERIFIED,Skenario kegagalan ini belum diuji menyeluruh dalam aplikasi nyata.
+13-01,13,Upload file,PARTIAL,Avatar/cloud upload terimplementasi; akses/batas/gagal upload live belum diuji; E1.
+13-02,13,Download file,FAIL,"Status terminal failure dan retry download salah; F24, F25, F31."
+13-03,13,File type validation,UNVERIFIED,"Implementasi storage ada; uji akses, batas, dan kegagalan nyata belum lengkap."
+13-04,13,File size limit,UNVERIFIED,"Implementasi storage ada; uji akses, batas, dan kegagalan nyata belum lengkap."
+13-05,13,Filename validation,FAIL,"Sanitizer ekspor tidak menghapus slash; validasi canonical ZIP kurang pada OS lama; F04, F14."
+13-06,13,Storage permission,PARTIAL,"MediaStore/SAF dan izin tersedia; runtime deny/revoke semua OS belum diuji; E10, E11."
+13-07,13,File tidak dapat diakses user yang tidak berhak,UNVERIFIED,"Policy bucket aktif belum diperiksa; backup settings/database perlu threat-model akses; E5, E10."
+13-08,13,Temporary files dibersihkan,PARTIAL,Worker menghapus temp backup setelah menyimpan; crash/full-disk/download cleanup belum diuji; E10.
+13-09,13,Storage backup jika diperlukan,PARTIAL,"Opsi backup file download tersedia; restore semua aset belum diuji; E10, F04, F15."
+14-01,14,Push notification,PARTIAL,Firebase messaging/service ada; tidak ditemukan registrasi token ke server pada onNewToken; pengiriman live belum; E9.
+14-02,14,Notification permission,PARTIAL,POST_NOTIFICATIONS dan request UI tersedia; grant/deny/revoke belum diuji; E11.
+14-03,14,Notification content benar,PARTIAL,Service membaca title/body dan menyimpan notifikasi; payload produksi belum diuji; E9.
+14-04,14,Deep link benar,PARTIAL,"PendingIntent/deep link tersedia; follow back/recovery/live payload belum diuji; F08, F12, E9."
+14-05,14,Notification ketika app terbuka,UNVERIFIED,Service FCM ada; belum ada uji pengiriman end to end pada perangkat; E9.
+14-06,14,Notification ketika app background,UNVERIFIED,Service FCM ada; belum ada uji pengiriman end to end pada perangkat; E9.
+14-07,14,Notification ketika app ditutup,UNVERIFIED,Service FCM ada; belum ada uji pengiriman end to end pada perangkat; E9.
+14-08,14,Tidak ada spam notification,UNVERIFIED,Service FCM ada; belum ada uji pengiriman end to end pada perangkat; E9.
+15-01,15,API key production,UNVERIFIED,Konfigurasi layanan produksi belum dapat diverifikasi dari lingkungan lokal.
+15-02,15,Webhook production,N/A,Tidak ditemukan integrasi webhook yang menjadi fitur aplikasi; bukan sertifikasi webhook server lain.
+15-03,15,Callback URL production,PARTIAL,"Scheme com.tan.gratify/login-callback ada; allowlist OAuth/recovery Supabase aktif belum; E12, F08."
+15-04,15,Billing/subscription production,N/A,Tidak ditemukan alur pembayaran/subscription produk Gratify; biaya penyedia layanan perlu verifikasi operator.
+15-05,15,Third-party dependency aktif,PARTIAL,"Dependensi dapat dibuild dan Home musik berfungsi; koneksi semua penyedia belum diuji; E3, E4."
+15-06,15,Fallback jika service gagal,FAIL,"Fallback/retry dan endpoint Gemini bermasalah; F13, F18, F24, F25, F27, F31."
+16-01,16,Application logging,PARTIAL,"Logger aplikasi aktif, tetapi belum aman untuk produksi; F06, E9."
+16-02,16,Backend logging,UNVERIFIED,Konfigurasi/operasi monitoring server aktif belum tersedia untuk diperiksa.
+16-03,16,Error tracking,FAIL,Implementasi terpilih crashlytics-empty hanya log; DSN kosong; remote error tracking tidak aktif; L03.
+16-04,16,Crash monitoring,FAIL,Build full juga memilih crashlyticsEmpty; Sentry auto-init dimatikan; L03.
+16-05,16,Server monitoring,UNVERIFIED,Konfigurasi/operasi monitoring server aktif belum tersedia untuk diperiksa.
+16-06,16,Database monitoring,UNVERIFIED,Konfigurasi/operasi monitoring server aktif belum tersedia untuk diperiksa.
+16-07,16,Disk monitoring,UNVERIFIED,Konfigurasi/operasi monitoring server aktif belum tersedia untuk diperiksa.
+16-08,16,CPU/RAM monitoring,UNVERIFIED,Konfigurasi/operasi monitoring server aktif belum tersedia untuk diperiksa.
+16-09,16,Alert ketika service down,UNVERIFIED,Konfigurasi/operasi monitoring server aktif belum tersedia untuk diperiksa.
+16-10,16,Sensitive information tidak masuk log,FAIL,"Token/cookie dan token FCM dapat masuk log; F06, E9."
+17-01,17,Database backup,PARTIAL,"Backup SQLite lokal/cloud sync ada; backup server Supabase bukan dibuktikan oleh sync; E10, F02."
+17-02,17,File/storage backup,PARTIAL,File download bisa disertakan backup; backup bucket server belum diverifikasi; E10.
+17-03,17,Backup otomatis,PARTIAL,WorkManager harian/mingguan/bulanan tersedia; execution/retention/restore nyata belum; E10.
+17-04,17,Backup location aman,PARTIAL,"Legacy backup app-specific; modern backup Download/Gratify berupa ZIP, belum ada bukti enkripsi/akses sesuai sensitivitas; E10."
+17-05,17,Restore test berhasil,FAIL,"Tidak ada restore end to end yang lulus; ada risiko Android dan backup desktop rusak; F04, F15."
+17-06,17,Recovery procedure terdokumentasi,UNVERIFIED,"Belum ditemukan runbook recovery server, owner, RPO/RTO dan bukti drill."
+17-07,17,Emergency contact tersedia,PARTIAL,README menyediakan email legal; emergency/on-call dan jalur eskalasi belum disepakati; E7.
+17-08,17,Rollback procedure tersedia,UNVERIFIED,Belum ditemukan prosedur rollback APK/database yang diuji bersama backup.
+18-01,18,Development,PARTIAL,"Variant debug dengan suffix .dev tersedia; isolasi backend dev dari produksi belum terbukti; E4, E6."
+18-02,18,Staging,UNVERIFIED,Belum ada bukti proyek/backend staging terpisah serta akun penguji.
+18-03,18,Production,PARTIAL,"Variant/workflow release tersedia; server, signing dan deploy production belum diverifikasi; E4, E6."
+18-04,18,Production API URL benar,PARTIAL,SUPABASE_URL lokal tersedia dan workflow utama memeriksa nonempty; kesesuaian proyek prod/allowlist belum; E6.
+18-05,18,Production database benar,UNVERIFIED,Tidak ada akses admin/snapshot schema untuk memastikan database produksi; E5.
+18-06,18,Production credentials benar,UNVERIFIED,Public key tersedia lokal; secret CI/signing/live service belum diverifikasi; E6.
+18-07,18,Debug mode OFF,PASS,Release APK non-debug berdasarkan manifest/build type; E4.
+18-08,18,Test account tidak digunakan production,UNVERIFIED,Belum memeriksa daftar akun server produksi; contoh UI hanya debug.
+18-09,18,Test data dibersihkan,UNVERIFIED,Belum memeriksa/menyetujui pembersihan dataset server; tidak ada data pengguna dihapus.
+18-10,18,Environment variables benar,FAIL,Dev release workflow tidak menulis Supabase URL/key; default build kosong; L04. Workflow utama punya guard.
+19-01,19,Application ID/package name benar,PASS,APK release: com.tan.gratify; debug berbeda .dev; E4.
+19-02,19,App name benar,PASS,Label APK release: Gratify; E4.
+19-03,19,Version name benar,PASS,APK release versionName 2.1.0 cocok konfigurasi; E4.
+19-04,19,Version code benar,PASS,APK release versionCode 61 cocok konfigurasi; monotonic terhadap store belum diperiksa; E4.
+19-05,19,App icon benar,PARTIAL,"Icon resource ada; tampilan launcher release/adaptive berbagai perangkat belum; E4, E8."
+19-06,19,Splash screen benar,PARTIAL,Tema/logo gelap splash diperiksa pada debug; startup release belum; E3.
+19-07,19,Release signing benar,FAIL,"APK lokal unsigned; apksigner verify exit 1. CI signing terdefinisi tetapi hasil CI belum diperiksa; E4, E6."
+19-08,19,Debug signing tidak digunakan,PARTIAL,APK lokal tidak memakai debug signer karena unsigned; certificate production belum diperiksa; E4.
+19-09,19,APK/AAB production berhasil dibuat,PARTIAL,"assembleRelease berhasil menghasilkan APK ABI/universal, tetapi belum signed siap distribusi; AAB tidak dibuat; E4."
+19-10,19,Install dari build production berhasil,UNVERIFIED,Tidak menginstal APK unsigned; perlu APK signed pada perangkat uji milik proyek.
+19-11,19,Update dari versi sebelumnya berhasil,UNVERIFIED,"Belum menguji upgrade, signature continuity, session, data dan migration dari versi sebelumnya."
+19-12,19,App description,FAIL,"Deskripsi/changelog ada tetapi changelog 61 masih menjanjikan Apple login yang sudah dihapus; L05, E8."
+19-13,19,Screenshot,PARTIAL,13 phoneScreenshots tersedia di fastlane; belum dicocokkan dengan UI terbaru dan store upload; E8.
+19-14,19,App icon,PARTIAL,Icon store tersedia di fastlane; validasi dimensi/branding dan publikasi belum; E8.
+19-15,19,Feature graphic jika diperlukan,PARTIAL,featureGraphic.png tersedia; validasi visual/dimensi dan publikasi belum; E8.
+19-16,19,Privacy policy,FAIL,Tidak ditemukan policy/URL yang dapat dibuka dari aplikasi/repo; L02.
+19-17,19,Content rating,UNVERIFIED,Belum ada bukti rating di console store.
+19-18,19,Data safety/privacy declarations,UNVERIFIED,Belum ada deklarasi Data safety yang diverifikasi terhadap data/SDK aktual.
+19-19,19,Store category,UNVERIFIED,Kategori store belum diverifikasi pada console.
+19-20,19,Support/contact information,PARTIAL,Contact legal tersedia di README; support listing dan operasional belum; E7.
+20-01,20,PASS,UNVERIFIED,Pilihan hasil UAT belum dipilih karena flow belum dijalankan end to end.
+20-02,20,FAIL,UNVERIFIED,Pilihan hasil UAT belum dipilih karena flow belum dijalankan end to end.
+20-03,20,PASS,UNVERIFIED,Pilihan hasil UAT belum dipilih karena flow belum dijalankan end to end.
+20-04,20,FAIL,UNVERIFIED,Pilihan hasil UAT belum dipilih karena flow belum dijalankan end to end.
+20-05,20,PASS,UNVERIFIED,Pilihan hasil UAT belum dipilih karena flow belum dijalankan end to end.
+20-06,20,FAIL,UNVERIFIED,Pilihan hasil UAT belum dipilih karena flow belum dijalankan end to end.
+20-07,20,PASS,UNVERIFIED,Pilihan hasil UAT belum dipilih karena flow belum dijalankan end to end.
+20-08,20,FAIL,UNVERIFIED,Pilihan hasil UAT belum dipilih karena flow belum dijalankan end to end.
+20-09,20,PASS,UNVERIFIED,Pilihan hasil UAT belum dipilih karena flow belum dijalankan end to end.
+20-10,20,FAIL,UNVERIFIED,Pilihan hasil UAT belum dipilih karena flow belum dijalankan end to end.
+gate-01,gate,Tidak ada Critical bug,FAIL,"Risiko Critical integritas/privasi/TLS masih terbuka; F01, F02, F03, F06, F07. Tidak ada insiden produksi yang diklaim."
+gate-02,gate,Tidak ada High security issue,FAIL,"Validasi ZIP OS lama dan logging/TLS belum diperbaiki; F04, F06, F07."
+gate-03,gate,Authentication aman,FAIL,"Pemisahan akun, OTP dan reset belum lulus; F01, F08, F09."
+gate-04,gate,Authorization aman,FAIL,"Privasi profil tidak ditegakkan dan RLS aktif belum diuji; F03, E5."
+gate-05,gate,Database production siap,FAIL,"Atomicity/sync/pagination bermasalah; migration dan backend live belum; F02, F05, F21, F22."
+gate-06,gate,Backup tersedia,PARTIAL,"Backup client ada; backup server/restore lengkap belum lulus; E10, F04, F15."
+gate-07,gate,Production environment benar,FAIL,"Dev release workflow kehilangan config dan server produksi belum dibuktikan; L04, E6."
+gate-08,gate,Secrets aman,FAIL,"Log token/cookie masih tersedia; scan secrets lengkap belum; F06, E6."
+gate-09,gate,Monitoring aktif,UNVERIFIED,Monitoring layanan/server dan alert belum dapat diverifikasi.
+gate-10,gate,Crash/error tracking aktif,FAIL,Crash/error tracking remote tidak aktif pada wiring build saat ini; L03.
+gate-11,gate,Release build sudah diuji,PARTIAL,"Release compile/lint lulus; unsigned, belum install/upgrade/UAT release; E4."
+gate-12,gate,Update/rollback plan tersedia,UNVERIFIED,Runbook rollback/update beserta drill belum tersedia.

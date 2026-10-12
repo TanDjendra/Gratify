@@ -155,7 +155,6 @@ internal class DownloadUtils(
                 MusicDownloadService.TerminalStateNotificationHelper(
                     context = context,
                     notificationHelper = downloadNotificationHelper,
-                    nextNotificationId = MusicDownloadService.NOTIFICATION_ID + 1,
                 ),
             )
         }

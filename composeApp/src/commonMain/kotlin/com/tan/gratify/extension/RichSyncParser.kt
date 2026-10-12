@@ -8,6 +8,8 @@ import com.tan.domain.extension.decodeHtmlEntities
 data class WordTiming(
     val text: String,
     val startTimeMs: Long,
+    // A timestamp can mark a syllable inside a word. Only source whitespace separates words.
+    val separatorBefore: String = " ",
 )
 
 /**
@@ -18,6 +20,20 @@ data class ParsedRichSyncLine(
     val lineStartTimeMs: Long,
     val lineEndTimeMs: Long,
 )
+
+fun ParsedRichSyncLine.displayText(): String = words.mapIndexed { index, word ->
+    (if (index == 0) "" else word.separatorBefore) + word.text
+}.joinToString("")
+
+/** Keep syllables together when wrapping, while retaining every segment's timing. */
+fun ParsedRichSyncLine.displayWordGroups(): List<List<Int>> {
+    val groups = mutableListOf<MutableList<Int>>()
+    words.forEachIndexed { index, word ->
+        if (groups.isEmpty() || word.separatorBefore.isNotEmpty()) groups.add(mutableListOf())
+        groups.last().add(index)
+    }
+    return groups
+}
 
 /**
  * Parses rich sync lyrics format into word-level timing data
@@ -36,12 +52,7 @@ fun parseRichSyncWords(
     lineEndTimeMs: String,
 ): ParsedRichSyncLine? {
     // Handle edge cases
-    if (words.isBlank()) {
-        println("[parseRichSyncWords] Input is blank")
-        return null
-    }
-
-    println("[parseRichSyncWords] Input preview: ${words.take(100)}")
+    if (words.isBlank()) return null
 
     // Strategy: Find all timestamps first, then extract text between them
     // Regex to match timestamp only: <MM:SS.mm> or <MM:SS.mmm>
@@ -51,6 +62,7 @@ fun parseRichSyncWords(
 
     // Find all timestamp matches with their positions
     val timestamps = timestampRegex.findAll(words).toList()
+    var previousEndedWithSpace = false
 
     timestamps.forEachIndexed { index, match ->
         val (minutes, seconds, fraction) = match.destructured
@@ -73,22 +85,20 @@ fun parseRichSyncWords(
                 words.length
             }
 
-        // Get the text between timestamps and trim it
-        val textBetween = words.substring(startPos, endPos).trim()
+        val rawText = decodeHtmlEntities(words.substring(startPos, endPos))
+        val textBetween = rawText.trim().replace(Regex("\\s+"), " ")
 
         // Only add if there's actual text (not just whitespace or empty)
         if (textBetween.isNotBlank()) {
-            wordTimings.add(WordTiming(text = decodeHtmlEntities(textBetween), startTimeMs = timeMs))
+            val boundary = wordTimings.isNotEmpty() &&
+                (previousEndedWithSpace || rawText.firstOrNull()?.isWhitespace() == true)
+            wordTimings.add(WordTiming(textBetween, timeMs, if (boundary) " " else ""))
         }
+        if (rawText.isNotEmpty()) previousEndedWithSpace = rawText.last().isWhitespace()
     }
 
     // If no valid words were parsed, return null (fallback to LINE_SYNCED)
-    if (wordTimings.isEmpty()) {
-        println("[parseRichSyncWords] No words matched the regex")
-        return null
-    }
-
-    println("[parseRichSyncWords] Successfully parsed ${wordTimings.size} words")
+    if (wordTimings.isEmpty()) return null
 
     // Parse line timing
     val lineStart = lineStartTimeMs.toLongOrNull() ?: 0L

@@ -6,11 +6,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -47,8 +47,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarDuration
+import com.tan.gratify.ui.component.InAppNotificationHost
+import com.tan.gratify.ui.component.InAppNotificationVisuals
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,7 +62,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
-import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.window.core.layout.WindowSizeClass.Companion.WIDTH_DP_MEDIUM_LOWER_BOUND
@@ -83,21 +82,27 @@ import com.tan.gratify.ui.component.ProfileDrawerContent
 import com.tan.gratify.ui.navigation.destination.home.ProfileDestination
 import com.tan.gratify.ui.navigation.destination.home.SettingsDestination
 import com.tan.gratify.ui.navigation.destination.home.NotificationDestination
+import com.tan.gratify.ui.navigation.openMainTab
 import com.tan.gratify.ui.navigation.destination.home.RecentlySongsDestination
 import com.tan.gratify.ui.navigation.destination.list.AlbumDestination
 import com.tan.gratify.ui.navigation.destination.list.ArtistDestination
 import com.tan.gratify.ui.navigation.destination.list.PlaylistDestination
 import com.tan.gratify.ui.navigation.destination.player.FullscreenDestination
-import com.tan.gratify.ui.navigation.destination.library.AddSongsToPlaylistDestination
-import com.tan.gratify.ui.navigation.destination.library.ArtistSelectionDestination
 
 import com.tan.gratify.ui.navigation.graph.AppNavigationGraph
+import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.auth.auth
+import com.tan.gratify.viewModel.auth.ProfileLoginReturn
+import com.tan.domain.data.model.intent.GenericIntent
+import com.tan.domain.utils.profileUrl
 import com.tan.gratify.ui.screen.player.FullscreenPlayer
 import com.tan.gratify.ui.screen.player.NowPlayingScreen
 import com.tan.gratify.ui.screen.player.NowPlayingScreenContent
 import com.tan.gratify.ui.theme.fontFamily
 import com.tan.gratify.ui.theme.typo
 import com.tan.gratify.utils.VersionManager
+import com.tan.gratify.ui.navigation.showMainChrome
+import com.tan.gratify.ui.component.LayerBackHandler
 import com.tan.gratify.viewModel.SettingsViewModel
 import com.tan.gratify.viewModel.SharedViewModel
 import com.tan.logger.Logger
@@ -137,23 +142,39 @@ fun MainScreen(
     viewModel: SharedViewModel = koinInject(),
     settingsViewModel: SettingsViewModel = koinInject()
 ) {
+    val supabase: SupabaseClient = koinInject()
+    val sessions: com.tan.data.sync.AccountSessionCoordinator = koinInject()
+    val accountAccess by sessions.access.collectAsStateWithLifecycle()
+    LaunchedEffect(accountAccess) {
+        if (accountAccess == com.tan.data.sync.AccountAccess.SignedOut &&
+            supabase.auth.sessionStatus.value is io.github.jan.supabase.auth.status.SessionStatus.NotAuthenticated &&
+            !com.tan.gratify.viewModel.auth.PasswordRecoveryCoordinator.pending.value) onLogOut()
+    }
+    if (accountAccess !is com.tan.data.sync.AccountAccess.Ready) {
+        com.tan.gratify.ui.component.AccountRecoveryScreen(
+            accountAccess != com.tan.data.sync.AccountAccess.RecoveryRequired, sessions::retry)
+        return
+    }
     val windowSize = currentWindowAdaptiveInfo().windowSizeClass
     val snackbarHostState = remember { SnackbarHostState() }
     val navController = rememberNavController()
+    LaunchedEffect(Unit) {
+        val target = ProfileLoginReturn.consume(supabase.auth.currentUserOrNull() != null)
+        if (target != null && viewModel.intent.value == null) {
+            viewModel.setIntent(GenericIntent(action = "android.intent.action.VIEW", data = com.eygraber.uri.Uri.parse(profileUrl(target))))
+        }
+    }
     
-    val loggedInState by settingsViewModel.loggedIn.collectAsStateWithLifecycle(null)
     LaunchedEffect(Unit) {
         settingsViewModel.getLoggedIn()
-    }
-    LaunchedEffect(loggedInState) {
-        if (loggedInState == DataStoreManager.FALSE) {
-            onLogOut()
-        }
     }
 
     val sleepTimerState by viewModel.sleepTimerState.collectAsStateWithLifecycle()
     val nowPlayingData by viewModel.nowPlayingState.collectAsStateWithLifecycle()
     val updateData by viewModel.updateResponse.collectAsStateWithLifecycle()
+    val updateDialogRequest by viewModel.updateDialogRequest.collectAsStateWithLifecycle()
+    val installState by com.tan.gratify.expect.updateInstallState().collectAsStateWithLifecycle()
+    val updateStatusRequest by com.tan.gratify.expect.updateStatusRequests.collectAsStateWithLifecycle()
     val intent by viewModel.intent.collectAsStateWithLifecycle()
     val showNotificationPermissionDialog by viewModel.showNotificationPermissionDialog.collectAsStateWithLifecycle()
 
@@ -162,13 +183,11 @@ fun MainScreen(
     LaunchedEffect(Unit) {
         viewModel.snackbarEvent.collect { event ->
             val result = snackbarHostState.showSnackbar(
-                message = event.message,
-                actionLabel = event.actionLabel,
-                duration = SnackbarDuration.Short
+                visuals = InAppNotificationVisuals(event),
             )
             if (result == SnackbarResult.ActionPerformed) {
                 if (event.actionId == "view_notification") {
-                    navController.navigate(NotificationDestination)
+                    navController.navigate(NotificationDestination) { launchSingleTop = true }
                 }
             }
         }
@@ -176,10 +195,18 @@ fun MainScreen(
     
     var isShowMiniPlayer by rememberSaveable { mutableStateOf(true) }
     var isShowNowPlaylistScreen by rememberSaveable { mutableStateOf(false) }
-    var isInFullscreen by rememberSaveable { mutableStateOf(false) }
-    var isNavBarVisible by rememberSaveable { mutableStateOf(true) }
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val isInFullscreen = navBackStackEntry?.destination?.hasRoute<FullscreenDestination>() == true
+    val isNavBarVisible = showMainChrome(navBackStackEntry?.destination)
+    var accountActionUnavailable by remember { mutableStateOf(false) }
+    val requestAccountAction: () -> Unit = {
+        // Main is already admitted by the local session coordinator. A temporarily
+        // missing cloud identity must never send this account back through onboarding.
+        accountActionUnavailable = true
+    }
     var shouldShowUpdateDialog by rememberSaveable { mutableStateOf(false) }
-
+    var lastOpenedUpdateId by rememberSaveable { mutableStateOf(0L) }
+    var lastHandledUpdateRequest by rememberSaveable { mutableStateOf(0L) }
 
     LaunchedEffect(nowPlayingData) {
         isShowMiniPlayer = !(nowPlayingData?.mediaItem == null || nowPlayingData?.mediaItem == GenericMediaItem.EMPTY)
@@ -188,12 +215,39 @@ fun MainScreen(
     LaunchedEffect(intent) {
         val intent = intent ?: return@LaunchedEffect
         val data = intent.data
-        Logger.d("MainActivity", "onCreate: $data")
+        Logger.d("MainActivity", "Content link received")
         if (data != null) {
-            if (data == "gratify://notification".toUri()) {
+            val invitation = com.tan.domain.utils.parseWorkspaceInvitation(data.toString())
+            if (invitation != null) {
                 viewModel.setIntent(null)
-                navController.navigate(NotificationDestination)
-            } else if (data.host == "gratify.org" || data.scheme == "gratify") {
+                if(!com.tan.domain.utils.PlaylistFeaturePolicy.experimentalEnabled) {
+                    viewModel.makeToast(com.tan.domain.utils.PlaylistFeaturePolicy.archivedMessage)
+                    return@LaunchedEffect
+                }
+                navController.navigate(com.tan.gratify.ui.navigation.destination.library.PlaylistWorkspaceDestination("invite", token = invitation)) { launchSingleTop = true }
+                return@LaunchedEffect
+            }
+            val profileId = com.tan.domain.utils.parseProfileUserId(data.toString(), allowRawId = false)
+            if (profileId != null) {
+                viewModel.setIntent(null)
+                navController.navigate(com.tan.gratify.ui.navigation.destination.social.UserProfileDestination(profileId)) { launchSingleTop = true }
+                return@LaunchedEffect
+            }
+            if (data.scheme == "gratify" && data.host == "friends") {
+                viewModel.setIntent(null)
+                val owner = (accountAccess as? com.tan.data.sync.AccountAccess.Ready)?.owner.orEmpty()
+                val target = com.tan.gratify.ui.navigation.parseSocialNotificationTarget(data.toString(), owner)
+                if (target != null) {
+                    viewModel.openSocialNotification(target)
+                    navController.openMainTab(com.tan.gratify.ui.navigation.destination.friends.FriendsDestination, returnToRoot = true)
+                } else viewModel.makeToast("Notifikasi ini tidak tersedia untuk akun yang sedang digunakan.")
+            } else if (data == "gratify://downloads".toUri()) {
+                viewModel.setIntent(null)
+                navController.openMainTab(com.tan.gratify.ui.navigation.destination.library.LibraryDestination)
+            } else if (data == "gratify://notification".toUri()) {
+                viewModel.setIntent(null)
+                navController.navigate(NotificationDestination) { launchSingleTop = true }
+            } else if (data.host in listOf("gratify.web.id", "gratify.org") || data.scheme == "gratify") {
                 val segments = data.pathSegments
                 val appPath = if (data.scheme == "gratify") data.host else segments.getOrNull(1)
                 Logger.d("MainActivity", "gratify.org deep link, appPath: $appPath")
@@ -235,7 +289,7 @@ fun MainScreen(
                     }
                 }
             } else {
-                Logger.d("MainActivity", "onCreate: $data")
+                Logger.d("MainActivity", "External content link received")
                 when (val path = data.pathSegments.firstOrNull()) {
                     "playlist" -> {
                         data.getQueryParameter("list")?.let { playlistId ->
@@ -275,45 +329,47 @@ fun MainScreen(
         }
     }
 
-    LaunchedEffect(updateData) {
-        val response = updateData ?: return@LaunchedEffect
-        val currentVersion = VersionManager.getVersionName()
-        val minVersion = response.minVersion ?: "2.0.0"
-        val hasDownload = response.apkUrl.startsWith("https://")
-        val isForceUpdate = hasDownload && VersionManager.isVersionLower(currentVersion, minVersion)
-        if (hasDownload && (viewModel.showedUpdateDialog || isForceUpdate) &&
-            VersionManager.isVersionLower(currentVersion, response.tagName)
-        ) {
+    LaunchedEffect(updateData, updateDialogRequest) {
+        if (updateData?.let(VersionManager::isUpdateAvailable) == true && viewModel.showedUpdateDialog &&
+            updateData?.apkUrl?.startsWith("https://") == true) shouldShowUpdateDialog = true
+    }
+    LaunchedEffect(installState.downloadId) {
+        if (installState.downloadId > 0 && installState.downloadId != lastOpenedUpdateId) {
             shouldShowUpdateDialog = true
+            lastOpenedUpdateId = installState.downloadId
+        }
+    }
+    LaunchedEffect(updateStatusRequest) {
+        if (updateStatusRequest > 0 && updateStatusRequest != lastHandledUpdateRequest) {
+            shouldShowUpdateDialog = true
+            lastHandledUpdateRequest = updateStatusRequest
         }
     }
 
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
     LaunchedEffect(navBackStackEntry) {
         Logger.d("MainActivity", "Current destination: ${navBackStackEntry?.destination?.route}")
-        if (navBackStackEntry?.destination?.route?.contains("FullscreenDestination") == true) {
+        if (isInFullscreen) {
             isShowNowPlaylistScreen = false
         }
-        isInFullscreen = navBackStackEntry?.destination?.hierarchy?.any {
-            it.hasRoute(FullscreenDestination::class)
-        } == true
-        val isArtistSelection = navBackStackEntry?.destination?.hierarchy?.any {
-            it.hasRoute(ArtistSelectionDestination::class)
-        } == true
-        val isAddSongsToPlaylist = navBackStackEntry?.destination?.hierarchy?.any {
-            it.hasRoute(AddSongsToPlaylistDestination::class)
-        } == true
-
-        // Tampilkan bottom navigation bar di semua layar kecuali FullscreenPlayer, ArtistSelection, dan AddSongsToPlaylist
-        isNavBarVisible = !isInFullscreen && !isArtistSelection && !isAddSongsToPlaylist
     }
 
+    val isDesktop = getPlatform() == Platform.Desktop
     val isTablet = windowSize.isWidthAtLeastBreakpoint(WIDTH_DP_MEDIUM_LOWER_BOUND)
     val isTabletLandscape = isTablet && currentOrientation() == Orientation.LANDSCAPE
 
     
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
+    val supportPromptStatus by viewModel.developerSupportPrompt.status.collectAsStateWithLifecycle()
+    val supportCanShow = navBackStackEntry?.destination?.hasRoute<com.tan.gratify.ui.navigation.destination.home.HomeDestination>() == true &&
+        !showNotificationPermissionDialog && !shouldShowUpdateDialog && !sleepTimerState.isDone &&
+        !accountActionUnavailable && !isShowNowPlaylistScreen && drawerState.isClosed && intent?.data == null
+    LaunchedEffect(supportPromptStatus, supportCanShow) {
+        if (supportPromptStatus == com.tan.gratify.viewModel.support.SupportPromptStatus.Pending && supportCanShow) {
+            kotlinx.coroutines.delay(700)
+            viewModel.developerSupportPrompt.present()
+        }
+    }
     val dataStoreManager: DataStoreManager = koinInject()
     val appProfileName by dataStoreManager.getString("AppProfileName").collectAsStateWithLifecycle(initialValue = "")
     val appProfileImage by dataStoreManager.getString("AppProfileImage").collectAsStateWithLifecycle(initialValue = "")
@@ -326,19 +382,23 @@ fun MainScreen(
                 profileName = appProfileName ?: "Pengguna",
                 onViewProfileClick = {
                     coroutineScope.launch { drawerState.close() }
-                    navController.navigate(ProfileDestination)
+                    navController.navigate(ProfileDestination) { launchSingleTop = true }
+                },
+                onWrappedClick = {
+                    coroutineScope.launch { drawerState.close() }
+                    navController.navigate(com.tan.gratify.ui.navigation.destination.home.WrappedDestination) { launchSingleTop = true }
                 },
                 onRecentlyPlayedClick = {
                     coroutineScope.launch { drawerState.close() }
-                    navController.navigate(RecentlySongsDestination)
+                    navController.navigate(RecentlySongsDestination) { launchSingleTop = true }
                 },
                 onNotificationClick = {
                     coroutineScope.launch { drawerState.close() }
-                    navController.navigate(NotificationDestination)
+                    navController.navigate(NotificationDestination) { launchSingleTop = true }
                 },
                 onSettingsClick = {
                     coroutineScope.launch { drawerState.close() }
-                    navController.navigate(SettingsDestination)
+                    navController.navigate(SettingsDestination) { launchSingleTop = true }
                 },
                 onCloseClick = {
                     coroutineScope.launch { drawerState.close() }
@@ -348,7 +408,7 @@ fun MainScreen(
     ) {
         Scaffold(
             bottomBar = {
-            if (!isTablet) {
+            if (!isTablet && !isDesktop) {
                 Column(
                     modifier = Modifier
                         .zIndex(10f)
@@ -365,6 +425,7 @@ fun MainScreen(
                                 .padding(horizontal = 12.dp)
                                 .padding(bottom = 4.dp),
                             onClick = { isShowNowPlaylistScreen = true },
+                            progressEnabled = !isShowNowPlaylistScreen,
                             onClose = {
                                 viewModel.stopPlayer()
                                 viewModel.isServiceRunning = false
@@ -381,6 +442,24 @@ fun MainScreen(
             }
         },
         content = { innerPadding ->
+            if (isDesktop) {
+                com.tan.gratify.ui.component.DesktopWorkspace(
+                    navController = navController,
+                    sharedViewModel = viewModel,
+                    profileName = appProfileName,
+                    profileImage = appProfileImage,
+                    chromeVisible = isNavBarVisible,
+                ) {
+                    AppNavigationGraph(
+                        onLoginRequired = requestAccountAction,
+                        innerPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
+                        navController = navController,
+                        onOpenDrawer = { coroutineScope.launch { drawerState.open() } },
+                        hideNavBar = {},
+                        showNavBar = {},
+                    )
+                }
+            } else {
             val destinationPadding = if (isTablet && isShowMiniPlayer && isNavBarVisible) {
                 innerPadding.copy(bottom = innerPadding.calculateBottomPadding() + 84.dp)
             } else innerPadding
@@ -399,17 +478,14 @@ fun MainScreen(
                             .fillMaxSize()
                             .weight(1f),
                     ) {
-                        Box(
-                            Modifier
-                                .fillMaxSize(),
-                        ) {
+                        com.tan.gratify.ui.component.BottomSafeContent(destinationPadding) { contentPadding ->
                             AppNavigationGraph(
-                                innerPadding = destinationPadding,
+                                onLoginRequired = requestAccountAction,
+                                innerPadding = contentPadding,
                                 navController = navController,
                                 onOpenDrawer = { coroutineScope.launch { drawerState.open() } },
-                                hideNavBar = { isNavBarVisible = false },
+                                hideNavBar = {},
                                 showNavBar = { showPlayer ->
-                                    isNavBarVisible = true
                                     if (showPlayer) isShowNowPlaylistScreen = true
                                 },
                             )
@@ -446,8 +522,8 @@ fun MainScreen(
                     if (isTablet && isTabletLandscape && !isInFullscreen) {
                         AnimatedVisibility(
                             isShowNowPlaylistScreen,
-                            enter = expandHorizontally() + fadeIn(),
-                            exit = fadeOut() + shrinkHorizontally(),
+                            enter = slideInHorizontally(tween(240)) { it } + fadeIn(tween(240)),
+                            exit = slideOutHorizontally(tween(240)) { it } + fadeOut(tween(240)),
                         ) {
                             Row(
                                 Modifier
@@ -468,6 +544,10 @@ fun MainScreen(
                                     ) {
                                         isShowNowPlaylistScreen = false
                                     }
+                                    // Registered after the NavHost so this inline panel closes first.
+                                    LayerBackHandler(isShowNowPlaylistScreen && !drawerState.isOpen) {
+                                        isShowNowPlaylistScreen = false
+                                    }
                                 }
                             }
                         }
@@ -482,6 +562,23 @@ fun MainScreen(
                 ) {
                     isShowNowPlaylistScreen = false
                 }
+            }
+            }
+
+            if (accountActionUnavailable) {
+                AlertDialog(onDismissRequest = { accountActionUnavailable = false },
+                    title = { Text("Koneksi akun belum tersedia") },
+                    text = { Text("Story, pesan, dan mengikuti akun memerlukan koneksi ke Gratify. Lagu unduhan tetap bisa diputar. Coba lagi saat koneksi tersedia.") },
+                    confirmButton = { TextButton(onClick = { accountActionUnavailable = false; sessions.retry() }) { Text("Coba lagi") } },
+                    dismissButton = { TextButton(onClick = { accountActionUnavailable = false }) { Text("Tutup") } })
+            }
+            // Developer support appears only once the homepage is ready and other modals are closed.
+            if (supportPromptStatus == com.tan.gratify.viewModel.support.SupportPromptStatus.Visible && supportCanShow) {
+                val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+                com.tan.gratify.ui.component.DeveloperSupportSheet(
+                    onDismiss = { optedOut -> coroutineScope.launch { viewModel.developerSupportPrompt.dismiss(optedOut) } },
+                    onOpenLink = uriHandler::openUri,
+                )
             }
 
             // Sleep Timer Dialog
@@ -503,107 +600,12 @@ fun MainScreen(
                 )
             }
 
-            // Update Dialog
-            if (shouldShowUpdateDialog) {
-                val response = updateData ?: return@Scaffold
-                val currentVersion = VersionManager.getVersionName()
-                val minVersion = response.minVersion ?: "2.0.0"
-                val isForceUpdate = response.apkUrl.startsWith("https://") &&
-                    VersionManager.isVersionLower(currentVersion, minVersion)
-                AlertDialog(
-                    properties = DialogProperties(dismissOnBackPress = !isForceUpdate, dismissOnClickOutside = false),
-                    onDismissRequest = {
-                        if (!isForceUpdate) {
-                            shouldShowUpdateDialog = false
-                            viewModel.showedUpdateDialog = false
-                        }
-                    },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                if (!isForceUpdate) {
-                                    shouldShowUpdateDialog = false
-                                    viewModel.showedUpdateDialog = false
-                                }
-                                downloadAndInstallApk(response.apkUrl, response.tagName)
-                            },
-                        ) {
-                            Text(stringResource(Res.string.download), style = typo().bodySmall)
-                        }
-                    },
-                    dismissButton = {
-                        if (!isForceUpdate) {
-                            TextButton(
-                                onClick = {
-                                    shouldShowUpdateDialog = false
-                                    viewModel.showedUpdateDialog = false
-                                },
-                            ) {
-                                Text(stringResource(Res.string.cancel), style = typo().bodySmall)
-                            }
-                        }
-                    },
-                    title = {
-                        Text(stringResource(Res.string.update_available), style = typo().labelSmall)
-                    },
-                    text = {
-                        val formatted = response.releaseTime?.let { input ->
-                            try {
-                                val instant = kotlinx.datetime.Instant.parse(input)
-                                val dateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
-                                dateTime.format(
-                                    LocalDateTime.Format {
-                                        dayOfMonth()
-                                        char(' ')
-                                        monthName(MonthNames.ENGLISH_ABBREVIATED)
-                                        char(' ')
-                                        year()
-                                        char(' ')
-                                        hour()
-                                        char(':')
-                                        minute()
-                                        char(':')
-                                        second()
-                                    },
-                                )
-                            } catch (e: Exception) {
-                                stringResource(Res.string.unknown)
-                            }
-                        } ?: stringResource(Res.string.unknown)
-
-                        val updateMessage = stringResource(Res.string.update_message, response.tagName, formatted)
-                        Column(
-                            Modifier
-                                .heightIn(max = 400.dp)
-                                .verticalScroll(rememberScrollState()),
-                        ) {
-                            Text(
-                                text = updateMessage,
-                                style = typo().labelMedium,
-                                modifier = Modifier.padding(vertical = 8.dp),
-                            )
-                            Markdown(
-                                response.body,
-                                typography = markdownTypography(
-                                    h1 = typo().labelLarge,
-                                    h2 = typo().labelMedium,
-                                    h3 = typo().labelSmall,
-                                    text = typo().bodySmall,
-                                    bullet = typo().bodySmall,
-                                    paragraph = typo().bodySmall,
-                                    textLink = TextLinkStyles(
-                                        SpanStyle(
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Normal,
-                                            fontFamily = fontFamily(),
-                                            textDecoration = TextDecoration.Underline,
-                                        ),
-                                    ),
-                                ),
-                            )
-                        }
-                    },
-                )
+            // Updates can always be postponed; local playback stays reachable.
+            if (shouldShowUpdateDialog && (updateData != null || installState.update != null)) {
+                com.tan.gratify.ui.component.AppUpdateDialog(updateData, installState) {
+                    shouldShowUpdateDialog = false
+                    viewModel.showedUpdateDialog = false
+                }
             }
 
             // Notification Permission Dialog
@@ -612,9 +614,15 @@ fun MainScreen(
                 AlertDialog(
                     onDismissRequest = { viewModel.dismissNotificationPermissionDialog(doNotShowAgain) },
                     confirmButton = {
-                        TextButton(onClick = { viewModel.dismissNotificationPermissionDialog(doNotShowAgain) }) {
-                            Text(stringResource(Res.string.yes), style = typo().bodySmall)
+                        TextButton(onClick = {
+                            com.tan.gratify.expect.openNotificationSettings()
+                            viewModel.dismissNotificationPermissionDialog(doNotShowAgain)
+                        }) {
+                            Text("Buka pengaturan", style = typo().bodySmall)
                         }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { viewModel.dismissNotificationPermissionDialog(doNotShowAgain) }) { Text("Nanti") }
                     },
                     title = {
                         Text(stringResource(Res.string.notification), style = typo().labelSmall)
@@ -648,9 +656,11 @@ fun MainScreen(
             }
             
             Box(Modifier.fillMaxSize().padding(innerPadding)) {
-                SnackbarHost(
+                InAppNotificationHost(
                     hostState = snackbarHostState,
-                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 16.dp)
+                    modifier = Modifier
+                        .align(if (isDesktop) Alignment.TopEnd else Alignment.TopCenter)
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
                 )
             }
         },

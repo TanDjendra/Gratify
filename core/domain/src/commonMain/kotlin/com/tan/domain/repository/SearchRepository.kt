@@ -17,6 +17,10 @@ interface SearchRepository {
 
     suspend fun deleteSearchHistory()
 
+    fun insertSearchHistoryForOwner(searchHistory: SearchHistory, owner: String?): Flow<Long>
+
+    suspend fun deleteSearchHistoryForOwner(owner: String?, query: String? = null)
+
     fun getSearchDataSong(query: String): Flow<Resource<ArrayList<SongsResult>>>
 
     fun getSearchDataVideo(query: String): Flow<Resource<ArrayList<VideosResult>>>

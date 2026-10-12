@@ -2,8 +2,12 @@ package com.tan.gratify.lyrics.parser
 
 import com.tan.domain.extension.decodeHtmlEntities
 import com.tan.gratify.lyrics.domain.Lyrics
+import com.tan.domain.utils.reconcileRichSyncWords
+import com.tan.domain.utils.richSyncTextSignature
+import com.tan.domain.utils.hasPotentiallyFragmentedText
+import com.tan.domain.utils.reconcileLineWords
 
-fun parseSyncedLyrics(data: String): Lyrics {
+fun parseSyncedLyrics(data: String, plainReference: String? = null): Lyrics {
     val timestamp = Regex("""\[(\d{1,6}):(\d{2})(?:\.(\d{1,3}))?\]""")
     val offset = Regex("""(?m)^\[offset:([+-]?\d+)\]""").find(data)?.groupValues?.get(1)?.toLongOrNull() ?: 0L
     val lines = data.lines().flatMap { line ->
@@ -17,10 +21,18 @@ fun parseSyncedLyrics(data: String): Lyrics {
                 syllables = listOf(), words = decodeHtmlEntities(words))
         }
     }.sortedBy { it.startTimeMs.toLong() }
-    return Lyrics(lyrics = Lyrics.LyricsX(lines = lines, syncType = "LINE_SYNCED"))
+    val references = plainReference.orEmpty().lines().filter {
+        it.isNotBlank() && !it.contains('<') && !it.contains('[') && !hasPotentiallyFragmentedText(it)
+    }.groupBy(::richSyncTextSignature)
+    val corrected = lines.map { line ->
+        val reference = references[richSyncTextSignature(line.words)]?.firstOrNull()
+        val words = reference?.let { reconcileLineWords(line.words, it) }
+        if (words != null) line.copy(words = words, wordBoundariesVerified = true) else line
+    }
+    return Lyrics(lyrics = Lyrics.LyricsX(lines = corrected, syncType = "LINE_SYNCED"))
 }
 
-fun parseRichSyncLyrics(data: String): Lyrics {
+fun parseRichSyncLyrics(data: String, syncedReference: String? = null, plainReference: String? = null): Lyrics {
     // Unescape JSON string if needed (remove quotes and replace \n with actual newlines)
     val unescapedData =
         data
@@ -40,16 +52,13 @@ fun parseRichSyncLyrics(data: String): Lyrics {
             line.isNotBlank() && !line.trim().startsWith("[offset:")
         }
 
-    println("[parseRichSyncLyrics] Total lines: ${lines.size}, Filtered lines: ${lyricsLines.size}")
-    if (lyricsLines.isNotEmpty()) {
-        println("[parseRichSyncLyrics] First line sample: ${lyricsLines.first()}")
-    }
-
     // Regex to match [MM:SS.mm] format (flexible with 1-2 digits)
     val regex = Regex("\\[(\\d{1,2}):(\\d{2})\\.(\\d{2,3})\\](.+)")
+    // Upstream voice metadata is not lyric text. Only remove it immediately before timing.
+    val voiceMarker = Regex("""^v\d+:\s*(?=<\d{1,6}:\d{2}\.\d{2,3}>)""")
     val linesLyrics = ArrayList<Lyrics.LyricsX.Line>()
 
-    lyricsLines.forEachIndexed { index, line ->
+    lyricsLines.forEach { line ->
         val matchResult = regex.matchEntire(line.trim())
         if (matchResult != null) {
             val minutes = matchResult.groupValues[1].toLongOrNull() ?: 0L
@@ -63,7 +72,7 @@ fun parseRichSyncLyrics(data: String): Lyrics {
             val timeInMillis = minutes * 60_000L + seconds * 1000L + millisPart
 
             // Keep the rich sync content as-is (with <MM:SS.mm> word format)
-            val content = matchResult.groupValues[4].trimStart()
+            val content = matchResult.groupValues[4].trimStart().replace(voiceMarker, "")
 
             if (content.isNotBlank()) {
                 linesLyrics.add(
@@ -75,19 +84,31 @@ fun parseRichSyncLyrics(data: String): Lyrics {
                     ),
                 )
             }
-        } else {
-            if (index < 3) { // Only log first 3 failed matches to avoid spam
-                println("[parseRichSyncLyrics] Line $index failed to match: '${line.take(100)}'")
-            }
         }
     }
 
-    println("[parseRichSyncLyrics] Parsed ${linesLyrics.size} lines successfully")
+    // Some providers insert spaces between timed syllables (e.g. Su / a / tu).
+    // Only a character-identical reference can establish the real word boundaries.
+    val timedReferences = syncedReference?.let { parseSyncedLyrics(it).lyrics?.lines }.orEmpty()
+        .filter { it.words.isNotBlank() && !hasPotentiallyFragmentedText(it.words) && !it.words.contains('<') }
+        .groupBy { richSyncTextSignature(it.words) }
+    val plainReferences = plainReference.orEmpty().lines().filter {
+        it.isNotBlank() && !it.contains('<') && !it.contains('[') && !hasPotentiallyFragmentedText(it)
+    }
+        .groupBy(::richSyncTextSignature)
+    val normalizedLines = linesLyrics.map { line ->
+        val signature = richSyncTextSignature(line.words)
+        val reference = timedReferences[signature]?.minByOrNull {
+            kotlin.math.abs(it.startTimeMs.toLong() - line.startTimeMs.toLong())
+        }?.words ?: plainReferences[signature]?.firstOrNull()
+        val normalized = reference?.let { reconcileRichSyncWords(line.words, it) }
+        if (normalized != null) line.copy(words = normalized, wordBoundariesVerified = true) else line
+    }
 
     return Lyrics(
         lyrics =
             Lyrics.LyricsX(
-                lines = linesLyrics,
+                lines = normalizedLines,
                 syncType = "RICH_SYNCED",
             ),
     )
@@ -121,14 +142,20 @@ fun parseTtmlLyrics(data: String): Lyrics {
             hasWordTiming = true
             // Build word-by-word content with <MM:SS.mm> timing format for rich sync
             val wordParts = StringBuilder()
+            var previousEnd = 0
             for (span in spans) {
                 val spanBegin = parseTtmlTime(span.groupValues[1])
-                val word = span.groupValues[3].trim()
+                // TTML spans may be syllables. The spaces in the document, not the spans,
+                // determine word boundaries; never append a space after every timestamp.
+                wordParts.append(decodeHtmlEntities(innerContent.substring(previousEnd, span.range.first).replace(Regex("<[^>]*>"), "")))
+                val word = decodeHtmlEntities(span.groupValues[3].replace(Regex("<[^>]*>"), ""))
                 if (word.isNotEmpty()) {
                     val beginFormatted = formatMsToLrc(spanBegin)
-                    wordParts.append("<$beginFormatted>$word ")
+                    wordParts.append("<$beginFormatted>$word")
                 }
+                previousEnd = span.range.last + 1
             }
+            wordParts.append(decodeHtmlEntities(innerContent.substring(previousEnd).replace(Regex("<[^>]*>"), "")))
             val words = wordParts.toString().trimEnd()
             if (words.isNotBlank()) {
                 linesLyrics.add(
@@ -137,6 +164,7 @@ fun parseTtmlLyrics(data: String): Lyrics {
                         endTimeMs = lineEnd.toString(),
                         syllables = listOf(),
                         words = words,
+                        wordBoundariesVerified = !hasPotentiallyFragmentedText(words),
                     ),
                 )
             }

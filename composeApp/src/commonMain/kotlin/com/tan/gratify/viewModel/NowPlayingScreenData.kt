@@ -15,6 +15,7 @@ data class NowPlayingScreenData(
     val lyricsData: LyricsData? = null,
     val songInfoData: SongInfoEntity? = null,
     val bitmap: ImageBitmap? = null,
+    val lyricsLoading: Boolean = false,
 ) {
     data class CanvasData(
         val isVideo: Boolean,

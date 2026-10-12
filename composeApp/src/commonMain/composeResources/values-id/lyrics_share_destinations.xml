@@ -1,0 +1,10 @@
+<resources>
+    <string name="share_lyrics_destination">Bagikan ke</string>
+    <string name="share_lyrics_gratify_story">Story Gratify</string>
+    <string name="share_lyrics_other_apps">Aplikasi lainnya</string>
+    <string name="share_lyrics_instagram_missing">Instagram belum terpasang. Simpan gambar atau pilih aplikasi lain.</string>
+    <string name="share_lyrics_whatsapp_missing">WhatsApp belum terpasang. Simpan gambar atau pilih aplikasi lain.</string>
+    <string name="share_lyrics_story_unavailable">Putar lagu di Gratify untuk membagikan liriknya ke story.</string>
+    <string name="share_lyrics_story_limit">Pilih lirik lebih singkat untuk story (maksimal 200 karakter) dan lagu berdurasi minimal 8 detik.</string>
+    <string name="share_lyrics_story_hint">Lirik pilihan menjadi catatan story. Pilih durasi potongan dan penonton di editor.</string>
+</resources>

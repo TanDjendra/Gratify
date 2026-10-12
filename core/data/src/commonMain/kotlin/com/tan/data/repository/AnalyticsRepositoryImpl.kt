@@ -20,6 +20,10 @@ private const val TAG = "AnalyticsRepositoryImpl"
 internal class AnalyticsRepositoryImpl(
     private val analyticsDatasource: AnalyticsDatasource,
 ) : AnalyticsRepository {
+    override suspend fun getPlaybackEventsInRange(start: LocalDateTime, endExclusive: LocalDateTime) =
+        flow { emit(analyticsDatasource.getPlaybackEventsInRange(start, endExclusive)) }.flowOn(Dispatchers.IO)
+    override suspend fun getPlaybackYears() = flow { emit(analyticsDatasource.getPlaybackYears()) }.flowOn(Dispatchers.IO)
+
     override suspend fun insertPlaybackEvent(
         videoId: String,
         channelIds: List<String>,

@@ -87,10 +87,8 @@ internal class CommonRepositoryImpl(
                             youTube.cookie = null
                         }
                         Logger.d("YouTube", "New cookie")
-                        localDataSource.getUsedGoogleAccount()?.netscapeCookie?.let {
-                            writeTextToFile(it, cookiePath)
-                            Logger.w("YouTube", "Wrote cookie to file")
-                        }
+                        // Legacy YouTube Music cookies are no longer needed by official collections.
+                        if (cookie.isEmpty()) writeTextToFile("", cookiePath)
                     }
                 }
             val pageIdJob =
@@ -309,9 +307,16 @@ internal class CommonRepositoryImpl(
         }
 
     override suspend fun getAllNotifications(): Flow<List<NotificationEntity>?> =
-        flow {
-            emit(localDataSource.getAllNotification())
-        }.flowOn(Dispatchers.IO)
+        localDataSource.observeNotifications().flowOn(Dispatchers.IO)
+
+    override suspend fun insertNotificationOnce(notificationEntity: NotificationEntity): Boolean =
+        withContext(Dispatchers.IO) { localDataSource.insertNotificationOnce(notificationEntity) }
+
+    override suspend fun notificationAccountOwner(): String? = localDataSource.notificationAccountOwner()
+    override suspend fun claimNotificationDelivery(notification: NotificationEntity): Boolean =
+        withContext(Dispatchers.IO) { localDataSource.claimNotificationDelivery(notification) }
+    override suspend fun claimDeveloperNotificationDelivery(notification: NotificationEntity): Boolean =
+        withContext(Dispatchers.IO) { localDataSource.claimDeveloperNotificationDelivery(notification) }
 
     override suspend fun deleteNotification(id: Long) =
         withContext(Dispatchers.IO) {

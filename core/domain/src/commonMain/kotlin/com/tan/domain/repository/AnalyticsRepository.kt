@@ -8,6 +8,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.LocalDateTime
 
 interface AnalyticsRepository {
+    suspend fun getPlaybackEventsInRange(start: LocalDateTime, endExclusive: LocalDateTime): Flow<List<PlaybackEventEntity>>
+    suspend fun getPlaybackYears(): Flow<List<Int>>
+
     suspend fun insertPlaybackEvent(
         videoId: String,
         channelIds: List<String>,

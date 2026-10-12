@@ -3,6 +3,7 @@ package com.tan.gratify.ui.navigation.graph
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
+import androidx.navigation.toRoute
 import androidx.navigation.compose.composable
 import com.tan.gratify.ui.navigation.destination.login.EmailLoginDestination
 import com.tan.gratify.ui.navigation.destination.login.ForgotPasswordDestination
@@ -18,6 +19,8 @@ import com.tan.gratify.ui.screen.login.LoginScreen
 import com.tan.gratify.ui.screen.login.SignUpScreen
 import com.tan.gratify.ui.screen.login.CreateProfileScreen
 import com.tan.gratify.ui.screen.login.SplashScreen
+import com.tan.gratify.ui.screen.login.YouTubeConnectScreen
+import com.tan.gratify.ui.navigation.destination.login.YouTubeConnectDestination
 
 fun NavGraphBuilder.loginScreenGraph(
     innerPadding: PaddingValues,
@@ -51,12 +54,13 @@ fun NavGraphBuilder.loginScreenGraph(
     }
 
     // ── Create Profile Flow ───────────────────────────────────────────────────
-    composable<CreateProfileDestination> {
+    composable<CreateProfileDestination> { entry ->
         CreateProfileScreen(
             innerPadding = innerPadding,
             navController = navController,
             hideBottomNavigation = hideBottomBar,
             showBottomNavigation = showBottomBar,
+            skipYouTubeConnection = entry.toRoute<CreateProfileDestination>().skipYouTubeConnection,
         )
     }
 
@@ -80,14 +84,12 @@ fun NavGraphBuilder.loginScreenGraph(
         )
     }
 
-    // ── YouTube Music web-view login ──────────────────────────────────────────
+    composable<YouTubeConnectDestination> {
+        YouTubeConnectScreen(navController, onboarding = true, hideBottomNavigation = hideBottomBar, showBottomNavigation = showBottomBar)
+    }
+    // Existing settings/navigation links now open official Google consent.
     composable<LoginDestination> {
-        LoginScreen(
-            innerPadding = innerPadding,
-            navController = navController,
-            hideBottomNavigation = hideBottomBar,
-            showBottomNavigation = showBottomBar,
-        )
+        YouTubeConnectScreen(navController, hideBottomNavigation = hideBottomBar, showBottomNavigation = showBottomBar)
     }
 
 }

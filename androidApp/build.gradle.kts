@@ -37,7 +37,9 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.tan.gratify"
+        applicationId = "com.tan.gratify.next"
+        resValue("string", "app_package_name", "com.tan.gratify.next")
+        manifestPlaceholders["apkUpdateChannel"] = if (isFullBuild) "full" else "foss"
         minSdk = 26
         targetSdk = 36
         versionCode =
@@ -118,6 +120,7 @@ android {
         debug {
             isMinifyEnabled = false
             applicationIdSuffix = ".dev"
+            resValue("string", "app_package_name", "com.tan.gratify.next.dev")
             versionNameSuffix = "-dev"
         }
     }
@@ -177,10 +180,8 @@ dependencies {
     implementation(libs.customactivityoncrash)
 
     // Easy Permissions
-    implementation(libs.easypermissions)
 
     // Legacy Support
-    implementation(libs.legacy.support.v4)
     // Coroutines
     implementation(libs.coroutines.android)
 
@@ -203,6 +204,7 @@ dependencies {
     // Supabase
     implementation(platform(libs.supabase.bom))
     implementation(libs.supabase.auth)
+    implementation(libs.supabase.postgrest)
     implementation(libs.kotlinx.datetime)
 
     // Firebase Messaging

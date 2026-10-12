@@ -58,6 +58,7 @@ import com.tan.gratify.extension.getColorFromPalette
 import com.tan.gratify.getPlatform
 import com.tan.gratify.ui.theme.md_theme_dark_background
 import com.tan.gratify.ui.theme.typo
+import com.tan.gratify.ui.navigation.openPlaylistSongPicker
 import com.tan.gratify.viewModel.LocalPlaylistUIEvent
 import com.tan.gratify.viewModel.LocalPlaylistViewModel
 import com.tan.gratify.viewModel.SharedViewModel
@@ -85,9 +86,53 @@ fun LocalPlaylistScreen(
     sharedViewModel: SharedViewModel = koinInject(),
     viewModel: LocalPlaylistViewModel = koinViewModel(),
     navController: NavController,
+    ownerMember:com.tan.gratify.viewModel.WorkspaceMember?=null,
+    collaborationBusy:Boolean=false,
+    canInvite:Boolean=false,
+    onInvite:(()->Unit)?=null,
 ) {
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val shareTitle = stringResource(Res.string.share_url)
+    val editStatus by viewModel.editStatus.collectAsStateWithLifecycle()
+    var showEditPlaylist by rememberSaveable(id) { mutableStateOf(false) }
+    var showVisibility by rememberSaveable(id) { mutableStateOf(false) }
+    var visibilityWasBusy by remember(id) { mutableStateOf(false) }
+    var confirmDelete by rememberSaveable(id) { mutableStateOf(false) }
+    var draftCover by rememberSaveable(id) { mutableStateOf<String?>(null) }
+    val coverPicker = com.tan.gratify.expect.ui.photoPickerResult { uri ->
+        if (showEditPlaylist && uri != null) draftCover = uri
+    }
+    fun editPlaylist() { viewModel.clearEditError(); draftCover = null; showEditPlaylist = true }
+    LaunchedEffect(uiState.visibilityBusy) {
+        if (uiState.visibilityBusy) visibilityWasBusy = true
+        else if (visibilityWasBusy) {
+            if (uiState.visibilityKnown && !uiState.visibilityFailed) showVisibility = false
+            visibilityWasBusy = false
+        }
+    }
+    val additionsModel: com.tan.gratify.viewModel.AddSongsToPlaylistViewModel = koinViewModel(key = "playlist-discovery-$id")
+    val additions by additionsModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(id, uiState.id, uiState.trackCount, uiState.isReadOnly, uiState.isUnavailable) {
+        if (uiState.id == id && !uiState.isReadOnly && !uiState.isUnavailable) {
+            if (additionsModel.uiState.value.targetPlaylistId == null) additionsModel.bindTargetPlaylist(id)
+            else if (additionsModel.uiState.value.pendingTrackIds.isEmpty() &&
+                uiState.trackCount != additionsModel.uiState.value.existingTrackIds.size) additionsModel.loadTargetPlaylist()
+        }
+    }
+    LaunchedEffect(additions.membershipChangeCount) {
+        if (additions.membershipChangeCount > 0) viewModel.updatePlaylistState(id, true)
+    }
+    val playlistEntry = remember(navController, id) { navController.currentBackStackEntry }
+    val tracksChanged by (playlistEntry?.savedStateHandle?.getStateFlow("playlist_tracks_changed", false)
+        ?: remember { kotlinx.coroutines.flow.MutableStateFlow(false) }).collectAsStateWithLifecycle()
+    LaunchedEffect(tracksChanged) {
+        if (tracksChanged) {
+            viewModel.updatePlaylistState(id, true)
+            additionsModel.loadTargetPlaylist()
+            playlistEntry?.savedStateHandle?.set("playlist_tracks_changed", false)
+        }
+    }
 
     val lazyState = rememberLazyListState()
     val firstItemVisible by remember {
@@ -318,10 +363,15 @@ fun LocalPlaylistScreen(
     ) {
         item(key = "collection-header", contentType = "header") {
             CollectionDetailHeader(
+                compactPlaylist = !uiState.isReadOnly,
+                onEdit = if (!uiState.isReadOnly && !uiState.isUnavailable) ::editPlaylist else null,
                 title = uiState.title,
                 kind = stringResource(Res.string.playlist),
                 subtitle = uiState.creatorName?.takeIf { it.isNotBlank() } ?: stringResource(Res.string.your_playlist),
-                metadata = stringResource(Res.string.album_length, uiState.trackCount.toString(), ""),
+                subtitleContent=if(!uiState.isReadOnly&&onInvite!=null) ({PlaylistMemberRow(
+                    listOfNotNull(ownerMember),canInvite&&!collaborationBusy,onInvite,onInvite)}) else null,
+                metadata = stringResource(Res.string.album_length, uiState.trackCount.toString(), "") +
+                    if (uiState.isReadOnly || uiState.isPublic) " • ${uiState.addCount} " + stringResource(Res.string.detail_saves) else "",
                 accent = paletteState.palette?.getColorFromPalette() ?: playlistTitleGradient(uiState.title).first(),
                 onBack = { navController.navigateUp() },
                 isPlaying = isPlaying && playingPlaylistId == LOCAL_PLAYLIST_ID + uiState.id,
@@ -345,7 +395,9 @@ fun LocalPlaylistScreen(
                     }
                 },
                 actions = {
-                    CollectionDownloadAction(downloadState, enabled = uiState.trackCount > 0 && !uiState.isUnavailable, onClick = {
+                    if (uiState.isReadOnly) CollectionDetailAction(Icons.Rounded.Favorite,
+                        stringResource(Res.string.detail_remove_saved), selected=true, onClick={ viewModel.deletePlaylist(uiState.id) { navController.navigateUp() } })
+                    if (uiState.trackCount > 0) CollectionDownloadAction(downloadState, enabled = uiState.trackCount > 0 && !uiState.isUnavailable, onClick = {
                         if (downloadState != DownloadState.STATE_DOWNLOADED) viewModel.downloadFullPlaylist()
                     })
                     if (shouldShowSuggestButton) CollectionDetailAction(Icons.Rounded.AutoAwesome, stringResource(Res.string.suggest),
@@ -353,21 +405,33 @@ fun LocalPlaylistScreen(
                     if (!uiState.isReadOnly) CollectionDetailAction(Icons.Rounded.MoreHoriz, stringResource(Res.string.detail_options), onClick = onPlaylistMoreClick)
                 },
             )
+            if (!uiState.isReadOnly && !uiState.isUnavailable) OwnedPlaylistVisibility(uiState.isPublic, uiState.visibilityKnown) {
+                showVisibility = true
+            }
+            OwnedPlaylistAddSongsAction(uiState.isReadOnly, uiState.isUnavailable) {
+                navController.openPlaylistSongPicker(uiState.id, uiState.title)
+            }
             if (uiState.isUnavailable) Text(stringResource(Res.string.detail_unavailable), color = GratifyColors.TextSecondary,
                 style = typo().bodyMedium, modifier = Modifier.fillMaxWidth().padding(16.dp))
-            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = { sortBottomSheetShow = true }) {
+            if (uiState.trackCount > 0) Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = { sortBottomSheetShow = true }, enabled = !changingOrder) {
                     Icon(Icons.AutoMirrored.Sharp.Sort, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(stringResource(Res.string.sort_by) + ": " + stringResource(uiState.filterState.displayNameRes()), color = GratifyColors.TextSecondary)
                 }
                 Spacer(Modifier.weight(1f))
-                if (uiState.filterState == FilterState.CustomOrder && !uiState.isReadOnly && !uiState.isUnavailable) {
-                    TextButton(onClick = { changingOrder = !changingOrder }) {
-                        Text(stringResource(if (changingOrder) Res.string.detail_done else Res.string.detail_reorder))
+                if (!uiState.isReadOnly && !uiState.isUnavailable) {
+                    TextButton(onClick = {
+                        if (!changingOrder && uiState.filterState != FilterState.CustomOrder)
+                            viewModel.onUIEvent(LocalPlaylistUIEvent.ChangeFilter(FilterState.CustomOrder))
+                        changingOrder = !changingOrder
+                    }) {
+                        Text(stringResource(if (changingOrder) Res.string.detail_done else Res.string.playlist_manage_edit_songs))
                     }
                 }
             }
+            if (changingOrder) Text(stringResource(Res.string.playlist_manage_edit_songs_hint),
+                color = GratifyColors.TextSecondary, style = typo().bodySmall, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
             AnimatedVisibility(visible = shouldShowSuggestions) {
                 Column(Modifier.padding(horizontal = 16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -382,11 +446,11 @@ fun LocalPlaylistScreen(
                     }
                 }
             }
-            if (uiState.trackCount == 0 && trackPagingItems.loadState.refresh !is LoadState.Loading) CollectionDetailEmpty()
+            if (uiState.trackCount == 0 && trackPagingItems.loadState.refresh !is LoadState.Loading && uiState.isReadOnly) CollectionDetailEmpty()
         }
         items(count = trackPagingItems.itemCount, key = { index ->
             val item = trackPagingItems[index]
-            (item?.first?.videoId ?: "") + "item_$index" + item?.second?.inPlaylist + item?.second?.position
+            item?.first?.videoId ?: "placeholder_$index"
         }) { index ->
             val item = trackPagingItems[index]?.first
             if (item != null) {
@@ -396,7 +460,12 @@ fun LocalPlaylistScreen(
                             isPlaying = true,
                             shouldShowDragHandle = changingOrder,
                             songEntity = item,
-                            onMoreClickListener = { onItemMoreClick(it) },
+                            onMoreClickListener = if (changingOrder) null else { videoId -> onItemMoreClick(videoId) },
+                            rightView = if (changingOrder) ({
+                                IconButton(onClick = { viewModel.deleteItem(id, item) }) {
+                                    Icon(Icons.Rounded.RemoveCircleOutline, stringResource(Res.string.playlist_builder_remove_song, item.title), tint = GratifyColors.Error)
+                                }
+                            }) else null,
                             onClickListener = {
                                 Logger.w("PlaylistScreen", "index: $index")
                                 onPlaylistItemClick(it)
@@ -413,7 +482,12 @@ fun LocalPlaylistScreen(
                             isPlaying = false,
                             shouldShowDragHandle = changingOrder,
                             songEntity = item,
-                            onMoreClickListener = { onItemMoreClick(it) },
+                            onMoreClickListener = if (changingOrder) null else { videoId -> onItemMoreClick(videoId) },
+                            rightView = if (changingOrder) ({
+                                IconButton(onClick = { viewModel.deleteItem(id, item) }) {
+                                    Icon(Icons.Rounded.RemoveCircleOutline, stringResource(Res.string.playlist_builder_remove_song, item.title), tint = GratifyColors.Error)
+                                }
+                            }) else null,
                             onClickListener = {
                                 Logger.w("PlaylistScreen", "index: $index")
                                 onPlaylistItemClick(it)
@@ -453,6 +527,9 @@ fun LocalPlaylistScreen(
                 }
             }
         }
+        if (!uiState.isReadOnly && !uiState.isUnavailable && !changingOrder) item("owned-recommendations") {
+            PlaylistRecommendationsContent(additions, additionsModel::appendTrack, additionsModel::loadRecommendations)
+        }
         item {
             EndOfPage()
         }
@@ -469,50 +546,38 @@ fun LocalPlaylistScreen(
             song = track,
         )
     }
-    if (playlistBottomSheetShow) {
-        Logger.w("PlaylistScreen", "PlaylistBottomSheet")
-        LocalPlaylistBottomSheet(
-            isBottomSheetVisible = playlistBottomSheetShow,
+    if (playlistBottomSheetShow && !uiState.isReadOnly && !uiState.isUnavailable) {
+        PlaylistOptionsSheet(uiState.title, uiState.trackCount, uiState.isPublic, uiState.visibilityKnown, uiState.ytPlaylistId,
             onDismiss = { playlistBottomSheetShow = false },
-            title = uiState.title,
-            ytPlaylistId = uiState.ytPlaylistId,
-            isPublic = uiState.isPublic,
-            isReadOnly = uiState.isReadOnly,
-            onEditTitle =
-                { newTitle ->
-                    viewModel.updatePlaylistTitle(newTitle, uiState.id)
-                },
-            onEditThumbnail =
-                { thumbUri ->
-                    viewModel.updatePlaylistThumbnail(thumbUri, uiState.id)
-                },
-            onAddToQueue = {
-                viewModel.addAllToQueue()
-            },
+            onAdd = { playlistBottomSheetShow = false; navController.openPlaylistSongPicker(id, uiState.title) },
+            onEdit = { playlistBottomSheetShow = false; editPlaylist() },
+            onVisibility = { playlistBottomSheetShow = false; showVisibility = true },
+            onQueue = { playlistBottomSheetShow = false; viewModel.addAllToQueue() },
             onSync = {
-                if (uiState.syncState == LocalPlaylistEntity.YouTubeSyncState.Synced) {
-                    showUnsyncAlertDialog = true
-                } else {
-                    showSyncAlertDialog = true
-                }
-            },
-            onUpdatePlaylist = {
-                viewModel.updateListTrackSynced(uiState.id)
-            },
-            onDelete = {
                 playlistBottomSheetShow = false
-                viewModel.deletePlaylist(uiState.id) {
-                    navController.popBackStack()
-                }
+                if (uiState.syncState == LocalPlaylistEntity.YouTubeSyncState.Synced) showUnsyncAlertDialog = true
+                else showSyncAlertDialog = true
             },
-            onShareToPublic = {
-                viewModel.sharePlaylistToPublic()
-            },
-            onHideFromPublic = {
-                viewModel.unsharePlaylistFromPublic()
-            }
-        )
+            onRefresh = { playlistBottomSheetShow = false; viewModel.updateListTrackSynced(id) },
+            onDelete = { playlistBottomSheetShow = false; confirmDelete = true },
+            onOpenPublic = uiState.sharedPlaylistId?.takeIf { it.isNotBlank() }?.let { sharedId -> {
+                playlistBottomSheetShow = false
+                navController.navigate(com.tan.gratify.ui.navigation.destination.list.SharedPlaylistDestination(sharedId))
+            } }, onShareYouTube = uiState.ytPlaylistId?.let { youtubeId -> {
+                com.tan.gratify.expect.shareUrl(shareTitle, "https://gratify.org/app/playlist?list=${youtubeId.removePrefix("VL")}")
+            } })
     }
+    if (showEditPlaylist && !uiState.isReadOnly) PlaylistEditDialog(uiState.title, editStatus.saving, editStatus.failed,
+        onSave = { viewModel.savePlaylistDetails(it, draftCover, id) { showEditPlaylist = false; draftCover = null } },
+        onCover = { coverPicker.launch() }, onDismiss = { showEditPlaylist = false; draftCover = null },
+        coverPreview = draftCover ?: uiState.thumbnail, coverChanged = draftCover != null)
+    if (showVisibility && !uiState.isReadOnly) PlaylistVisibilityDialog(uiState.isPublic, uiState.visibilityKnown,
+        uiState.visibilityBusy, uiState.visibilityFailed,
+        onConfirm = { if (uiState.isPublic) viewModel.unsharePlaylistFromPublic() else viewModel.sharePlaylistToPublic() },
+        onRetry = { viewModel.updatePlaylistState(id) }, onDismiss = { showVisibility = false })
+    if (confirmDelete) PlaylistDeleteDialog(uiState.title, uiState.isPublic,
+        onDelete = { confirmDelete = false; viewModel.deletePlaylist(id) { navController.navigateUp() } },
+        onDismiss = { confirmDelete = false })
     if (showSyncAlertDialog) {
         AlertDialog(
             title = { Text(text = stringResource(Res.string.warning)) },

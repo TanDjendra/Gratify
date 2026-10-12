@@ -74,3 +74,35 @@ build/
 /artifacts/launch-audit/postgres-test-runtime/
 /artifacts/launch-audit/postgres-test-data/
 /artifacts/launch-audit/postgres-test*.log
+
+# Crash logs & temporary dumps
+*.log
+hs_err_pid*
+replay_pid*
+build-hermes-debug.log
+
+# Build archives and binaries
+*.apk
+*.idsig
+*.zip
+
+# Python caches
+__pycache__/
+*.pyc
+
+# Local editor and scratch directories
+.motioncraft/
+/gratify ui/
+/New folder/
+/website/
+
+# Test and run artifacts (preserve audit records and release metadata)
+/artifacts/*
+!/artifacts/launch-audit/
+!/artifacts/github-release-20261013/
+/artifacts/github-release-20261013/*.apk
+/artifacts/github-release-20261013/*.idsig
+/artifacts/github-release-20261013/*.zip
+/artifacts/github-release-20261013/*.log
+*.pid
+gratify ui

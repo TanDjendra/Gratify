@@ -1,0 +1,30 @@
+<resources>
+    <string name="about_app_summary">Musik, koleksi, dan lirik dalam satu tempat.</string>
+    <string name="about_application">Aplikasi</string>
+    <string name="about_build">Build %1$d</string>
+    <string name="about_info_copied">Informasi versi disalin.</string>
+    <string name="about_copy_failed">Belum bisa menyalin. Coba lagi.</string>
+    <string name="about_people_support">Developer &amp; bantuan</string>
+    <string name="about_developer_credits">Developer &amp; kredit</string>
+    <string name="about_developer_hint">Tan, proyek asal, dan lisensi sumber terbuka.</string>
+    <string name="about_contact_support">Bantuan atau laporkan masalah</string>
+    <string name="about_support_hint">Draf email memuat versi aplikasi. Tambahkan apa yang terjadi dan cara mengulanginya sebelum dikirim.</string>
+    <string name="about_privacy_terms">Privasi &amp; ketentuan</string>
+    <string name="about_developer_heading">Di balik Gratify</string>
+    <string name="about_developer_role">Pengembang Gratify</string>
+    <string name="about_connect">Terhubung dengan Tan</string>
+    <string name="about_developer_site">Situs developer</string>
+    <string name="about_open_source">Dibangun dari sumber terbuka</string>
+    <string name="about_upstream_credit">Gratify merupakan versi modifikasi SimpMusic dari maxrave-dev dan para kontributornya. Terima kasih kepada proyek asal dan pustaka yang mendukung aplikasi ini.</string>
+    <string name="about_source_code">Kode sumber Gratify</string>
+    <string name="about_library_licenses">Pustaka &amp; lisensi</string>
+    <string name="about_library_hint">Lihat pustaka, pembuat, dan informasi lisensi yang disertakan dalam aplikasi.</string>
+    <string name="about_project_license">Lisensi Gratify</string>
+    <string name="about_support_development">Dukung pengembangan</string>
+    <string name="about_donation_optional">Donasi bersifat opsional. Tautan membuka Saweria.</string>
+    <string name="about_link_failed">Tautan belum bisa dibuka. Alamat dapat disalin dan dibuka dengan aplikasi lain.</string>
+    <string name="about_licenses_loading">Memuat pustaka…</string>
+    <string name="about_licenses_failed">Informasi pustaka belum bisa dimuat. Coba lagi.</string>
+    <string name="about_terms_label">Ketentuan penggunaan (draf)</string>
+    <string name="about_privacy_label">Kebijakan privasi</string>
+</resources>

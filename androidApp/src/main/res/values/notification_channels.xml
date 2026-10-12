@@ -1,0 +1,7 @@
+<resources>
+    <string name="notif_channel_gratify">Gratify announcements</string>
+    <string name="notif_channel_messages">Friends messages</string>
+    <string name="notif_channel_stories">Music stories</string>
+    <string name="notif_channel_artists">Followed artists</string>
+    <string name="notif_channel_artists_hint">New music from artists you follow</string>
+</resources>

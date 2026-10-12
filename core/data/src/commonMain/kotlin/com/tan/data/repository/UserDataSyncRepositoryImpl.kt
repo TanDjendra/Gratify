@@ -68,6 +68,8 @@ internal class UserDataSyncRepositoryImpl(
 
     private val accountLibraryStore = AccountLibraryStore(database)
 
+    override suspend fun getLocalAccountOwner(): String? = localDataSource.getLibraryOwner()
+
     override suspend fun activateLocalAccount(userId: String, legacyOwner: String?) =
         accountLibraryStore.activate(userId, legacyOwner)
 

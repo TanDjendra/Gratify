@@ -1,0 +1,14 @@
+{
+  "checklist_items": 251,
+  "section_count": 20,
+  "all_original_checkboxes_mapped": true,
+  "unique_item_ids": 251,
+  "tracked_findings": 41,
+  "existing_findings": 36,
+  "new_launch_gaps": 5,
+  "file_links_checked": 67,
+  "broken_file_links": [],
+  "unfilled_template_fields": false,
+  "release_evidence": "release-verification.json",
+  "no_source_edits_confirmed_for_inventory": true
+}

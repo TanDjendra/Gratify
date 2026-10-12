@@ -45,11 +45,15 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.lastOrNull
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDateTime
+import kotlinx.serialization.builtins.nullable
+import kotlinx.serialization.builtins.serializer
+import okio.ByteString.Companion.encodeUtf8
 
 internal class PlaylistRepositoryImpl(
     private val dataStoreManager: DataStoreManager,
     private val localDataSource: LocalDataSource,
     private val youTube: YouTube,
+    private val contentCache: com.tan.data.cache.JsonContentCache? = null,
 ) : PlaylistRepository {
     override fun getAllPlaylists(limit: Int): Flow<List<PlaylistEntity>> =
         flow {
@@ -439,6 +443,21 @@ internal class PlaylistRepositoryImpl(
     override fun getPlaylistData(
         playlistId: String,
         viewString: String,
+    ): Flow<Resource<Pair<PlaylistBrowse, String?>>> = com.tan.data.cache.cachedContent(
+        contentCache,
+        key = {
+            val owner = dataStoreManager.getString("last_synced_user_id").first().orEmpty()
+            val cookieHash = dataStoreManager.cookie.first().orEmpty().encodeUtf8().sha256().hex()
+            "playlist-v1:$owner:$cookieHash:${dataStoreManager.language.first()}:${dataStoreManager.location.first()}:$playlistId:$viewString"
+        },
+        freshMs = 10 * 60 * 1000L,
+        serializer = kotlinx.serialization.builtins.PairSerializer(PlaylistBrowse.serializer(), String.serializer().nullable),
+        fetch = { fetchPlaylistData(playlistId, viewString) },
+    )
+
+    private fun fetchPlaylistData(
+        playlistId: String,
+        viewString: String,
     ): Flow<Resource<Pair<PlaylistBrowse, String?>>> =
         flow {
             runCatching {
@@ -619,7 +638,7 @@ internal class PlaylistRepositoryImpl(
                         val account = localDataSource.getUsedGoogleAccount()
                         val isNeeded =
                             dataStoreManager.keepYouTubePlaylistOffline.first() == DataStoreManager.TRUE &&
-                                dataStoreManager.loggedIn.first() == DataStoreManager.TRUE && account != null
+                                dataStoreManager.cookie.first().isNotBlank() && account != null
                         if (isNeeded) {
                             insertYourYouTubePlaylist(
                                 YourYouTubePlaylistList(
@@ -637,7 +656,7 @@ internal class PlaylistRepositoryImpl(
                     val account = localDataSource.getUsedGoogleAccount()
                     val isNeeded =
                         dataStoreManager.keepYouTubePlaylistOffline.first() == DataStoreManager.TRUE &&
-                            dataStoreManager.loggedIn.first() == DataStoreManager.TRUE && account != null
+                            dataStoreManager.cookie.first().isNotBlank() && account != null
                     if (isNeeded) {
                         val list =
                             getYourYouTubePlaylistList("${account.email}_${account.pageId ?: ""}")

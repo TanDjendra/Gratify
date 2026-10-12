@@ -24,6 +24,9 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.*
 import com.tan.gratify.ui.component.*
 import com.tan.gratify.ui.navigation.destination.home.HomeDestination
+import com.tan.gratify.ui.navigation.destination.home.SettingsDestination
+import com.tan.gratify.ui.screen.home.HomeHeaderContent
+import com.tan.gratify.ui.screen.home.SettingScreen
 import com.tan.gratify.ui.navigation.destination.search.SearchDestination
 import com.tan.gratify.ui.navigation.destination.library.LibraryDestination
 import com.tan.gratify.ui.navigation.destination.friends.FriendsDestination
@@ -70,7 +73,10 @@ private fun DesignPreview() {
         },
     ) { padding ->
         NavHost(navController, startDestination = HomeDestination) {
-            composable<HomeDestination> { PreviewHome(padding) }
+            composable<HomeDestination> { PreviewHome(padding) {
+                navController.navigate(SettingsDestination) { launchSingleTop = true }
+            } }
+            composable<SettingsDestination> { SettingScreen(padding, navController) }
             composable<SearchDestination> { PreviewPage("Cari", padding, "Jelajahi musik", search = true) }
             composable<LibraryDestination> { PreviewPage("Koleksi", padding, "Musikmu", library = true) }
             composable<FriendsDestination> { PreviewPage("Teman", padding, "Aktivitas teman") }
@@ -81,7 +87,7 @@ private fun DesignPreview() {
 /** Uses the production home sections, rather than the library's vertical playlist list. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun PreviewHome(padding: PaddingValues) {
+private fun PreviewHome(padding: PaddingValues, onOpenSettings: () -> Unit) {
     val songs = remember {
         listOf("Ruang tenang" to "Senja", "Perjalanan pulang" to "Langit Kota",
             "Hari yang baru" to "Nara", "Pelan-pelan" to "Sore")
@@ -92,7 +98,7 @@ private fun PreviewHome(padding: PaddingValues) {
             .mapIndexed { index, title -> sampleContent(title, "Gratify", playlistId = "sample-playlist-$index", artworkIndex = index) }
     }
     Column {
-        ScreenHeader("Beranda", "Tan", null, onOpenProfile = {})
+        HomeHeaderContent("Tan", null, onOpenProfile = {}, onOpenSettings = onOpenSettings)
         var selectedParams by remember { mutableStateOf<String?>(null) }
         HomeMoodFilters(selectedParams, onSelect = { selectedParams = it })
         LazyColumn(
@@ -126,7 +132,7 @@ private fun PreviewHome(padding: PaddingValues) {
 
 private fun sampleArtwork(index: Int): String {
     val resourceId = listOf(R.drawable.home_sample_green, R.drawable.home_sample_coral, R.drawable.home_sample_blue)[index % 3]
-    return "android.resource://com.tan.gratify.dev/$resourceId"
+    return "android.resource://${BuildConfig.APPLICATION_ID}/$resourceId"
 }
 
 private fun sampleContent(title: String, artist: String, videoId: String? = null, playlistId: String? = null, artworkIndex: Int = 0) = Content(

@@ -107,9 +107,14 @@ internal class MediaServiceHandlerImpl(
     private val streamRepository: StreamRepository,
     private val localPlaylistRepository: LocalPlaylistRepository,
     private val analyticsRepository: AnalyticsRepository,
-    private val coroutineScope: CoroutineScope,
+    parentScope: CoroutineScope,
 ) : MediaPlayerHandler,
     MediaPlayerListener {
+    // Own only handler jobs; release must not cancel the application service scope.
+    private val coroutineScope = CoroutineScope(
+        parentScope.coroutineContext + SupervisorJob(parentScope.coroutineContext[Job]),
+    )
+
     private val backgroundScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val context: Context = getKoin().get()
     override val player: MediaPlayerInterface = getKoin().get()
@@ -732,14 +737,12 @@ internal class MediaServiceHandlerImpl(
                 val positionPersistIntervalMs = 5_000L
                 var sinceLastPositionSaveMs = 0L
                 while (true) {
-                    delay(100)
+                    delay(200)
                     _simpleMediaState.value = SimpleMediaState.Progress(player.currentPosition)
-                    nowPlayingState.value.songEntity?.let {
-                        updateDiscordRpc(it)
-                    }
-                    sinceLastPositionSaveMs += 100
+                    sinceLastPositionSaveMs += 200
                     if (sinceLastPositionSaveMs >= positionPersistIntervalMs) {
                         sinceLastPositionSaveMs = 0
+                        nowPlayingState.value.songEntity?.let(::updateDiscordRpc)
                         mayBeSaveRecentPosition()
                     }
                 }
@@ -747,6 +750,7 @@ internal class MediaServiceHandlerImpl(
     }
 
     override fun startBufferedUpdate() {
+        bufferedJob?.cancel()
         bufferedJob =
             coroutineScope.launch {
                 while (true) {
@@ -775,6 +779,7 @@ internal class MediaServiceHandlerImpl(
 
     override fun stopBufferedUpdate() {
         bufferedJob?.cancel()
+        bufferedJob = null
         _simpleMediaState.value =
             SimpleMediaState.Loading(player.bufferedPercentage, player.duration)
     }
@@ -1858,6 +1863,17 @@ internal class MediaServiceHandlerImpl(
         return true
     }
 
+    override fun stopPlaybackForAppExit() {
+        loadJob?.cancel()
+        loadJob = null
+        getFormatJob?.cancel()
+        getSkipSegmentsJob?.cancel()
+        stopProgressUpdate()
+        stopBufferedUpdate()
+        sleepStop()
+        player.stop()
+    }
+
     override fun addQueueToPlayer() {
         loadJob?.cancel()
         loadJob =
@@ -2357,7 +2373,7 @@ internal class MediaServiceHandlerImpl(
         Logger.w(TAG, "Checking current state before transition ${simpleMediaState.value}")
         val lastPlayed = nowPlayingState.value.songEntity
         val listenedMillis = listeningTimeTracker.takeMillis()
-        if (lastPlayed != null && lastPlayed.durationSeconds > 0) mayBeTrackingListeningLocal(lastPlayed, listenedMillis)
+        if (lastPlayed != null) mayBeTrackingListeningLocal(lastPlayed, listenedMillis)
         Logger.w(TAG, "Smooth Switching Transition Current Position: ${player.currentPosition}")
         mayBeNormalizeVolume()
         Logger.w(TAG, "REASON onMediaItemTransition: $reason")
@@ -2396,27 +2412,22 @@ internal class MediaServiceHandlerImpl(
 
     private fun mayBeTrackingListeningLocal(
         song: SongEntity,
-        currentPositionMillis: Long,
+        listenedMillis: Long,
     ) {
+        if (!com.tan.domain.utils.shouldRecordListening(listenedMillis)) return
         coroutineScope.launch {
             val trackingEnabled = dataStoreManager.localTrackingEnabled.first() == TRUE
             if (!trackingEnabled) {
                 return@launch
             }
-            val percent = (currentPositionMillis / (song.durationSeconds * 1000f))
-            Logger.w(TAG, "${song.title} - $currentPositionMillis ms listened, duration: ${song.durationSeconds * 1000} ms, percent: $percent")
-            if (percent < 0.2f) {
-                Logger.d(TAG, "Not enough listening time for ${song.title}, skipping tracking")
-                return@launch
-            }
-            Logger.d(TAG, "Tracking listening for ${song.title} at position $currentPositionMillis ms")
+            Logger.d(TAG, "Tracking ${song.title}: $listenedMillis ms of elapsed listening")
             analyticsRepository
                 .insertPlaybackEvent(
                     videoId = song.videoId,
                     channelIds = song.artistId ?: emptyList(),
                     albumBrowseId = song.albumId,
                     durationSecond = song.durationSeconds.toLong(),
-                    listenedSecond = currentPositionMillis / 1000,
+                    listenedSecond = listenedMillis / 1000,
                 ).collect {
                     Logger.d(TAG, "Inserted playback event for ${song.title}: $it")
                 }
@@ -2424,12 +2435,13 @@ internal class MediaServiceHandlerImpl(
     }
 
     private fun updateDiscordRpc(song: SongEntity) {
+        val rpc = discordRPC ?: return
         coroutineScope.launch {
             val progress = getProgress()
             val duration = getPlayerDuration()
             val speed = dataStoreManager.playbackSpeed.first()
             withContext(Dispatchers.IO) {
-                discordRPC?.updateSong(progress, duration, speed, song)
+                if (discordRPC === rpc) rpc.updateSong(progress, duration, speed, song)
             }
         }
     }

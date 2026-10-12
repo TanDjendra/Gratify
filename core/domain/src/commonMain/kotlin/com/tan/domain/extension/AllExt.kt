@@ -159,9 +159,7 @@ private fun unicodeScalar(point: Int): String? = when {
     }
 }
 
-fun decodeHtmlEntities(text: String): String {
-    // Named HTML entities
-    val namedEntities =
+private val HtmlNamedEntities =
         mapOf(
             "&apos;" to "'",
             "&quot;" to "\"",
@@ -175,16 +173,21 @@ fun decodeHtmlEntities(text: String): String {
             "&#x3E;" to ">",
         )
 
+private val HtmlHexEntity = Regex("""&#x([0-9a-fA-F]+);?""")
+private val HtmlDecimalEntity = Regex("""&#(\d+);?""")
+
+fun decodeHtmlEntities(text: String): String {
+    if ('&' !in text) return text
     var result = text
 
     // Replace named entities
-    for ((entity, char) in namedEntities) {
+    for ((entity, char) in HtmlNamedEntities) {
         result = result.replace(entity, char, ignoreCase = true)
     }
 
     // Replace hex numeric entities: &#xHH; or &#xHH (with or without semicolon)
     result =
-        Regex("""&#x([0-9a-fA-F]+);?""").replace(result) { match ->
+        HtmlHexEntity.replace(result) { match ->
             val codePoint = match.groupValues[1].toIntOrNull(16)
             if (codePoint != null) {
                 unicodeScalar(codePoint) ?: match.value
@@ -195,7 +198,7 @@ fun decodeHtmlEntities(text: String): String {
 
     // Replace decimal numeric entities: &#DD; or &#DD (with or without semicolon)
     result =
-        Regex("""&#(\d+);?""").replace(result) { match ->
+        HtmlDecimalEntity.replace(result) { match ->
             val codePoint = match.groupValues[1].toIntOrNull()
             if (codePoint != null) {
                 unicodeScalar(codePoint) ?: match.value

@@ -16,7 +16,7 @@ dependencies {
     testImplementation(platform("org.junit:junit-bom:5.10.2"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    implementation("net.java.dev.jna:jna:5.14.0")
+    implementation(libs.jna)
     implementation("com.github.hypfvieh:dbus-java-core:5.0.0")
     implementation("com.github.hypfvieh:dbus-java-transport-native-unixsocket:5.0.0")
 }

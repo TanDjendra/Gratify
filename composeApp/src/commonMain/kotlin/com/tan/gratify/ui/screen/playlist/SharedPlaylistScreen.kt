@@ -88,16 +88,19 @@ fun SharedPlaylistScreen(
     supabase: io.github.jan.supabase.SupabaseClient = koinInject(),
 ) {
     val scope = rememberCoroutineScope()
+    val authStatus by supabase.auth.sessionStatus.collectAsStateWithLifecycle()
+    val currentUserId = remember(authStatus) { supabase.auth.currentUserOrNull()?.id }
+
     var playlist by remember(playlistId) { mutableStateOf<SharedPlaylist?>(null) }
     var tracks by remember(playlistId) { mutableStateOf<List<SharedPlaylistTrack>>(emptyList()) }
     var isLoading by remember(playlistId) { mutableStateOf(true) }
     var retry by remember(playlistId) { mutableStateOf(0) }
-    var isSaved by remember(playlistId) { mutableStateOf(false) }
-    var isSaving by remember(playlistId) { mutableStateOf(false) }
-    var showDeleteDialog by remember(playlistId) { mutableStateOf(false) }
-    var isDeleting by remember(playlistId) { mutableStateOf(false) }
-    var chosenTrack by remember(playlistId) { mutableStateOf<Track?>(null) }
-    val currentUserId = supabase.auth.currentUserOrNull()?.id
+    var isSaved by remember(playlistId, currentUserId) { mutableStateOf(false) }
+    var isSaving by remember(playlistId, currentUserId) { mutableStateOf(false) }
+    var showDeleteDialog by remember(playlistId, currentUserId) { mutableStateOf(false) }
+    var isDeleting by remember(playlistId, currentUserId) { mutableStateOf(false) }
+    var chosenTrack by remember(playlistId, currentUserId) { mutableStateOf<Track?>(null) }
+    var ownedLocalId by remember(playlistId, currentUserId) { mutableStateOf<Long?>(null) }
     val controller by sharedViewModel.controllerState.collectAsStateWithLifecycle()
     val queueData by sharedViewModel.getQueueDataState().collectAsStateWithLifecycle()
     val nowPlaying by sharedViewModel.nowPlayingState.collectAsStateWithLifecycle()
@@ -113,33 +116,24 @@ fun SharedPlaylistScreen(
         }
     }
 
-    LaunchedEffect(playlistId, retry) {
+    LaunchedEffect(playlistId, retry, currentUserId) {
         isLoading = true
         playlist = null
         tracks = emptyList()
+        isSaved = false
+        ownedLocalId = null
         try {
             withTimeout(20_000) {
                 val result = sharedPlaylistRepository.getSharedPlaylist(playlistId)
-                val trackResult = sharedPlaylistRepository.getSharedPlaylistTracks(playlistId).first()
-                if (result.getOrNull() != null && trackResult.isSuccess) {
-                    playlist = result.getOrNull()
-                    tracks = trackResult.getOrThrow()
-                } else {
-                    val dto = supabase.postgrest["cloud_playlists"].select {
-                        filter { eq("id", playlistId) }
-                    }.decodeList<CloudPlaylistDto>().firstOrNull()
-                    if (dto != null) {
-                        val items = socialRepository.getCloudPlaylistItems(playlistId).first().getOrThrow()
-                        tracks = items.mapIndexed { index, item ->
-                            SharedPlaylistTrack(id = item.id ?: "${playlistId}_$index", playlistId = playlistId,
-                                videoId = item.videoId, title = item.title, artists = item.artist,
-                                durationSeconds = item.duration, createdAt = null)
-                        }
-                        playlist = SharedPlaylist(id = dto.id ?: playlistId, userId = dto.userId ?: "",
-                            title = dto.title, thumbnailUrl = dto.thumbnailUrl, creatorName = null, createdAt = null)
-                    }
+                val resolved = result.getOrThrow()
+                val sourceId = requireNotNull(resolved.id)
+                tracks = sharedPlaylistRepository.getSharedPlaylistTracks(sourceId).first().getOrThrow()
+                playlist = resolved
+                isSaved = localPlaylistRepository.getLocalPlaylistBySourceSharedId(sourceId) != null
+                if (resolved.userId == currentUserId && !resolved.clientSyncId.isNullOrBlank()) {
+                    ownedLocalId = localPlaylistRepository.getAllLocalPlaylists().first()
+                        .firstOrNull { it.sourceSharedPlaylistId == null && it.syncId == resolved.clientSyncId }?.id
                 }
-                isSaved = localPlaylistRepository.getLocalPlaylistBySourceSharedId(playlistId) != null
             }
         } catch (_: TimeoutCancellationException) {
             playlist = null
@@ -163,33 +157,39 @@ fun SharedPlaylistScreen(
     val playTrack: (Track, List<Track>) -> Unit = { first, queue ->
         sharedViewModel.setQueueData(QueueData.Data(listTracks = queue.toCollection(ArrayList()), firstPlayedTrack = first,
             playlistId = queueId, playlistName = data.title, playlistType = PlaylistType.PLAYLIST, continuation = null))
-        sharedViewModel.loadMediaItemFromTrack(first, type = Config.SONG_CLICK)
+        sharedViewModel.loadMediaItemFromTrack(first, type = Config.PLAYLIST_CLICK,
+            index = queue.indexOfFirst { it.videoId == first.videoId }.coerceAtLeast(0))
     }
     val onSave: () -> Unit = {
         if (!isSaving) {
+            val owner = currentUserId
+            if (owner == null) sharedViewModel.makeToast("Masuk untuk menyimpan playlist.")
+            else {
             isSaving = true
             scope.launch {
                 try {
+                    val sourceId = requireNotNull(data.id)
                     if (!isSaved) {
-                        localPlaylistRepository.saveSharedPlaylistToLibrary(sharedPlaylistId = playlistId, title = data.title,
+                        localPlaylistRepository.saveSharedPlaylistToLibrary(sharedPlaylistId = sourceId, title = data.title,
                             thumbnail = data.thumbnailUrl, tracks = domainTracks, creatorName = data.creatorName)
-                        currentUserId?.let { sharedPlaylistRepository.recordPlaylistSave(playlistId, it).getOrThrow() }
                         isSaved = true
-                        playlist = data.copy(addCount = data.addCount + 1)
                     } else {
-                        currentUserId?.let { sharedPlaylistRepository.removePlaylistSave(playlistId, it).getOrThrow() }
-                        localPlaylistRepository.getLocalPlaylistBySourceSharedId(playlistId)?.let {
-                            localPlaylistRepository.deleteLocalPlaylist(it.id, "Removed").collect {}
+                        sharedPlaylistRepository.removePlaylistSave(sourceId, owner).getOrThrow()
+                        localPlaylistRepository.getLocalPlaylistBySourceSharedId(sourceId)?.let {
+                            val result = localPlaylistRepository.deleteLocalPlaylist(it.id, "Removed").first { it !is com.tan.domain.utils.LocalResource.Loading }
+                            check(result is com.tan.domain.utils.LocalResource.Success) { "Local removal failed" }
                         }
                         isSaved = false
-                        playlist = data.copy(addCount = (data.addCount - 1).coerceAtLeast(0))
                     }
+                    // Count only confirmed unique saves; never guess with +/- 1.
+                    sharedPlaylistRepository.getSharedPlaylist(sourceId).getOrNull()?.let { playlist = it }
                 } catch (error: CancellationException) {
                     throw error
                 } catch (_: Exception) {
-                    isSaved = localPlaylistRepository.getLocalPlaylistBySourceSharedId(playlistId) != null
+                    isSaved = localPlaylistRepository.getLocalPlaylistBySourceSharedId(requireNotNull(data.id)) != null
                     sharedViewModel.makeToast("Gagal memperbarui koleksi. Coba lagi.")
                 } finally { isSaving = false }
+            }
             }
         }
     }
@@ -200,7 +200,7 @@ fun SharedPlaylistScreen(
             item(key = "collection-header", contentType = "header") {
                 CollectionDetailHeader(title = data.title, kind = stringResource(Res.string.playlist),
                     subtitle = data.creatorName.orEmpty(),
-                    metadata = stringResource(Res.string.album_length, tracks.size.toString(), "") + if (data.addCount > 0) " • ${data.addCount} " + stringResource(Res.string.detail_saves) else "",
+                    metadata = stringResource(Res.string.album_length, tracks.size.toString(), "") + " • ${data.addCount} " + stringResource(Res.string.detail_saves),
                     accent = paletteState.palette?.getColorFromPalette() ?: playlistTitleGradient(data.title).first(),
                     onBack = { navController.navigateUp() }, isPlaying = controller.isPlaying && queueData?.data?.playlistId == queueId,
                     canPlay = domainTracks.isNotEmpty(),
@@ -220,11 +220,24 @@ fun SharedPlaylistScreen(
                             onSuccess = { bitmap = it.result.image.toImageBitmap() }, modifier = modifier)
                     },
                     actions = {
-                        if (data.userId != currentUserId) CollectionSaveAction(isSaved, enabled = !isSaving && tracks.isNotEmpty(), onClick = onSave)
-                        else CollectionDetailAction(Icons.Rounded.DeleteOutline, stringResource(Res.string.delete_playlist), enabled = !isDeleting, onClick = { showDeleteDialog = true })
+                        if (data.userId != currentUserId) CollectionDetailAction(
+                            if (isSaved) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                            stringResource(if (isSaved) Res.string.detail_remove_saved else Res.string.detail_save),
+                            selected = isSaved, enabled = !isSaving, onClick = onSave)
+                        else CollectionDetailAction(Icons.Rounded.VisibilityOff, stringResource(Res.string.hide_from_public), enabled = !isDeleting, onClick = { showDeleteDialog = true })
                     },
                 )
             }
+            ownedLocalId?.let { localId -> item("manage-owned") {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(Res.string.playlist_manage_owned_public_hint), color = GratifyColors.TextSecondary,
+                        style = typo().bodyMedium)
+                    OutlinedButton(onClick = { navController.navigate(com.tan.gratify.ui.navigation.destination.list.LocalPlaylistDestination(localId)) },
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                        Text(stringResource(Res.string.playlist_manage_edit))
+                    }
+                }
+            } }
             if (tracks.isEmpty()) item { CollectionDetailEmpty() }
             itemsIndexed(domainTracks, key = { index, track -> "${track.videoId}_$index" }, contentType = { _, _ -> "song" }) { _, track ->
                 SongFullWidthItems(collectionStyle = true, track = track, isPlaying = controller.isPlaying && nowPlaying?.songEntity?.videoId == track.videoId,
@@ -240,18 +253,19 @@ fun SharedPlaylistScreen(
         NowPlayingBottomSheet(onDismiss = { chosenTrack = null }, navController = navController, song = track.toSongEntity())
     }
     if (showDeleteDialog) AlertDialog(onDismissRequest = { if (!isDeleting) showDeleteDialog = false },
-        title = { Text(stringResource(Res.string.delete_playlist)) }, text = { Text(data.title) },
+        title = { Text(stringResource(Res.string.hide_from_public)) }, text = { Text(stringResource(Res.string.playlist_manage_public_hint)) },
         confirmButton = {
             TextButton(enabled = !isDeleting, onClick = {
                 isDeleting = true
                 scope.launch {
                     try {
-                        sharedPlaylistRepository.deleteSharedPlaylist(playlistId).getOrThrow()
+                        withTimeout(20_000) { sharedPlaylistRepository.deleteSharedPlaylist(playlistId).getOrThrow() }
                         navController.navigateUp()
-                    } catch (error: CancellationException) { throw error }
-                    catch (_: Exception) { sharedViewModel.makeToast("Gagal menghapus playlist. Coba lagi.") }
+                    } catch (_: TimeoutCancellationException) { sharedViewModel.makeToast("Koneksi terlalu lama. Coba lagi.") }
+                    catch (error: CancellationException) { throw error }
+                    catch (_: Exception) { sharedViewModel.makeToast("Gagal menyembunyikan playlist. Coba lagi.") }
                     finally { isDeleting = false; showDeleteDialog = false }
                 }
-            }) { Text(stringResource(Res.string.delete_playlist)) }
+            }) { Text(stringResource(Res.string.hide_from_public)) }
         }, dismissButton = { TextButton(enabled = !isDeleting, onClick = { showDeleteDialog = false }) { Text(stringResource(Res.string.cancel)) } })
 }

@@ -89,7 +89,7 @@ class CollectionDetailRenderTest {
                         item {
                             CollectionDetailHeader(title = "Indie untukmu", kind = "Playlist", subtitle = "Gratify",
                                 metadata = "24 lagu • 1 jam 28 menit", accent = Color(0xFF254F42), onBack = {},
-                                onPlay = { playing = !playing; playCount++ }, onShuffle = {}, isPlaying = playing, canPlay = true,
+                                onPlay = { playing = !playing; playCount++ }, onShuffle = {}, isPlaying = playing, canPlay = true, desktop = false,
                                 artwork = { Artwork(it) }, actions = {
                                     CollectionSaveAction(saved, onClick = { saved = !saved })
                                     CollectionDownloadAction(0, onClick = {})
@@ -100,7 +100,7 @@ class CollectionDetailRenderTest {
                             item {
                                 SongFullWidthItems(track = SharedPlaylistTrack(playlistId = "preview", videoId = "preview-$index", title = title,
                                     artists = artist).toTrack().copy(thumbnails = emptyList()), isPlaying = playing && index == 0,
-                                    onClickListener = {}, onMoreClickListener = {}, modifier = Modifier.fillMaxWidth(), collectionStyle = true)
+                                    onClickListener = {}, onMoreClickListener = {}, modifier = Modifier.fillMaxWidth(), collectionStyle = true, desktop = false)
                             }
                         }
                     }
@@ -151,7 +151,7 @@ class CollectionDetailRenderTest {
                     item {
                         CollectionDetailHeader(title = "Playlist baru", kind = "Playlist", subtitle = "Koleksimu", metadata = "0 lagu",
                             accent = GratifyColors.SurfaceRaised, onBack = {}, onPlay = { error("Empty playlist must not play") },
-                            onShuffle = {}, isPlaying = false, canPlay = false, artwork = { Artwork(it) },
+                            onShuffle = {}, isPlaying = false, canPlay = false, artwork = { Artwork(it) }, desktop = false,
                             actions = { CollectionSaveAction(false, onClick = {}); CollectionDownloadAction(0, enabled = false, onClick = {}) })
                         CollectionDetailEmpty()
                     }

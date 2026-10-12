@@ -4,14 +4,10 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import androidx.navigation.NavDestination.Companion.hasRoute
-import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.compose.currentBackStackEntryAsState
 import com.tan.gratify.ui.navigation.destination.home.HomeDestination
 import com.tan.gratify.ui.theme.GratifyColors
 import gratify.composeapp.generated.resources.Res
@@ -19,32 +15,21 @@ import gratify.composeapp.generated.resources.mono
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import kotlin.reflect.KClass
+import com.tan.gratify.ui.navigation.openMainTab
 
 private val mainTabs = listOf(BottomNavScreen.Home, BottomNavScreen.Search, BottomNavScreen.Library, BottomNavScreen.Friends)
 
 @Composable
 private fun rememberSelectedTab(navController: NavController, startDestination: Any): Int {
-    val entry by navController.currentBackStackEntryAsState()
-    var selected by rememberSaveable {
-        mutableIntStateOf(mainTabs.firstOrNull { it.destination::class == startDestination::class }?.ordinal ?: 0)
-    }
-    LaunchedEffect(entry) {
-        mainTabs.firstOrNull { entry?.destination?.hasRoute(it.destination::class) == true }
-            ?.let { selected = it.ordinal }
-    }
-    return selected
+    val stack by navController.currentBackStack.collectAsState()
+    val owner = stack.asReversed().firstNotNullOfOrNull {
+        com.tan.gratify.ui.navigation.MainTab.forDestination(it.destination)
+    } ?: com.tan.gratify.ui.navigation.MainTab.HOME
+    return owner.ordinal
 }
 
 private fun NavController.openTab(screen: BottomNavScreen, onReselect: (KClass<*>) -> Unit) {
-    if (currentDestination?.hasRoute(screen.destination::class) == true) {
-        onReselect(screen.destination::class)
-    } else {
-        navigate(screen.destination) {
-            popUpTo(graph.findStartDestination().id) { saveState = true }
-            launchSingleTop = true
-            restoreState = true
-        }
-    }
+    openMainTab(screen.destination, onRootReselect = onReselect)
 }
 
 @Composable

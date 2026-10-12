@@ -1,0 +1,22 @@
+{
+  "date": "2026-10-01",
+  "project": "Gratify",
+  "version": "2.1.0 (61)",
+  "decision": "NEED_FIX_BEFORE_LAUNCH",
+  "template_sha256": "28bdc46858e5a3f7ed49f26ab199faeb9a986cd9b8873b6171d1ef480296c845",
+  "template_checkboxes": 251,
+  "uat_choice_checkboxes": 10,
+  "release_gate_checkboxes": 12,
+  "status_counts": {
+    "FAIL": 56,
+    "PASS": 10,
+    "PARTIAL": 95,
+    "UNVERIFIED": 84,
+    "N/A": 6
+  },
+  "existing_open_findings": 36,
+  "new_launch_gaps": 5,
+  "source_changed": false,
+  "signed_release_tested": false,
+  "live_backend_tested": false
+}

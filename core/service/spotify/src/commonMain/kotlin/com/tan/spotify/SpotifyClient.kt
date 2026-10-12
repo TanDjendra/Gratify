@@ -14,7 +14,6 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.cookies.AcceptAllCookiesStorage
 import io.ktor.client.plugins.cookies.HttpCookies
 import io.ktor.client.plugins.defaultRequest
-import io.ktor.client.plugins.logging.DEFAULT
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logger
 import io.ktor.client.plugins.logging.Logging
@@ -37,6 +36,11 @@ import kotlinx.serialization.protobuf.ProtoBuf
 import kotlin.random.Random
 
 class SpotifyClient {
+    private val diagnosticLogger = object : Logger {
+        override fun log(message: String) {
+            com.tan.logger.Logger.d("Spotify", message)
+        }
+    }
     private var spotifyClient = createSpotifyClient()
     private var jsonClient =
         createSpotifyClient(
@@ -57,11 +61,11 @@ class SpotifyClient {
             expectSuccess = false
             install(HttpCache)
             install(Logging) {
-                logger = Logger.DEFAULT
+                logger = diagnosticLogger
                 level = LogLevel.NONE
             }
             install(CurlLogger) {
-                logger = { Logger.DEFAULT.log(it) }
+                logger = { diagnosticLogger.log(it) }
             }
             install(HttpSend) {
                 maxSendCount = 100

@@ -1,0 +1,7 @@
+<resources>
+    <string name="notif_channel_gratify">Pengumuman Gratify</string>
+    <string name="notif_channel_messages">Pesan Friends</string>
+    <string name="notif_channel_stories">Story musik</string>
+    <string name="notif_channel_artists">Artis yang diikuti</string>
+    <string name="notif_channel_artists_hint">Musik baru dari artis yang kamu ikuti</string>
+</resources>

@@ -12,6 +12,7 @@ import com.tan.domain.data.model.streams.YouTubeWatchEndpoint
 import com.tan.domain.manager.DataStoreManager
 import com.tan.domain.manager.DataStoreManager.Values.BETTER_LYRICS
 import com.tan.domain.manager.DataStoreManager.Values.GRATIFYMUSIC
+import com.tan.domain.manager.DataStoreManager.Values.SIMPMUSIC
 import com.tan.domain.manager.DataStoreManager.Values.LRCLIB
 import com.tan.domain.manager.DataStoreManager.Values.YOUTUBE
 import com.tan.domain.mediaservice.handler.DownloadHandler
@@ -65,7 +66,7 @@ class NowPlayingBottomSheetViewModel(
             NowPlayingBottomSheetUIState(
                 listLocalPlaylist = emptyList(),
                 listYouTubePlaylist = emptyList(),
-                mainLyricsProvider = GRATIFYMUSIC,
+                mainLyricsProvider = SIMPMUSIC,
                 sleepTimer =
                     SleepTimerState(
                         false,
@@ -108,8 +109,8 @@ class NowPlayingBottomSheetViewModel(
                 launch {
                     dataStoreManager.lyricsProvider.collectLatest { lyricsProvider ->
                         when (lyricsProvider) {
-                            GRATIFYMUSIC -> {
-                                _uiState.update { it.copy(mainLyricsProvider = GRATIFYMUSIC) }
+                            SIMPMUSIC, GRATIFYMUSIC -> {
+                                _uiState.update { it.copy(mainLyricsProvider = SIMPMUSIC) }
                             }
 
                             YOUTUBE -> {
@@ -340,7 +341,7 @@ class NowPlayingBottomSheetViewModel(
                 }
 
                 is NowPlayingBottomSheetUIEvent.ChangeLyricsProvider -> {
-                    if (listOf(GRATIFYMUSIC, YOUTUBE, LRCLIB, BETTER_LYRICS).contains(ev.lyricsProvider)) {
+                    if (listOf(SIMPMUSIC, GRATIFYMUSIC, YOUTUBE, LRCLIB, BETTER_LYRICS).contains(ev.lyricsProvider)) {
                         dataStoreManager.setLyricsProvider(ev.lyricsProvider)
                     } else {
                         return@launch

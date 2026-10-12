@@ -1,6 +1,19 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <application>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <application android:networkSecurityConfig="@xml/media_audit_network_security_config" tools:replace="android:networkSecurityConfig">
         <!-- Debug-only visual checks with sample data, without signing into an account. -->
         <activity android:name=".DesignPreviewActivity" android:exported="true" />
+        <activity android:name=".PlayerPerformanceActivity" android:exported="true" />
+        <activity android:name=".LyricsQualityPerformanceActivity" android:exported="true" />
+        <activity android:name=".PlayerInteractionActivity" android:exported="true" />
+        <activity android:name=".FriendsSocialPreviewActivity" android:exported="true" />
+        <activity android:name=".PlaylistBuilderPreviewActivity" android:exported="true" />
+        <activity android:name=".SettingsPreviewActivity" android:exported="true" />
+        <activity android:name=".AuthPreviewActivity" android:exported="true" />
+        <activity android:name=".SupportPreviewActivity" android:exported="true" />
+        <activity android:name=".SupabaseNetworkAuditActivity" android:exported="true" />
+        <activity android:name=".ProfilePreviewActivity" android:exported="true" />
+        <activity android:name=".NotificationPreviewActivity" android:exported="true" />
+        <activity android:name=".WrappedPreviewActivity" android:exported="true" />
+        <activity android:name=".SearchPreviewActivity" android:exported="true" />
     </application>
 </manifest>

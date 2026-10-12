@@ -24,6 +24,7 @@ import org.jetbrains.compose.resources.stringResource
 fun PlayerControlLayout(
     controllerState: ControlState,
     isSmallSize: Boolean = false,
+    desktop: Boolean = false,
     onUIEvent: (UIEvent) -> Unit,
 ) {
     Row(
@@ -38,16 +39,16 @@ fun PlayerControlLayout(
             enabled = controllerState.isPreviousAvailable, onClick = { onUIEvent(UIEvent.Previous) })
         IconButton(
             onClick = { onUIEvent(UIEvent.PlayPause) },
-            modifier = Modifier.size(if (isSmallSize) 48.dp else 64.dp),
+            modifier = Modifier.size(if (desktop) 36.dp else if (isSmallSize) 48.dp else 64.dp),
             shape = CircleShape,
             colors = IconButtonDefaults.iconButtonColors(
-                containerColor = if (isSmallSize) Color.Transparent else GratifyColors.Accent,
-                contentColor = if (isSmallSize) GratifyColors.TextPrimary else GratifyColors.OnAccent,
+                containerColor = if (desktop) GratifyColors.TextPrimary else if (isSmallSize) Color.Transparent else GratifyColors.Accent,
+                contentColor = if (desktop) GratifyColors.Background else if (isSmallSize) GratifyColors.TextPrimary else GratifyColors.OnAccent,
             ),
         ) {
             Icon(if (controllerState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                 stringResource(if (controllerState.isPlaying) Res.string.ui_pause else Res.string.ui_play),
-                modifier = Modifier.size(if (isSmallSize) 30.dp else 36.dp))
+                modifier = Modifier.size(if (desktop) 24.dp else if (isSmallSize) 30.dp else 36.dp))
         }
         PlaybackControlIcon(Icons.Rounded.SkipNext, stringResource(Res.string.ui_next_track),
             enabled = controllerState.isNextAvailable, onClick = { onUIEvent(UIEvent.Next) })

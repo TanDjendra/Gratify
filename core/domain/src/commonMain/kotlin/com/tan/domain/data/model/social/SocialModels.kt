@@ -26,6 +26,11 @@ data class CloudPlaylistDto(
     @SerialName("thumbnail_url") val thumbnailUrl: String? = null,
     @SerialName("is_public") val isPublic: Boolean = false,
     @SerialName("client_sync_id") val clientSyncId: String? = null,
+    @SerialName("is_profile_pinned") val isProfilePinned: Boolean = false,
+    @SerialName("canonical_playlist_id") val canonicalPlaylistId: String? = null,
+    @SerialName("shared_playlist_id") val sharedPlaylistId: String? = null,
+    @SerialName("add_count") val addCount: Int = 0,
+    @kotlinx.serialization.Transient val automaticImages: List<String> = emptyList(),
 )
 
 @Serializable

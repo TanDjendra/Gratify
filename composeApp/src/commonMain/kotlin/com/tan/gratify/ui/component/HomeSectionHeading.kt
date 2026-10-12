@@ -38,13 +38,14 @@ fun HomeSectionHeading(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.size(36.dp).clip(MaterialTheme.shapes.extraLarge))
         }
-        Column(Modifier.padding(start = 10.dp).weight(1f)) {
+        Column(Modifier.padding(start = if (artworkUrl.isNullOrBlank()) 0.dp else 10.dp).weight(1f)) {
+            Text(title, style = MaterialTheme.typography.headlineSmall,
+                color = GratifyColors.TextPrimary, maxLines = 2, overflow = TextOverflow.Ellipsis)
             if (!subtitle.isNullOrBlank()) {
                 Text(subtitle, style = MaterialTheme.typography.bodySmall,
-                    color = GratifyColors.TextSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    color = GratifyColors.TextSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 4.dp))
             }
-            Text(title, style = MaterialTheme.typography.headlineMedium,
-                color = GratifyColors.TextPrimary, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
     }
 }

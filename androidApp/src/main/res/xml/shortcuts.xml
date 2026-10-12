@@ -7,7 +7,7 @@
         android:shortcutShortLabel="@string/home">
         <intent
             android:targetClass="com.tan.gratify.MainActivity"
-            android:targetPackage="com.tan.gratify"
+            android:targetPackage="@string/app_package_name"
             android:action="com.tan.gratify.action.HOME" />
     </shortcut>
     <shortcut
@@ -17,7 +17,7 @@
         android:shortcutShortLabel="@string/search">
         <intent
             android:targetClass="com.tan.gratify.MainActivity"
-            android:targetPackage="com.tan.gratify"
+            android:targetPackage="@string/app_package_name"
             android:action="com.tan.gratify.action.SEARCH" />
     </shortcut>
     <shortcut
@@ -27,7 +27,7 @@
         android:shortcutShortLabel="@string/library">
         <intent
             android:targetClass="com.tan.gratify.MainActivity"
-            android:targetPackage="com.tan.gratify"
+            android:targetPackage="@string/app_package_name"
             android:action="com.tan.gratify.action.LIBRARY" />
     </shortcut>
 </shortcuts>

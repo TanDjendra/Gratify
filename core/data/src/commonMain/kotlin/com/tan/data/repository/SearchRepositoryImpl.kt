@@ -3,309 +3,59 @@ package com.tan.data.repository
 import com.tan.data.db.datasource.LocalDataSource
 import com.tan.data.mapping.toDomainSearchSuggestions
 import com.tan.data.parser.parsePodcast
-import com.tan.data.parser.search.parseSearchAlbum
-import com.tan.data.parser.search.parseSearchArtist
-import com.tan.data.parser.search.parseSearchPlaylist
-import com.tan.data.parser.search.parseSearchSong
-import com.tan.data.parser.search.parseSearchVideo
+import com.tan.data.parser.search.*
 import com.tan.domain.data.entities.SearchHistory
 import com.tan.domain.data.model.searchResult.SearchSuggestions
-import com.tan.domain.data.model.searchResult.albums.AlbumsResult
-import com.tan.domain.data.model.searchResult.artists.ArtistsResult
-import com.tan.domain.data.model.searchResult.playlists.PlaylistsResult
-import com.tan.domain.data.model.searchResult.songs.SongsResult
-import com.tan.domain.data.model.searchResult.videos.VideosResult
 import com.tan.domain.repository.SearchRepository
 import com.tan.domain.utils.Resource
 import com.tan.kotlinytmusicscraper.YouTube
-import com.tan.logger.Logger
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.withContext
+import com.tan.kotlinytmusicscraper.pages.SearchResult
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
 
-internal class SearchRepositoryImpl(
-    private val localDataSource: LocalDataSource,
-    private val youTube: YouTube,
-) : SearchRepository {
-    override fun getSearchHistory(): Flow<List<SearchHistory>> =
-        flow {
-            emit(localDataSource.getSearchHistory())
-        }.flowOn(Dispatchers.IO)
+/** Emit the first page immediately, preserve cumulative results and stop cyclic cursors. */
+internal fun <T> progressiveSearch(
+    initial: suspend () -> SearchResult, next: suspend (String) -> SearchResult,
+    parse: (SearchResult) -> List<T>, identity: (T) -> String,
+): Flow<Resource<ArrayList<T>>> = flow<Resource<ArrayList<T>>> {
+    var page = initial()
+    val rows = linkedMapOf<String, T>()
+    val cursors = mutableSetOf<String>()
+    repeat(3) { index ->
+        currentCoroutineContext().ensureActive()
+        parse(page).forEach { item -> identity(item).takeIf { it.isNotBlank() }?.let { rows[it] = item } }
+        emit(Resource.Success(ArrayList(rows.values)))
+        val cursor = page.continuation?.takeIf { it.isNotBlank() && cursors.add(it) } ?: return@flow
+        if (index < 2) page = next(cursor)
+    }
+}.catch { error ->
+    if (error is CancellationException) throw error
+    emit(Resource.Error("Search unavailable"))
+}.flowOn(Dispatchers.IO)
 
-    override fun insertSearchHistory(searchHistory: SearchHistory): Flow<Long> =
-        flow {
-            emit(localDataSource.insertSearchHistory(searchHistory))
-        }.flowOn(Dispatchers.IO)
+internal class SearchRepositoryImpl(private val localDataSource: LocalDataSource, private val youTube: YouTube) : SearchRepository {
+    override fun getSearchHistory() = localDataSource.observeSearchHistory().flowOn(Dispatchers.IO)
+    override fun insertSearchHistory(searchHistory: SearchHistory) = flow { emit(localDataSource.insertSearchHistory(searchHistory)) }.flowOn(Dispatchers.IO)
+    override fun insertSearchHistoryForOwner(searchHistory: SearchHistory, owner: String?) = flow {
+        emit(localDataSource.insertOwnedSearchHistory(owner, searchHistory))
+    }.flowOn(Dispatchers.IO)
+    override suspend fun deleteSearchHistory() = withContext(Dispatchers.IO) { localDataSource.deleteSearchHistory() }
+    override suspend fun deleteSearchHistoryForOwner(owner: String?, query: String?) = withContext(Dispatchers.IO) {
+        localDataSource.deleteOwnedSearchHistory(owner, query)
+    }
+    private fun <T> pages(query: String, filter: YouTube.SearchFilter, parse: (SearchResult) -> List<T>, identity: (T) -> String) =
+        progressiveSearch({ youTube.search(query, filter).getOrThrow() }, { youTube.searchContinuation(it).getOrThrow() }, parse, identity)
 
-    override suspend fun deleteSearchHistory() =
-        withContext(Dispatchers.IO) {
-            localDataSource.deleteSearchHistory()
-        }
-
-    override fun getSearchDataSong(query: String): Flow<Resource<ArrayList<SongsResult>>> =
-        flow {
-            runCatching {
-                youTube
-                    .search(query, YouTube.SearchFilter.FILTER_SONG)
-                    .onSuccess { result ->
-                        val listSongs: ArrayList<SongsResult> = arrayListOf()
-                        var countinueParam = result.continuation
-                        parseSearchSong(result).let { list ->
-                            listSongs.addAll(list)
-                        }
-                        emit(Resource.Success<ArrayList<SongsResult>>(ArrayList(listSongs)))
-
-                        var count = 0
-                        while (count < 2 && countinueParam != null) {
-                            youTube
-                                .searchContinuation(countinueParam)
-                                .onSuccess { values ->
-                                    parseSearchSong(values).let { list ->
-                                        listSongs.addAll(list)
-                                    }
-                                    emit(Resource.Success<ArrayList<SongsResult>>(ArrayList(listSongs)))
-                                    count++
-                                    countinueParam = values.continuation
-                                }.onFailure {
-                                    Logger.e("Continue", "Error: ${it.message}")
-                                    countinueParam = null
-                                    count++
-                                }
-                        }
-                    }.onFailure { e ->
-                        Logger.d("Search", "Error: ${e.message}")
-                        emit(Resource.Error<ArrayList<SongsResult>>(e.message.toString()))
-                    }
-            }
-        }.flowOn(Dispatchers.IO)
-
-    override fun getSearchDataVideo(query: String): Flow<Resource<ArrayList<VideosResult>>> =
-        flow {
-            runCatching {
-                youTube
-                    .search(query, YouTube.SearchFilter.FILTER_VIDEO)
-                    .onSuccess { result ->
-                        val listSongs: ArrayList<VideosResult> = arrayListOf()
-                        var countinueParam = result.continuation
-                        parseSearchVideo(result).let { list ->
-                            listSongs.addAll(list)
-                        }
-                        var count = 0
-                        while (count < 2 && countinueParam != null) {
-                            youTube
-                                .searchContinuation(countinueParam)
-                                .onSuccess { values ->
-                                    parseSearchVideo(values).let { list ->
-                                        listSongs.addAll(list)
-                                    }
-                                    count++
-                                    countinueParam = values.continuation
-                                }.onFailure {
-                                    Logger.e("Continue", "Error: ${it.message}")
-                                    countinueParam = null
-                                    count++
-                                }
-                        }
-
-                        emit(Resource.Success<ArrayList<VideosResult>>(listSongs))
-                    }.onFailure { e ->
-                        Logger.d("Search", "Error: ${e.message}")
-                        emit(Resource.Error<ArrayList<VideosResult>>(e.message.toString()))
-                    }
-            }
-        }.flowOn(Dispatchers.IO)
-
-    override fun getSearchDataPodcast(query: String): Flow<Resource<ArrayList<PlaylistsResult>>> =
-        flow {
-            runCatching {
-                youTube
-                    .search(query, YouTube.SearchFilter.FILTER_PODCAST)
-                    .onSuccess { result ->
-                        println(query)
-                        val listPlaylist: ArrayList<PlaylistsResult> = arrayListOf()
-                        var countinueParam = result.continuation
-                        Logger.w("Podcast", "result: $result")
-                        parsePodcast(result.listPodcast).let { list ->
-                            listPlaylist.addAll(list)
-                        }
-                        var count = 0
-                        while (count < 2 && countinueParam != null) {
-                            youTube
-                                .searchContinuation(countinueParam)
-                                .onSuccess { values ->
-                                    parsePodcast(values.listPodcast).let { list ->
-                                        listPlaylist.addAll(list)
-                                    }
-                                    count++
-                                    countinueParam = values.continuation
-                                }.onFailure {
-                                    Logger.e("Continue", "Error: ${it.message}")
-                                    countinueParam = null
-                                    count++
-                                }
-                        }
-                        emit(Resource.Success<ArrayList<PlaylistsResult>>(listPlaylist))
-                    }.onFailure { e ->
-                        Logger.d("Search", "Error: ${e.message}")
-                        emit(Resource.Error<ArrayList<PlaylistsResult>>(e.message.toString()))
-                    }
-            }
-        }.flowOn(Dispatchers.IO)
-
-    override fun getSearchDataFeaturedPlaylist(query: String): Flow<Resource<ArrayList<PlaylistsResult>>> =
-        flow {
-            runCatching {
-                youTube
-                    .search(query, YouTube.SearchFilter.FILTER_FEATURED_PLAYLIST)
-                    .onSuccess { result ->
-                        val listPlaylist: ArrayList<PlaylistsResult> = arrayListOf()
-                        var countinueParam = result.continuation
-                        parseSearchPlaylist(result).let { list ->
-                            listPlaylist.addAll(list)
-                        }
-                        var count = 0
-                        while (count < 2 && countinueParam != null) {
-                            youTube
-                                .searchContinuation(countinueParam)
-                                .onSuccess { values ->
-                                    parseSearchPlaylist(values).let { list ->
-                                        listPlaylist.addAll(list)
-                                    }
-                                    count++
-                                    countinueParam = values.continuation
-                                }.onFailure {
-                                    Logger.e("Continue", "Error: ${it.message}")
-                                    countinueParam = null
-                                    count++
-                                }
-                        }
-                        emit(Resource.Success<ArrayList<PlaylistsResult>>(listPlaylist))
-                    }.onFailure { e ->
-                        Logger.d("Search", "Error: ${e.message}")
-                        emit(Resource.Error<ArrayList<PlaylistsResult>>(e.message.toString()))
-                    }
-            }
-        }.flowOn(Dispatchers.IO)
-
-    override fun getSearchDataArtist(query: String): Flow<Resource<ArrayList<ArtistsResult>>> =
-        flow {
-            runCatching {
-                youTube
-                    .search(query, YouTube.SearchFilter.FILTER_ARTIST)
-                    .onSuccess { result ->
-                        val listArtist: ArrayList<ArtistsResult> = arrayListOf()
-                        var countinueParam = result.continuation
-                        parseSearchArtist(result).let { list ->
-                            listArtist.addAll(list)
-                        }
-                        var count = 0
-                        while (count < 2 && countinueParam != null) {
-                            youTube
-                                .searchContinuation(countinueParam)
-                                .onSuccess { values ->
-                                    parseSearchArtist(values).let { list ->
-                                        listArtist.addAll(list)
-                                    }
-                                    count++
-                                    countinueParam = values.continuation
-                                }.onFailure {
-                                    Logger.e("Continue", "Error: ${it.message}")
-                                    countinueParam = null
-                                    count++
-                                }
-                        }
-                        emit(Resource.Success<ArrayList<ArtistsResult>>(listArtist))
-                    }.onFailure { e ->
-                        Logger.d("Search", "Error: ${e.message}")
-                        emit(Resource.Error<ArrayList<ArtistsResult>>(e.message.toString()))
-                    }
-            }
-        }.flowOn(Dispatchers.IO)
-
-    override fun getSearchDataAlbum(query: String): Flow<Resource<ArrayList<AlbumsResult>>> =
-        flow {
-            runCatching {
-                youTube
-                    .search(query, YouTube.SearchFilter.FILTER_ALBUM)
-                    .onSuccess { result ->
-                        val listAlbum: ArrayList<AlbumsResult> = arrayListOf()
-                        var countinueParam = result.continuation
-                        parseSearchAlbum(result).let { list ->
-                            listAlbum.addAll(list)
-                        }
-                        var count = 0
-                        while (count < 2 && countinueParam != null) {
-                            youTube
-                                .searchContinuation(countinueParam)
-                                .onSuccess { values ->
-                                    parseSearchAlbum(values).let { list ->
-                                        listAlbum.addAll(list)
-                                    }
-                                    count++
-                                    countinueParam = values.continuation
-                                }.onFailure {
-                                    Logger.e("Continue", "Error: ${it.message}")
-                                    countinueParam = null
-                                    count++
-                                }
-                        }
-                        emit(Resource.Success<ArrayList<AlbumsResult>>(listAlbum))
-                    }.onFailure { e ->
-                        Logger.d("Search", "Error: ${e.message}")
-                        emit(Resource.Error<ArrayList<AlbumsResult>>(e.message.toString()))
-                    }
-            }
-        }.flowOn(Dispatchers.IO)
-
-    override fun getSearchDataPlaylist(query: String): Flow<Resource<ArrayList<PlaylistsResult>>> =
-        flow {
-            runCatching {
-                youTube
-                    .search(query, YouTube.SearchFilter.FILTER_COMMUNITY_PLAYLIST)
-                    .onSuccess { result ->
-                        val listPlaylist: ArrayList<PlaylistsResult> = arrayListOf()
-                        var countinueParam = result.continuation
-                        parseSearchPlaylist(result).let { list ->
-                            listPlaylist.addAll(list)
-                        }
-                        var count = 0
-                        while (count < 2 && countinueParam != null) {
-                            youTube
-                                .searchContinuation(countinueParam)
-                                .onSuccess { values ->
-                                    parseSearchPlaylist(values).let { list ->
-                                        listPlaylist.addAll(list)
-                                    }
-                                    count++
-                                    countinueParam = values.continuation
-                                }.onFailure {
-                                    Logger.e("Continue", "Error: ${it.message}")
-                                    countinueParam = null
-                                    count++
-                                }
-                        }
-                        emit(Resource.Success<ArrayList<PlaylistsResult>>(listPlaylist))
-                    }.onFailure { e ->
-                        Logger.d("Search", "Error: ${e.message}")
-                        emit(Resource.Error<ArrayList<PlaylistsResult>>(e.message.toString()))
-                    }
-            }
-        }.flowOn(Dispatchers.IO)
-
-    override fun getSuggestQuery(query: String): Flow<Resource<SearchSuggestions>> =
-        flow {
-            runCatching {
-                youTube
-                    .getYTMusicSearchSuggestions(query)
-                    .onSuccess {
-                        emit(Resource.Success(it.toDomainSearchSuggestions()))
-                    }.onFailure { e ->
-                        Logger.d("Suggest", "Error: ${e.message}")
-                        emit(Resource.Error<SearchSuggestions>(e.message.toString()))
-                    }
-            }
-        }.flowOn(Dispatchers.IO)
+    override fun getSearchDataSong(query: String) = pages(query, YouTube.SearchFilter.FILTER_SONG, ::parseSearchSong) { it.videoId }
+    override fun getSearchDataVideo(query: String) = pages(query, YouTube.SearchFilter.FILTER_VIDEO, ::parseSearchVideo) { it.videoId }
+    override fun getSearchDataAlbum(query: String) = pages(query, YouTube.SearchFilter.FILTER_ALBUM, ::parseSearchAlbum) { it.browseId }
+    override fun getSearchDataArtist(query: String) = pages(query, YouTube.SearchFilter.FILTER_ARTIST, ::parseSearchArtist) { it.browseId }
+    override fun getSearchDataPlaylist(query: String) = pages(query, YouTube.SearchFilter.FILTER_COMMUNITY_PLAYLIST, ::parseSearchPlaylist) { it.browseId }
+    override fun getSearchDataFeaturedPlaylist(query: String) = pages(query, YouTube.SearchFilter.FILTER_FEATURED_PLAYLIST, ::parseSearchPlaylist) { it.browseId }
+    override fun getSearchDataPodcast(query: String) = pages(query, YouTube.SearchFilter.FILTER_PODCAST, { parsePodcast(it.listPodcast) }) { it.browseId }
+    override fun getSuggestQuery(query: String) = flow<Resource<SearchSuggestions>> {
+        val suggestions = youTube.getYTMusicSearchSuggestions(query).getOrThrow()
+        currentCoroutineContext().ensureActive()
+        emit(Resource.Success(suggestions.toDomainSearchSuggestions()))
+    }.catch { error -> if (error is CancellationException) throw error; emit(Resource.Error("Suggestions unavailable")) }.flowOn(Dispatchers.IO)
 }

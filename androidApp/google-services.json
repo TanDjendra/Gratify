@@ -1,45 +1,123 @@
 {
   "project_info": {
-    "project_number": "205110987717",
-    "project_id": "tan-gratify",
-    "storage_bucket": "tan-gratify.firebasestorage.app"
+    "project_number": "1072882393306",
+    "project_id": "gratify-auth",
+    "storage_bucket": "gratify-auth.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:205110987717:android:153b7e7238ed280bafd9ac",
+        "mobilesdk_app_id": "1:1072882393306:android:d31e9101ff8065c5cf05e3",
         "android_client_info": {
           "package_name": "com.tan.gratify"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "1072882393306-066inpjhs2njrliu61rulg5oq28c7v9m.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyARSA0mb4bNSdJ-3nm5cCUzwTWMv54Jl88"
+          "current_key": "AIzaSyDJ1SgYYPrz8YLKTaHfQuk6C0DGjWZT74Y"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1072882393306-066inpjhs2njrliu61rulg5oq28c7v9m.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "1:205110987717:android:38a13d9414ee2d5fafd9ac",
+        "mobilesdk_app_id": "1:1072882393306:android:c5b3490a2cd9e942cf05e3",
         "android_client_info": {
           "package_name": "com.tan.gratify.dev"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "1072882393306-066inpjhs2njrliu61rulg5oq28c7v9m.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyARSA0mb4bNSdJ-3nm5cCUzwTWMv54Jl88"
+          "current_key": "AIzaSyDJ1SgYYPrz8YLKTaHfQuk6C0DGjWZT74Y"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1072882393306-066inpjhs2njrliu61rulg5oq28c7v9m.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1072882393306:android:12d260b65ff36309cf05e3",
+        "android_client_info": {
+          "package_name": "com.tan.gratify.next"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1072882393306-066inpjhs2njrliu61rulg5oq28c7v9m.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJ1SgYYPrz8YLKTaHfQuk6C0DGjWZT74Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1072882393306-066inpjhs2njrliu61rulg5oq28c7v9m.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1072882393306:android:0560d9e2d933b9facf05e3",
+        "android_client_info": {
+          "package_name": "com.tan.gratify.next.dev"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1072882393306-066inpjhs2njrliu61rulg5oq28c7v9m.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJ1SgYYPrz8YLKTaHfQuk6C0DGjWZT74Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1072882393306-066inpjhs2njrliu61rulg5oq28c7v9m.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

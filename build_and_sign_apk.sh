@@ -6,7 +6,7 @@ set -e
 # Default variables
 BUILD_TYPE="release"
 BUILD_VARIANT="full"
-KEYSTORE_PATH="./gratify.jks"
+KEYSTORE_PATH="${KEYSTORE_PATH:-./gratify.jks}"
 # Read passwords from environment variables or use default (for backward compatibility)
 KEYSTORE_PASSWORD="${KEYSTORE_PASSWORD}"
 KEY_ALIAS="${KEY_ALIAS}"
@@ -27,6 +27,8 @@ if [ -z "$KEY_ALIAS" ]; then
   echo "Error: KEY_ALIAS environment variable must be set"
   exit 1
 fi
+
+export KEYSTORE_PASSWORD KEY_PASSWORD
 
 
 
@@ -114,7 +116,9 @@ echo "Project cleaned successfully."
 
 # Step 2: Build the APK
 echo "[Step 2] Building APK..."
-./gradlew androidApp:assemble"$BUILD_TYPE" -x lint -x lintVital
+BUILD_FULL="false"
+if [ "$BUILD_VARIANT" = "full" ]; then BUILD_FULL="true"; fi
+./gradlew androidApp:assemble"$BUILD_TYPE" -PisFullBuild="$BUILD_FULL" -x lint -x lintVital
 echo "APK built successfully."
 
 # Step 3: Locate the built APKs
@@ -146,8 +150,8 @@ for APK_PATH in $APK_PATHS; do
     --alignment-preserved \
     --ks "$KEYSTORE_PATH" \
     --ks-key-alias "$KEY_ALIAS" \
-    --ks-pass pass:"$KEYSTORE_PASSWORD" \
-    --key-pass pass:"$KEY_PASSWORD" \
+    --ks-pass env:KEYSTORE_PASSWORD \
+    --key-pass env:KEY_PASSWORD \
     --out "$SIGNED_APK_PATH" \
     "$ALIGNED_APK_PATH"
   echo "APK signed successfully: $SIGNED_APK_PATH"

@@ -37,6 +37,7 @@ fun AppNavigationGraph(
     showNowPlayingSheet: () -> Unit = {},
     onScrolling: (onTop: Boolean) -> Unit = {},
     onOpenDrawer: () -> Unit = {},
+    onLoginRequired: () -> Unit = {},
 ) {
     val homeViewModel: HomeViewModel = koinViewModel()
     NavHost(
@@ -88,6 +89,7 @@ fun AppNavigationGraph(
                 onOpenDrawer = onOpenDrawer,
                 navController = navController,
                 onScrolling = onScrolling,
+                onLoginRequired = onLoginRequired,
             )
         }
         composable<FullscreenDestination> {
@@ -114,15 +116,9 @@ fun AppNavigationGraph(
         listScreenGraph(
             innerPadding = innerPadding,
             navController = navController,
+            onLoginRequired = onLoginRequired,
         )
-        // Login screen graph
-        loginScreenGraph(
-            innerPadding = innerPadding,
-            navController = navController,
-            hideBottomBar = hideNavBar,
-            showBottomBar = {
-                showNavBar(false)
-            },
-        )
+        // Authentication/onboarding belongs to the ROOT host. This is only YouTube management.
+        youTubeSettingsGraph(navController)
     }
 }

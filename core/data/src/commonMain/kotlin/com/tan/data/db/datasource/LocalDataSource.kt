@@ -28,6 +28,7 @@ import kotlinx.datetime.LocalDateTime
 
 import com.tan.domain.manager.DataStoreManager
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
 
@@ -45,6 +46,12 @@ internal class LocalDataSource(
     suspend fun getAllDownloadingPlaylist() = databaseDao.getAllDownloadingPlaylist()
 
     suspend fun getSearchHistory() = databaseDao.getSearchHistory()
+
+    fun observeSearchHistory() = databaseDao.observeSearchHistory()
+
+    suspend fun insertOwnedSearchHistory(owner: String?, entry: SearchHistory) = databaseDao.insertOwnedSearchHistory(owner, entry)
+
+    suspend fun deleteOwnedSearchHistory(owner: String?, query: String?) = databaseDao.deleteOwnedSearchHistory(owner, query)
 
     suspend fun deleteSearchHistory() = databaseDao.deleteSearchHistory()
 
@@ -178,6 +185,8 @@ internal class LocalDataSource(
 
     suspend fun getArtist(channelId: String) = databaseDao.getArtist(channelId)
 
+    fun observeFollowedArtists() = databaseDao.observeFollowedArtists()
+
     suspend fun getFollowedArtists(
         limit: Int,
         offset: Int,
@@ -288,7 +297,7 @@ internal class LocalDataSource(
     )
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    fun getAllLocalPlaylistsFlow() = getActiveUserEmailFlow().flatMapLatest { ownerEmail ->
+    fun getAllLocalPlaylistsFlow() = getActiveUserEmailFlow().distinctUntilChanged().flatMapLatest { ownerEmail ->
         databaseDao.getAllLocalPlaylistsFlow(ownerEmail)
     }
 
@@ -307,8 +316,10 @@ internal class LocalDataSource(
         return databaseDao.insertLocalPlaylist(localPlaylist.copy(ownerEmail = email, syncId = localPlaylist.syncId ?: Uuid.random().toString()))
     }
 
-    suspend fun createLocalPlaylistWithSongs(playlist: LocalPlaylistEntity, songs: List<SongEntity>): Long {
-        val owner = databaseDao.getLibraryOwner()
+    suspend fun createLocalPlaylistWithSongs(playlist: LocalPlaylistEntity, songs: List<SongEntity>): Long =
+        createLocalPlaylistWithSongs(playlist, songs, databaseDao.getLibraryOwner())
+
+    suspend fun createLocalPlaylistWithSongs(playlist: LocalPlaylistEntity, songs: List<SongEntity>, owner: String?): Long {
         val email = getActiveUserEmail()
         return databaseDao.createLocalPlaylistWithSongs(owner,
             playlist.copy(ownerEmail = email, syncId = playlist.syncId ?: Uuid.random().toString()), songs)
@@ -320,6 +331,15 @@ internal class LocalDataSource(
         databaseDao.ensurePlaylistSyncId(id, ownerId, Uuid.random().toString())
 
     suspend fun getLocalPlaylistBySyncId(syncId: String) = databaseDao.getLocalPlaylistBySyncId(syncId)
+    suspend fun cacheCanonicalPlaylist(owner: String, playlist: LocalPlaylistEntity, songs: List<SongEntity>) =
+        databaseDao.cacheCanonicalPlaylist(owner,playlist.copy(ownerEmail=getActiveUserEmail()),songs)
+    suspend fun reconcileCanonicalPlaylists(owner: String, memberIds: List<String>) =
+        databaseDao.reconcileCanonicalPlaylists(owner,memberIds)
+    suspend fun removeCanonicalCache(owner:String,id:Long) {
+        check(getLibraryOwner()==owner)
+        check(databaseDao.getLocalPlaylist(id)?.canonicalPlaylistId!=null)
+        databaseDao.deleteLocalPlaylist(id)
+    }
 
     suspend fun applyPlaylistTombstones(ownerId: String, syncIds: List<String>) =
         databaseDao.applyPlaylistTombstones(ownerId, syncIds)
@@ -330,18 +350,44 @@ internal class LocalDataSource(
     suspend fun getLocalPlaylistBySourceSharedId(sharedPlaylistId: String) =
         databaseDao.getLocalPlaylistBySourceSharedId(sharedPlaylistId)
 
+    suspend fun restoreSavedPlaylist(owner: String, playlist: LocalPlaylistEntity, songs: List<SongEntity>) =
+        databaseDao.restoreSavedPlaylist(owner, playlist.copy(ownerEmail = getActiveUserEmail(), syncId = Uuid.random().toString()), songs)
+
     suspend fun updateSourceAvailability(sharedPlaylistId: String, availability: Int) =
         databaseDao.updateSourceAvailability(sharedPlaylistId, availability)
 
     suspend fun updateLocalPlaylistTitle(
         title: String,
         id: Long,
-    ) = databaseDao.updateLocalPlaylistTitle(title, id)
+    ) = databaseDao.setOwnedPlaylistTitle(databaseDao.getLibraryOwner(),id,title,Uuid.random().toString())
 
     suspend fun updateLocalPlaylistThumbnail(
         thumbnail: String,
         id: Long,
-    ) = databaseDao.updateLocalPlaylistThumbnail(thumbnail, id)
+    ) {
+        val owner=databaseDao.getLibraryOwner()
+        val coverOwner=com.tan.data.repository.playlistCoverPath(thumbnail)?.substringBefore('/')
+        check(coverOwner==null || coverOwner==owner) { "Account ownership changed" }
+        databaseDao.setOwnedPlaylistThumbnail(owner,id,thumbnail,Uuid.random().toString())
+    }
+
+    suspend fun queuePlaylistMetadata(owner: String, id: Long): String {
+        val revision=Uuid.random().toString()
+        databaseDao.markPlaylistMetadataDirty(owner,id,revision)
+        return revision
+    }
+
+    suspend fun updatePlaylistDetails(owner: String?, id: Long, title: String, thumbnail: String?) {
+        val coverOwner = thumbnail?.let { com.tan.data.repository.playlistCoverPath(it)?.substringBefore('/') }
+        check(coverOwner == null || coverOwner == owner) { "Account ownership changed" }
+        databaseDao.setOwnedPlaylistDetails(owner, id, title, thumbnail, Uuid.random().toString())
+    }
+
+    suspend fun appendOwnedPlaylistSongs(owner: String?, id: Long, songs: List<SongEntity>) =
+        databaseDao.appendOwnedPlaylistSongs(owner, id, songs, Uuid.random().toString())
+
+    suspend fun removeOwnedPlaylistSong(owner: String?, id: Long, videoId: String) =
+        databaseDao.removeOwnedPlaylistSong(owner, id, videoId, Uuid.random().toString())
 
     suspend fun updateLocalPlaylistTracks(
         tracks: List<String>,
@@ -553,6 +599,12 @@ internal class LocalDataSource(
     suspend fun insertNotification(notificationEntity: NotificationEntity) = databaseDao.insertNotification(notificationEntity)
 
     suspend fun getAllNotification() = databaseDao.getAllNotification()
+
+    fun observeNotifications() = databaseDao.observeNotifications()
+    suspend fun insertNotificationOnce(entity: NotificationEntity) = databaseDao.insertNotificationOnce(entity)
+    suspend fun notificationAccountOwner() = databaseDao.getLibraryOwner()
+    suspend fun claimNotificationDelivery(entity: NotificationEntity) = databaseDao.claimNotificationDelivery(entity)
+    suspend fun claimDeveloperNotificationDelivery(entity: NotificationEntity) = databaseDao.claimDeveloperNotificationDelivery(entity)
 
     suspend fun deleteNotification(id: Long) = databaseDao.deleteNotification(id)
 

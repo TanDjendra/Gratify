@@ -7,7 +7,7 @@ import com.tan.logger.Logger
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.ProxyConfig
 import io.ktor.client.plugins.HttpSend
-import io.ktor.client.plugins.cache.HttpCache
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.compression.ContentEncoding
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.cookies.AcceptAllCookiesStorage
@@ -42,7 +42,11 @@ class GratifyLyrics {
         HttpClient(getEngine()) {
             expectSuccess = false
             followRedirects = true
-            install(HttpCache)
+            install(HttpTimeout) {
+                requestTimeoutMillis = 8000
+                connectTimeoutMillis = 5000
+                socketTimeoutMillis = 8000
+            }
             install(CurlLogger) {
                 logger = { Logger.d("GratifyLyrics", it) }
             }
@@ -178,7 +182,8 @@ class GratifyLyrics {
         q_artist: String,
     ) = httpClient.get("https://lrclib.net/api/search") {
         buildDefaultHeaders()
-        parameter("q", "$q_artist $q_track")
+        parameter("track_name", lyricsSearchTitle(q_track))
+        q_artist.takeIf(String::isNotBlank)?.let { parameter("artist_name", it.removeSuffix(" - Topic")) }
     }
 
     suspend fun searchBetterLyrics(
@@ -187,9 +192,9 @@ class GratifyLyrics {
         durationSeconds: Int?,
     ) = httpClient.get("https://lyrics-api.boidu.dev/getLyrics") {
         buildDefaultHeaders()
-        parameter("s", q_track)
-        parameter("a", q_artist)
-        durationSeconds?.let {
+        parameter("s", lyricsSearchTitle(q_track))
+        parameter("a", q_artist.removeSuffix(" - Topic"))
+        durationSeconds?.takeIf { it > 0 }?.let {
             parameter("d", it)
         }
     }

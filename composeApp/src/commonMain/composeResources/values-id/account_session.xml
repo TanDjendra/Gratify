@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="account_library_recovery_message">Library akun belum bisa dibuka. Data lokal tetap tersimpan. Silakan coba lagi.</string>
+    <string name="account_library_retry">Coba lagi</string>
+</resources>

@@ -128,12 +128,7 @@ class GratifyLyricsClient {
                     q_track = q_track,
                     q_artist = q_artist,
                 ).body<List<LrclibObject>>()
-        val lrclibObject: LrclibObject? =
-            if (duration != null) {
-                rs.find { abs(it.duration.toInt() - duration) <= 10 }
-            } else {
-                rs.firstOrNull()
-            }
+        val lrclibObject = selectLrclibResult(rs, duration)
         if (lrclibObject != null) {
             val syncedLyrics = lrclibObject.syncedLyrics
             val plainLyrics = lrclibObject.plainLyrics

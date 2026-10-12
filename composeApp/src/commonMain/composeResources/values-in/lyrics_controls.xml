@@ -1,0 +1,18 @@
+<resources>
+    <string name="lyrics_animation">Tampilan lirik</string>
+    <string name="lyrics_animation_on">Animasi SimpMusic</string>
+    <string name="lyrics_no_animation">Standar · per baris</string>
+    <string name="share_lyrics">Bagikan lirik</string>
+    <string name="share_lyrics_select">Pilih hingga 3 baris berurutan</string>
+    <string name="share_lyrics_count">%1$d baris dipilih</string>
+    <string name="share_lyrics_limit">Kartu memuat maksimal 3 baris berurutan.</string>
+    <string name="share_lyrics_preview">Pratinjau kartu</string>
+    <string name="share_lyrics_image">Bagikan gambar</string>
+    <string name="share_lyrics_failed">Gambar belum bisa dibagikan. Coba lagi.</string>
+    <string name="player_loading">Memuat</string>
+    <string name="share_lyrics_save">Simpan gambar</string>
+    <string name="share_lyrics_saved">Gambar tersimpan.</string>
+    <string name="lyrics_finding">Mencari lirik…</string>
+    <string name="lyrics_missing">Lirik belum tersedia</string>
+    <string name="lyrics_retry">Coba lagi</string>
+</resources>

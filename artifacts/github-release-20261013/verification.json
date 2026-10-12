@@ -1,0 +1,114 @@
+{
+  "version_name": "2.1.5",
+  "version_code": 66,
+  "build_successful": true,
+  "tests": {
+    "tests": 13,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "experimental_playlist_features_enabled": false,
+  "release_apks": [
+    {
+      "path": "D:\\Tan\\Gratify\\artifacts\\github-release-20261013\\Gratify-2.1.5-release-arm64-v8a.apk",
+      "bytes": 28066702,
+      "sha256": "2d8dc4e95a0e3b5e0d6ded32e0b94a5d352dfc5c46e74aa581ced73970811aef",
+      "certificate_sha256": "efefe1b8bf7c6502aeeb60db9a45b430dc50040e11c6f76eb22e2308a51c316a",
+      "release_signature_verified": true,
+      "debuggable": false,
+      "zipalign_16k": true,
+      "native_64bit_alignment_checked": [
+        "lib/arm64-v8a/libandroidx.graphics.path.so",
+        "lib/arm64-v8a/libavcodec.so",
+        "lib/arm64-v8a/libavdevice.so",
+        "lib/arm64-v8a/libavfilter.so",
+        "lib/arm64-v8a/libavformat.so",
+        "lib/arm64-v8a/libavutil.so",
+        "lib/arm64-v8a/libc++_shared.so",
+        "lib/arm64-v8a/libdatastore_shared_counter.so",
+        "lib/arm64-v8a/libffmpegkit.so",
+        "lib/arm64-v8a/libffmpegkit_abidetect.so",
+        "lib/arm64-v8a/libsentry-android.so",
+        "lib/arm64-v8a/libsentry.so",
+        "lib/arm64-v8a/libsqliteJni.so",
+        "lib/arm64-v8a/libswresample.so",
+        "lib/arm64-v8a/libswscale.so"
+      ],
+      "matches_final_unsigned_payload": true,
+      "experimental_playlist_features_enabled": false
+    },
+    {
+      "path": "D:\\Tan\\Gratify\\artifacts\\github-release-20261013\\Gratify-2.1.5-release-universal.apk",
+      "bytes": 55098552,
+      "sha256": "8f907eb872b3b71107a11977e85aef0104fdfc73af66d4ef86c6d9862d439846",
+      "certificate_sha256": "efefe1b8bf7c6502aeeb60db9a45b430dc50040e11c6f76eb22e2308a51c316a",
+      "release_signature_verified": true,
+      "debuggable": false,
+      "zipalign_16k": true,
+      "native_64bit_alignment_checked": [
+        "lib/arm64-v8a/libandroidx.graphics.path.so",
+        "lib/arm64-v8a/libavcodec.so",
+        "lib/arm64-v8a/libavdevice.so",
+        "lib/arm64-v8a/libavfilter.so",
+        "lib/arm64-v8a/libavformat.so",
+        "lib/arm64-v8a/libavutil.so",
+        "lib/arm64-v8a/libc++_shared.so",
+        "lib/arm64-v8a/libdatastore_shared_counter.so",
+        "lib/arm64-v8a/libffmpegkit.so",
+        "lib/arm64-v8a/libffmpegkit_abidetect.so",
+        "lib/arm64-v8a/libsentry-android.so",
+        "lib/arm64-v8a/libsentry.so",
+        "lib/arm64-v8a/libsqliteJni.so",
+        "lib/arm64-v8a/libswresample.so",
+        "lib/arm64-v8a/libswscale.so",
+        "lib/x86_64/libandroidx.graphics.path.so",
+        "lib/x86_64/libavcodec.so",
+        "lib/x86_64/libavdevice.so",
+        "lib/x86_64/libavfilter.so",
+        "lib/x86_64/libavformat.so",
+        "lib/x86_64/libavutil.so",
+        "lib/x86_64/libc++_shared.so",
+        "lib/x86_64/libdatastore_shared_counter.so",
+        "lib/x86_64/libffmpegkit.so",
+        "lib/x86_64/libffmpegkit_abidetect.so",
+        "lib/x86_64/libsentry-android.so",
+        "lib/x86_64/libsentry.so",
+        "lib/x86_64/libsqliteJni.so",
+        "lib/x86_64/libswresample.so",
+        "lib/x86_64/libswscale.so"
+      ],
+      "matches_final_unsigned_payload": true,
+      "experimental_playlist_features_enabled": false
+    }
+  ],
+  "public_assets": {
+    "Gratify.apk": {
+      "size": 55098552,
+      "digest": "sha256:8f907eb872b3b71107a11977e85aef0104fdfc73af66d4ef86c6d9862d439846"
+    },
+    "Gratify-2.1.5-release-arm64-v8a.apk": {
+      "size": 28066702,
+      "digest": "sha256:2d8dc4e95a0e3b5e0d6ded32e0b94a5d352dfc5c46e74aa581ced73970811aef"
+    },
+    "gratify-update.json": {
+      "size": 254,
+      "digest": "sha256:e836d8a2b34ed12c1b42fa2bc770a71ee46c615ac8f12aa36e9b067ea3fdb772"
+    },
+    "Gratify-2.1.5-source.zip": {
+      "size": 6330182,
+      "digest": "sha256:e6cdd879f3b4ce2dfb5a6285c60ac6d6b2474c4137e0a01bee8bdb4aa691035d"
+    },
+    "SHA256SUMS.txt": {
+      "size": 361,
+      "digest": "sha256:8450862b431eae68e382c6a7e2c031846dd3f593af286ec82864d34fd66c4773"
+    }
+  },
+  "developer_site": "https://tanheradhe.my.id/",
+  "developer_site_http_status": 200,
+  "separate_simpmusic_link_removed": true,
+  "simpmusic_credit_and_license_retained": true,
+  "matching_android_source_snapshot": "Gratify-2.1.5-source.zip",
+  "release_runtime_or_long_playback_tested_this_round": false,
+  "uploaded_to_github": false
+}

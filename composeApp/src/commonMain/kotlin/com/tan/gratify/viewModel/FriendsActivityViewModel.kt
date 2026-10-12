@@ -7,13 +7,8 @@ import com.tan.domain.repository.UserRepository
 import com.tan.gratify.viewModel.base.BaseViewModel
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
 import kotlinx.datetime.Clock
 
 data class FriendActivityItem(
@@ -22,7 +17,8 @@ data class FriendActivityItem(
     val songTitle: String,
     val artistName: String,
     val videoId: String,
-    val lastActiveText: String
+    val lastActiveText: String,
+    val artworkUrl: String? = null,
 )
 
 data class FriendsActivityState(
@@ -31,120 +27,120 @@ data class FriendsActivityState(
     val friendsList: List<FriendActivityItem> = emptyList(),
     val myNote: String? = null,
     val myNoteUpdatedAt: String? = null,
-    val error: String? = null
+    val error: String? = null,
+    val noteSaving: Boolean = false,
+    val noteError: String? = null,
 )
+
+/** Only shared, fresh playback is activity; a public playlist is not listening history. */
+internal fun friendActivityAt(profile: UserProfile, now: Long): FriendActivityItem {
+    val age = profile.lastActiveAt?.toLongOrNull()?.let { now - it }
+    val playing = profile.showRecentArtists && age != null && age in 0..600_000 &&
+        !profile.nowPlayingVideoId.isNullOrBlank() && !profile.nowPlayingTitle.isNullOrBlank()
+    return FriendActivityItem(profile, playing,
+        profile.nowPlayingTitle.takeIf { playing }.orEmpty(), profile.nowPlayingArtist.takeIf { playing }.orEmpty(),
+        profile.nowPlayingVideoId.takeIf { playing }.orEmpty(),
+        if (playing) "Sedang mendengarkan" else "Belum ada aktivitas terbaru")
+}
 
 class FriendsActivityViewModel(
     private val userRepository: UserRepository,
     private val supabase: SupabaseClient,
-    private val socialRepository: SocialRepository
+    @Suppress("UNUSED_PARAMETER") socialRepository: SocialRepository,
 ) : BaseViewModel() {
-
     private val _state = MutableStateFlow(FriendsActivityState())
     val state: StateFlow<FriendsActivityState> = _state.asStateFlow()
+    private var loadJob: Job? = null
+    private var pollJob: Job? = null
+    private var noteJob: Job? = null
+    private var noteRevision = 0L
+    private fun account() = supabase.auth.currentUserOrNull()?.id
+    private fun sameAccount(id: String) = account() == id && _state.value.currentUserId == id
 
-    init {
-        loadFriendsActivity()
+    fun start() {
+        if (pollJob?.isActive == true) return
+        pollJob = viewModelScope.launch {
+            supabase.auth.sessionStatus.collectLatest {
+                loadJob?.cancel()
+                val id = account()
+                if (_state.value.currentUserId != id) { noteJob?.cancel(); _state.value = FriendsActivityState(currentUserId = id) }
+                do {
+                    loadFriendsActivity()
+                    delay(60_000)
+                } while (isActive && id != null && account() == id)
+            }
+        }
+    }
+    fun stop() { pollJob?.cancel(); pollJob = null; loadJob?.cancel() }
+
+    private suspend fun allProfiles(fetch: (Int) -> Flow<Result<List<UserProfile>>>): List<UserProfile> {
+        val profiles = mutableListOf<UserProfile>()
+        var offset = 0
+        while (true) {
+            val page = fetch(offset).first().getOrThrow()
+            profiles.addAll(page)
+            if (page.size < 40) return profiles.distinctBy(UserProfile::id)
+            offset += page.size
+        }
     }
 
     fun loadFriendsActivity() {
-        viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
+        loadJob?.cancel()
+        val id = account()
+        if (_state.value.currentUserId != id) { noteJob?.cancel(); _state.value = FriendsActivityState(currentUserId = id) }
+        if (id == null) { _state.value = FriendsActivityState(); return }
+        _state.update { it.copy(isLoading = true, error = null) }
+        loadJob = viewModelScope.launch {
             try {
-                val currentUserId = supabase.auth.currentUserOrNull()?.id
-                _state.update { it.copy(currentUserId = currentUserId) }
-
-                if (currentUserId != null) {
-                    // Muat catatan milik sendiri (ditampilkan & bisa diedit di atas daftar teman).
-                    launch {
-                        val myProfile = userRepository.getUserProfile(currentUserId).firstOrNull()
-                        _state.update { it.copy(myNote = myProfile?.note, myNoteUpdatedAt = myProfile?.noteUpdatedAt) }
+                withTimeout(20_000) {
+                    val following = async { allProfiles { userRepository.fetchFollowing(id, it, 40) } }
+                    val followers = async { allProfiles { userRepository.fetchFollowers(id, it, 40) }.map(UserProfile::id).toSet() }
+                    val mutualIds = followers.await()
+                    val now = Clock.System.now().toEpochMilliseconds()
+                    val friends = following.await().filter { it.id != id && it.id in mutualIds }
+                        .map { friendActivityAt(it, now) }
+                        .sortedWith(compareByDescending<FriendActivityItem> { it.isOnline }
+                            .thenBy { it.userProfile.displayName.orEmpty().lowercase() })
+                    if (sameAccount(id)) _state.update { it.copy(friendsList = friends, isLoading = false) }
+                    // A profile read failing must not erase an otherwise loaded friend list.
+                    val readRevision = noteRevision
+                    val ownProfile = runCatching { userRepository.fetchUserProfile(id).first().getOrThrow() }
+                        .getOrElse { if (it is CancellationException) throw it; null }
+                    if (ownProfile?.id == id && sameAccount(id) && !_state.value.noteSaving && readRevision == noteRevision) _state.update {
+                        it.copy(myNote = ownProfile.note, myNoteUpdatedAt = ownProfile.noteUpdatedAt)
                     }
-                    userRepository.getFollowing(currentUserId).collectLatest { followingList ->
-                        userRepository.getFollowers(currentUserId).collectLatest { followersList ->
-                            // Berteman = mutual follow (saling mengikuti)
-                            val mutualFriends = followingList.filter { following ->
-                                followersList.any { follower -> follower.id == following.id }
-                            }
-
-                            if (mutualFriends.isEmpty()) {
-                                _state.update { it.copy(friendsList = emptyList(), isLoading = false) }
-                            } else {
-                                val mappedList = mutualFriends.map { friend ->
-                                    val lastActiveMillis = friend.lastActiveAt?.toLongOrNull() ?: 0L
-                                    val nowMillis = Clock.System.now().toEpochMilliseconds()
-                                    val isExpired = (nowMillis - lastActiveMillis) > 10 * 60 * 1000L
-
-                                    val npTitle = friend.nowPlayingTitle
-                                    val npVideoId = friend.nowPlayingVideoId
-                                    val isPlaying = !npVideoId.isNullOrBlank() && !npTitle.isNullOrBlank() && !isExpired
-
-                                    var songTitle = "Belum memutar lagu"
-                                    var artistName = "-"
-                                    var videoId = ""
-
-                                    if (isPlaying && npTitle != null && npVideoId != null) {
-                                        songTitle = npTitle
-                                        artistName = friend.nowPlayingArtist ?: "-"
-                                        videoId = npVideoId
-                                    } else {
-                                        try {
-                                            val playlistsRes = socialRepository.getUserPublicPlaylists(friend.id).firstOrNull()
-                                            val playlists = playlistsRes?.getOrNull() ?: emptyList()
-                                            val playlistId = playlists.firstOrNull()?.id
-                                            if (playlistId != null) {
-                                                val itemsRes = socialRepository.getCloudPlaylistItems(playlistId).firstOrNull()
-                                                val items = itemsRes?.getOrNull() ?: emptyList()
-                                                val latestItem = items.firstOrNull()
-                                                if (latestItem != null) {
-                                                    songTitle = latestItem.title
-                                                    artistName = latestItem.artist
-                                                    videoId = latestItem.videoId
-                                                }
-                                            }
-                                        } catch (e: Exception) {
-                                            // Abaikan error jaringan individual
-                                        }
-                                    }
-
-                                    FriendActivityItem(
-                                        userProfile = friend,
-                                        isOnline = isPlaying,
-                                        songTitle = songTitle,
-                                        artistName = artistName,
-                                        videoId = videoId,
-                                        lastActiveText = if (isPlaying) "Sedang memutar" else "Offline"
-                                    )
-                                }
-                                val sortedList = mappedList.sortedWith(
-                                    compareByDescending<FriendActivityItem> { it.isOnline }
-                                        .thenByDescending { it.userProfile.lastActiveAt?.toLongOrNull() ?: 0L }
-                                )
-                                _state.update { it.copy(friendsList = sortedList, isLoading = false) }
-                            }
-                        }
-                    }
-                } else {
-                    _state.update { it.copy(friendsList = emptyList(), isLoading = false) }
                 }
-            } catch (e: Exception) {
-                _state.update { it.copy(isLoading = false, error = e.message) }
+            } catch (cancelled: CancellationException) {
+                if (cancelled !is TimeoutCancellationException) throw cancelled
+                if (sameAccount(id)) _state.update { it.copy(isLoading = false, error = "Aktivitas belum dapat dimuat. Coba lagi.") }
+            } catch (_: Exception) {
+                if (sameAccount(id)) _state.update { it.copy(isLoading = false, error = "Aktivitas belum dapat dimuat. Coba lagi.") }
             }
         }
     }
 
-    /** Simpan/ubah/hapus catatan ("Notes IG") milik user. Kirim teks kosong untuk menghapus. */
-    fun updateMyNote(note: String) {
-        viewModelScope.launch {
-            val userId = supabase.auth.currentUserOrNull()?.id ?: return@launch
-            val cleaned = note.trim().takeIf { it.isNotBlank() }
-            val nowMillis = if (cleaned != null) Clock.System.now().toEpochMilliseconds().toString() else null
-            _state.update { it.copy(myNote = cleaned, myNoteUpdatedAt = nowMillis) } // optimistic
+    fun clearNoteError() { _state.update { it.copy(noteError = null) } }
+
+    fun updateMyNote(note: String, onSuccess: () -> Unit = {}) {
+        val id = account() ?: return
+        if (!sameAccount(id) || _state.value.noteSaving) return
+        val cleaned = note.trim().take(100).takeIf(String::isNotBlank)
+        val saveRevision = ++noteRevision
+        _state.update { it.copy(noteSaving = true, noteError = null) }
+        noteJob = viewModelScope.launch {
             try {
-                userRepository.updateNote(userId, cleaned).collectLatest {}
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+                withTimeout(15_000) { userRepository.updateNote(id, cleaned).first().getOrThrow() }
+                if (sameAccount(id) && saveRevision == noteRevision) {
+                    _state.update { it.copy(myNote = cleaned,
+                        myNoteUpdatedAt = cleaned?.let { Clock.System.now().toEpochMilliseconds().toString() }, noteSaving = false) }
+                    onSuccess()
+                }
+            } catch (cancelled: CancellationException) {
+                if (cancelled !is TimeoutCancellationException) throw cancelled
+                if (sameAccount(id) && saveRevision == noteRevision) _state.update { it.copy(noteError = "Catatan belum tersimpan. Coba lagi.") }
+            } catch (_: Exception) {
+                if (sameAccount(id) && saveRevision == noteRevision) _state.update { it.copy(noteError = "Catatan belum tersimpan. Coba lagi.") }
+            } finally { if (sameAccount(id) && saveRevision == noteRevision) _state.update { it.copy(noteSaving = false) } }
         }
     }
 }

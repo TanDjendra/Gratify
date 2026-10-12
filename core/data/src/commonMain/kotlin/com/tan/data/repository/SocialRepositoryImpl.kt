@@ -17,6 +17,7 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -39,6 +40,8 @@ internal class SocialRepositoryImpl(
     private val supabase: SupabaseClient,
     private val localDataSource: LocalDataSource
 ) : SocialRepository {
+    private val covers = PlaylistCoverStorage(supabase)
+    private val canonical = CanonicalPlaylistOperations(supabase,localDataSource)
     @Serializable
     private data class PlaylistTombstone(@SerialName("client_sync_id") val syncId: String)
     override suspend fun flushPlaylistRemovals(userId: String) {
@@ -58,14 +61,49 @@ internal class SocialRepositoryImpl(
             }
             localDataSource.acknowledgeLibraryRemoval(userId, "shared_playlist_saves", removal.itemId, removal.revision)
         }
+        for (update in localDataSource.getLibraryRemovals(userId, "playlist_metadata")) {
+            check(supabase.auth.currentUserOrNull()?.id==userId && localDataSource.getLibraryOwner()==userId)
+            try {
+            val local=localDataSource.getLocalPlaylistBySyncId(update.itemId)
+            if(local==null || local.sourceSharedPlaylistId!=null) {
+                localDataSource.acknowledgeLibraryRemoval(userId,"playlist_metadata",update.itemId,update.revision)
+                continue
+            }
+            // Only an existing cloud playlist can be updated automatically. A
+            // local draft must never be published or backed up implicitly.
+            val cloud=supabase.postgrest["cloud_playlists"].select {
+                filter { eq("user_id",userId); eq("client_sync_id",update.itemId) }
+            }.decodeList<CloudPlaylistDto>().firstOrNull()
+            if(cloud?.canonicalPlaylistId!=null) {
+                canonical.refresh(userId,requireNotNull(cloud.canonicalPlaylistId))
+                localDataSource.acknowledgeLibraryRemoval(userId,"playlist_metadata",update.itemId,update.revision)
+            }
+            else if(cloud!=null) syncUpPlaylist(local.id,userId,isPublic=null).collect { it.getOrThrow() }
+            else localDataSource.acknowledgeLibraryRemoval(userId,"playlist_metadata",update.itemId,update.revision)
+            } catch(cancelled: CancellationException) { throw cancelled }
+            catch(_: Exception) { Logger.w("SocialRepositoryImpl", "Playlist metadata update remains queued") }
+        }
     }
 
 
-    override suspend fun syncUpPlaylist(localPlaylistId: Long, userId: String, isPublic: Boolean?): Flow<Result<String>> = flow {
+    override suspend fun syncUpPlaylist(localPlaylistId: Long, userId: String, isPublic: Boolean?, isProfilePinned: Boolean?): Flow<Result<String>> = flow {
         val result = try {
             check(supabase.auth.currentUserOrNull()?.id == userId && localDataSource.getLibraryOwner() == userId)
             val syncId = localDataSource.ensurePlaylistSyncId(localPlaylistId, userId)
+            val existing=supabase.postgrest["cloud_playlists"].select {
+                filter { eq("user_id",userId);eq("client_sync_id",syncId) }
+            }.decodeList<CloudPlaylistDto>().firstOrNull()
+            if(existing?.canonicalPlaylistId!=null) {
+                if(isPublic!=null)setCanonicalVisibility(requireNotNull(existing.canonicalPlaylistId),isPublic)
+                if(isProfilePinned!=null)supabase.postgrest.rpc("gratify_set_playlist_profile_pin",buildJsonObject {
+                    put("p_sync_id",syncId);put("p_pinned",isProfilePinned)
+                })
+                canonical.refresh(userId,requireNotNull(existing.canonicalPlaylistId))
+                emit(Result.success(requireNotNull(existing.id)));return@flow
+            }
+            val revision = localDataSource.queuePlaylistMetadata(userId, localPlaylistId)
             val playlist = requireNotNull(localDataSource.getLocalPlaylist(localPlaylistId)) { "Playlist not found" }
+            check(playlist.sourceSharedPlaylistId == null) { "Saved playlists cannot be republished as owned playlists" }
             val pairs = localDataSource.getAllPlaylistPairSongByPosition(localPlaylistId).orEmpty()
             val songs = localDataSource.getSongByListVideoIdFull(pairs.map { it.songId }).associateBy { it.videoId }
             // Missing local metadata must fail before replacement, never silently drop tracks.
@@ -77,13 +115,17 @@ internal class SocialRepositoryImpl(
             check(playlist.syncId == syncId && localDataSource.getLibraryOwner() == userId && supabase.auth.currentUserOrNull()?.id == userId) {
                 "Account ownership changed"
             }
-            val saved = supabase.postgrest.rpc("gratify_replace_cloud_playlist_v2", buildJsonObject {
+            val rpc = if (isProfilePinned == null) "gratify_replace_cloud_playlist_v2" else "gratify_replace_cloud_playlist_v3"
+            val saved = supabase.postgrest.rpc(rpc, buildJsonObject {
                 put("p_sync_id", syncId)
                 put("p_title", playlist.title)
                 put("p_thumbnail_url", (playlist.thumbnail ?: songs.values.firstOrNull()?.thumbnails)?.let(::JsonPrimitive) ?: JsonNull)
                 put("p_is_public", isPublic?.let(::JsonPrimitive) ?: JsonNull)
                 put("p_tracks", Json.encodeToJsonElement(items))
+                if (isProfilePinned != null) put("p_profile_pinned", isProfilePinned)
             }).decodeSingle<PlaylistRpcResult>()
+            check(supabase.auth.currentUserOrNull()?.id==userId && localDataSource.getLibraryOwner()==userId)
+            localDataSource.acknowledgeLibraryRemoval(userId,"playlist_metadata",syncId,revision)
             Result.success(saved.playlistId)
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) {
@@ -92,11 +134,39 @@ internal class SocialRepositoryImpl(
         emit(result)
     }.flowOn(Dispatchers.IO)
 
+    override suspend fun setPlaylistProfilePinned(localPlaylistId: Long, userId: String, pinned: Boolean): Flow<Result<Unit>> = flow {
+        val result = try {
+            check(supabase.auth.currentUserOrNull()?.id == userId && localDataSource.getLibraryOwner() == userId)
+            val syncId = localDataSource.ensurePlaylistSyncId(localPlaylistId, userId)
+            supabase.postgrest.rpc("gratify_set_playlist_profile_pin", buildJsonObject {
+                put("p_sync_id", syncId); put("p_pinned", pinned)
+            })
+            Result.success(Unit)
+        } catch (e: CancellationException) { throw e }
+        catch (e: Exception) { Result.failure(e) }
+        emit(result)
+    }.flowOn(Dispatchers.IO)
+
+    override suspend fun getUserProfilePlaylists(userId: String): Flow<Result<List<CloudPlaylistDto>>> = flow {
+        val result = try {
+            Result.success(supabase.postgrest.rpc("gratify_get_profile_playlists", buildJsonObject {
+                put("p_user_id", userId)
+            }).decodeList<CloudPlaylistDto>().let { rows ->
+                val automatic=playlistArtwork(supabase,rows.mapNotNull{it.id})
+                covers.map(rows,{row -> row.thumbnailUrl}) { row,url -> row.copy(thumbnailUrl=url,automaticImages=automatic[row.id].orEmpty()) }
+            })
+        } catch (e: CancellationException) { throw e }
+        catch (e: Exception) { Result.failure(e) }
+        emit(result)
+    }.flowOn(Dispatchers.IO)
+
     override suspend fun unshareOrHideCloudPlaylist(localPlaylistId: Long, userId: String): Flow<Result<Unit>> = flow {
         val result = try {
             val syncId = localDataSource.ensurePlaylistSyncId(localPlaylistId, userId)
             check(supabase.auth.currentUserOrNull()?.id == userId)
-            supabase.postgrest.rpc("gratify_hide_owned_playlist_v2", buildJsonObject { put("p_sync_id", syncId) })
+            val cloud=supabase.postgrest["cloud_playlists"].select { filter{eq("user_id",userId);eq("client_sync_id",syncId)} }.decodeList<CloudPlaylistDto>().firstOrNull()
+            if(cloud?.canonicalPlaylistId!=null)setCanonicalVisibility(requireNotNull(cloud.canonicalPlaylistId),false)
+            else supabase.postgrest.rpc("gratify_hide_owned_playlist_v2", buildJsonObject { put("p_sync_id", syncId) })
             Result.success(Unit)
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) { Result.failure(e) }
@@ -138,6 +208,9 @@ internal class SocialRepositoryImpl(
                 // Legacy server rows receive their own ID in migration 007. Never guess by title/local ID.
                 val syncId = requireNotNull(playlist.clientSyncId) { "Playlist identity migration is required" }
                 if (syncId in pending) continue
+                if(playlist.canonicalPlaylistId!=null) {
+                    canonical.refresh(userId,requireNotNull(playlist.canonicalPlaylistId));restored++;continue
+                }
                 val existing = localDataSource.getLocalPlaylistBySyncId(syncId)
                 if (existing != null) {
                     if (existing.ownerEmail.isNullOrBlank()) {
@@ -164,11 +237,45 @@ internal class SocialRepositoryImpl(
                     LocalPlaylistEntity(title = playlist.title, thumbnail = playlist.thumbnailUrl,
                         tracks = songs.map { it.videoId }, syncId = syncId), songs)) restored++
             }
-            Result.success(restored)
+            val saved = supabase.postgrest.rpc("gratify_get_saved_playlists").decodeList<com.tan.domain.data.entities.SharedPlaylist>()
+            val removedSources = localDataSource.getLibraryRemovals(userId, "shared_playlist_saves").map { it.itemId }.toSet()
+            for (source in saved) {
+                val sourceId = requireNotNull(source.id)
+                if (sourceId in removedSources) continue
+                check(supabase.auth.currentUserOrNull()?.id == userId && localDataSource.getLibraryOwner() == userId)
+                val incoming = supabase.postgrest.rpc("gratify_get_shared_playlist_tracks", buildJsonObject {
+                    put("p_playlist_id", sourceId)
+                }).decodeList<com.tan.domain.data.entities.SharedPlaylistTrack>()
+                val songs = incoming.map { track ->
+                    SongEntity(videoId = track.videoId, title = track.title, artistName = listOf(track.artists),
+                        durationSeconds = track.durationSeconds ?: 0,
+                        duration = "${(track.durationSeconds ?: 0) / 60}:${((track.durationSeconds ?: 0) % 60).toString().padStart(2,'0')}",
+                        thumbnails = "https://i.ytimg.com/vi/${track.videoId}/mqdefault.jpg",
+                        isAvailable = true, isExplicit = false, likeStatus = "INDIFFERENT", videoType = "MUSIC_VIDEO_TYPE_ATV", category = null, resultType = null)
+                }
+                check(supabase.auth.currentUserOrNull()?.id == userId)
+                localDataSource.restoreSavedPlaylist(userId, LocalPlaylistEntity(title=source.title, thumbnail=source.thumbnailUrl,
+                    sourceSharedPlaylistId=sourceId, creatorName=source.creatorName), songs)
+            }
+            Result.success(restored + saved.size)
         } catch (e: CancellationException) { throw e }
         catch (e: Exception) { Result.failure(e) }
         emit(result)
     }.flowOn(Dispatchers.IO)
+
+    private suspend fun setCanonicalVisibility(id:String,public:Boolean) {
+        val owner=requireNotNull(supabase.auth.currentUserOrNull()?.id)
+        check(localDataSource.getLibraryOwner()==owner)
+        val detail=supabase.postgrest.rpc("gratify_workspace",buildJsonObject {
+            put("p_action","detail");put("p_args",buildJsonObject{put("playlist_id",id)})
+        }).decodeAs<JsonObject>()
+        check(detail["owner_id"]?.jsonPrimitive?.content==owner && supabase.auth.currentUserOrNull()?.id==owner)
+        supabase.postgrest.rpc("gratify_workspace",buildJsonObject {
+            put("p_action","metadata");put("p_args",buildJsonObject {
+                put("playlist_id",id);put("title",detail.getValue("title"));put("description",detail["description"]?:JsonPrimitive(""));put("is_public",public)
+            })
+        })
+    }
 
     override suspend fun getUserPublicPlaylists(userId: String): Flow<Result<List<CloudPlaylistDto>>> = flow {
         try {
@@ -180,7 +287,7 @@ internal class SocialRepositoryImpl(
                     }
                 }
                 .decodeList<CloudPlaylistDto>()
-            emit(Result.success(playlists))
+            emit(Result.success(covers.map(playlists,{it.thumbnailUrl}) { row,url -> row.copy(thumbnailUrl=url) }))
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             emit(Result.failure(e))

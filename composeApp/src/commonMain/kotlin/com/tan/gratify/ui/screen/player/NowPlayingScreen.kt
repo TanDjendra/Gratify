@@ -86,17 +86,15 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -127,6 +125,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
@@ -163,6 +163,7 @@ import com.tan.gratify.ui.component.ExplicitBadge
 import com.tan.gratify.ui.component.FullscreenLyricsSheet
 import com.tan.gratify.ui.component.HeartCheckBox
 import com.tan.gratify.ui.component.InfoPlayerBottomSheet
+import com.tan.gratify.ui.component.lyricsColorsFromArtwork
 import com.tan.gratify.ui.component.LyricsView
 import com.tan.gratify.ui.component.NowPlayingBottomSheet
 import com.tan.gratify.ui.component.PlayPauseButton
@@ -170,10 +171,12 @@ import com.tan.gratify.ui.component.PlayerControlLayout
 import com.tan.gratify.ui.component.QueueBottomSheet
 import com.tan.gratify.ui.component.VoteLyricsDialog
 import com.tan.gratify.ui.navigation.destination.list.ArtistDestination
+import com.tan.gratify.ui.navigation.navigateFromPlayer
 import com.tan.gratify.ui.navigation.destination.player.FullscreenDestination
 import com.tan.gratify.ui.theme.blackMoreOverlay
 import com.tan.gratify.ui.theme.md_theme_dark_background
 import com.tan.gratify.ui.theme.overlay
+import com.tan.gratify.ui.screen.player.simp.content.toAudioQualityLabel
 import com.tan.gratify.ui.theme.typo
 import com.tan.gratify.viewModel.LyricsProvider
 import com.tan.gratify.viewModel.NowPlayingBottomSheetUIEvent
@@ -214,7 +217,6 @@ import gratify.composeapp.generated.resources.now_playing_upper
 import gratify.composeapp.generated.resources.offline_mode
 import gratify.composeapp.generated.resources.published_at
 import gratify.composeapp.generated.resources.rate_lyrics
-import gratify.composeapp.generated.resources.rich_synced
 import gratify.composeapp.generated.resources.show
 import gratify.composeapp.generated.resources.spotify_lyrics_provider
 import gratify.composeapp.generated.resources.unsynced
@@ -222,7 +224,7 @@ import gratify.composeapp.generated.resources.view_count
 import kotlin.math.roundToLong
 
 private const val TAG = "NowPlayingScreen"
-private val RICH_SYNC_TIMESTAMP_REGEX = Regex("""<\d{2}:\d{2}\.\d{2,3}>\s*""")
+private val RICH_SYNC_TIMESTAMP_REGEX = Regex("""<\d{2}:\d{2}\.\d{2,3}>""")
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalHazeMaterialsApi::class)
 @ExperimentalMaterial3Api
@@ -232,41 +234,13 @@ fun NowPlayingScreen(
     navController: NavController,
     onDismiss: () -> Unit = {},
 ) {
-    val coroutineScope = rememberCoroutineScope()
-    val sheetState =
-        rememberModalBottomSheetState(
-            skipPartiallyExpanded = true,
-        )
-
-    val hideSheet: () -> Unit = {
-        coroutineScope.launch {
-            sheetState.hide()
-            onDismiss()
-        }
-    }
-
-    ModalBottomSheet(
-        modifier =
-            Modifier
-                .fillMaxHeight(),
-        onDismissRequest = {
-            onDismiss()
-        },
-        containerColor = GratifyColors.Background,
-        dragHandle = {},
-        scrimColor = Color.Black,
-        sheetState = sheetState,
-        contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
-        shape = RectangleShape,
-    ) {
+    com.tan.gratify.ui.component.PlayerModalSheet(onDismiss = onDismiss) { dismiss ->
         NowPlayingScreenContent(
             sharedViewModel = sharedViewModel,
             navController = navController,
-            isExpanded = sheetState.currentValue == SheetValue.Expanded,
+            isExpanded = true,
             dismissIcon = Icons.Rounded.KeyboardArrowDown,
-            onDismiss = {
-                hideSheet()
-            },
+            onDismiss = dismiss,
         )
     }
 }
@@ -281,18 +255,40 @@ fun NowPlayingScreenContent(
     dismissIcon: ImageVector,
     onDismiss: () -> Unit = {},
 ) {
+    com.tan.gratify.ui.component.lyrics.LyricsStoryShareHost(sharedViewModel, mediaPlayerHandler, navController, onDismiss) {
+        NowPlayingScreenBody(sharedViewModel, mediaPlayerHandler, navController, isExpanded, dismissIcon, onDismiss)
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class, ExperimentalHazeMaterialsApi::class)
+@Composable
+private fun NowPlayingScreenBody(
+    sharedViewModel: SharedViewModel,
+    mediaPlayerHandler: MediaPlayerHandler,
+    navController: NavController,
+    isExpanded: Boolean,
+    dismissIcon: ImageVector,
+    onDismiss: () -> Unit,
+) {
     val screenInfo = getScreenSizeInfo()
 
     val localDensity = LocalDensity.current
     val uriHandler = LocalUriHandler.current
 
     // ViewModel State
+    val isInPipMode = rememberIsInPipMode()
     val controllerState by sharedViewModel.controllerState.collectAsStateWithLifecycle()
     val screenDataState by sharedViewModel.nowPlayingScreenData.collectAsStateWithLifecycle()
-    val timelineState by sharedViewModel.timeline.collectAsStateWithLifecycle()
     val likeStatus by sharedViewModel.likeStatus.collectAsStateWithLifecycle()
 
     val shouldShowVideo by sharedViewModel.getVideo.collectAsStateWithLifecycle()
+    // The primary player collects its own timeline. Collecting again here also
+    // recomposes the hidden legacy controls and all artwork on every position tick.
+    val timelineState by if (isInPipMode || (screenDataState.isVideo && shouldShowVideo)) {
+        sharedViewModel.timeline.collectAsStateWithLifecycle()
+    } else {
+        remember { mutableStateOf(com.tan.domain.data.model.streams.TimeLine(0L, 0L, 0)) }
+    }
     val translatedVoteState by sharedViewModel.translatedVoteState.collectAsStateWithLifecycle()
     val lyricsVoteState by sharedViewModel.lyricsVoteState.collectAsStateWithLifecycle()
 
@@ -395,8 +391,6 @@ fun NowPlayingScreenContent(
     }
 
     // State
-    val isInPipMode = rememberIsInPipMode()
-
     val mainScrollState = rememberScrollState()
 
     var showHideMiddleLayout by rememberSaveable {
@@ -476,6 +470,9 @@ fun NowPlayingScreenContent(
     LaunchedEffect(spotShadowColor) {
         Logger.d(TAG, "spotShadowColor: $spotShadowColor")
     }
+    val lyricsColors = remember(spotShadowColor) { lyricsColorsFromArtwork(spotShadowColor) }
+    val lyricsBackground by animateColorAsState(lyricsColors.background, tween(600), label = "lyricsArtworkBackground")
+
     // Height
     var topAppBarHeightDp by rememberSaveable {
         mutableIntStateOf(0)
@@ -527,25 +524,6 @@ fun NowPlayingScreenContent(
                 }
         }
     }
-
-    // Crossfade: RGB rainbow color cycling when transitioning between tracks
-    val infiniteTransition = rememberInfiniteTransition(label = "crossfadeRainbow")
-    val rainbowHue by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(1000, easing = LinearEasing),
-                repeatMode = RepeatMode.Restart,
-            ),
-        label = "rainbowHue",
-    )
-    val rainbowColor = hsvToColor(rainbowHue, 1f, 1f)
-    val sliderTrackColor by animateColorAsState(
-        targetValue = if (timelineState.isCrossfading) rainbowColor else Color.White,
-        animationSpec = tween(300),
-        label = "sliderCrossfadeColor",
-    )
 
     // Show ControlLayout Or Show Artist Badge
     var showHideControlLayout by rememberSaveable {
@@ -678,7 +656,7 @@ fun NowPlayingScreenContent(
         FullscreenLyricsSheet(
             sharedViewModel = sharedViewModel,
             navController = navController, // <-- ADD THIS LINE
-            color = startColor.value,
+            color = lyricsColors.background,
             shouldHaze = sharedViewModel.blurFullscreenLyrics(),
         ) {
             showFullscreenLyrics = false
@@ -767,6 +745,107 @@ fun NowPlayingScreenContent(
     if (screenDataState.lyricsData != null && controllerState.isPlaying) {
         KeepScreenOn()
     }
+    val playerActionScope = rememberCoroutineScope()
+    val dataStoreManager: com.tan.domain.manager.DataStoreManager = koinInject()
+    val appleMusicTab by sharedViewModel.appleMusicPlayerTab.collectAsStateWithLifecycle()
+    val lyricsAnimationsEnabled by sharedViewModel.lyricsAnimationsEnabled.collectAsStateWithLifecycle()
+    // Sheet expansion and buffering must never select a different player presentation.
+    if (!isInPipMode) {
+        AppleMusicPlayerContent(
+            state = AppleMusicPlayerState(
+                screen = screenDataState,
+                controls = controllerState,
+                timeline = sharedViewModel.timeline,
+                queue = artworkQueue,
+                queueIndex = currentOrderIndex,
+                artworkColor = spotShadowColor,
+                tab = appleMusicTab,
+                artworkPager = artworkPagerState,
+                showVideo = screenDataState.isVideo && shouldShowVideo,
+                lyricsAnimationsEnabled = lyricsAnimationsEnabled,
+                audioQualityLabel = mediaPlayerHandler.format.collectAsStateWithLifecycle().value.toAudioQualityLabel(),
+                isYouTubeLoggedIn = dataStoreManager.cookie.collectAsStateWithLifecycle("").value.isNotEmpty(),
+                youtubeLikeStatus = likeStatus,
+                endlessQueueEnabled = dataStoreManager.endlessQueue.collectAsStateWithLifecycle(com.tan.domain.manager.DataStoreManager.FALSE).value == com.tan.domain.manager.DataStoreManager.TRUE,
+            ),
+            actions = AppleMusicPlayerActions(
+                onEvent = sharedViewModel::onUIEvent,
+                onSelectTab = { sharedViewModel.appleMusicPlayerTab.value = it },
+                onQueueTrack = { index ->
+                    if (index in artworkQueue.indices) mediaPlayerHandler.playMediaItemInMediaSource(index)
+                },
+                onArtwork = sharedViewModel::setBitmap,
+                onDismiss = onDismiss,
+                onMore = { showSheet = true },
+                onInfo = { showInfoBottomSheet = true },
+                onArtist = {
+                    nowPlayingState?.track?.artists?.firstOrNull()?.id?.let {
+                        navController.navigateFromPlayer(ArtistDestination(it), onDismiss)
+                    }
+                },
+                onFullscreenLyrics = { showFullscreenLyrics = true },
+                onFullscreenVideo = { navController.navigateFromPlayer(FullscreenDestination, onDismiss) },
+                onManageQueue = { showQueueBottomSheet = true },
+                onVoteLyrics = { showVoteDialog = true },
+                onLyricsAnimationsChange = sharedViewModel::setLyricsAnimationsEnabled,
+                onRetryLyrics = sharedViewModel::retryLyrics,
+                onYouTubeLiked = sharedViewModel::addToYouTubeLiked,
+                onAddToPlaylist = { showAddToPlaylistDirectly = true },
+                onMoveQueueItem = { from, to -> playerActionScope.launch { mediaPlayerHandler.swap(from, to) } },
+                onRemoveQueueItem = mediaPlayerHandler::removeMediaItem,
+                onLoadMore = mediaPlayerHandler::loadMore,
+                onEndlessQueueChange = { enabled -> playerActionScope.launch { dataStoreManager.setEndlessQueue(enabled) } },
+            ),
+            video = { modifier ->
+                MediaPlayerViewWithSubtitle(
+                    modifier = modifier,
+                    playerName = MAIN_PLAYER,
+                    shouldPip = false,
+                    shouldShowSubtitle = true,
+                    shouldScaleDownSubtitle = true,
+                    timelineState = timelineState,
+                    lyricsData = screenDataState.lyricsData?.lyrics,
+                    translatedLyricsData = screenDataState.lyricsData?.translatedLyrics?.first,
+                    isInPipMode = false,
+                    mainTextStyle = typo().bodyLarge,
+                    translatedTextStyle = typo().bodyMedium,
+                )
+            },
+            canvas = { modifier ->
+                screenDataState.canvasData?.let { canvas ->
+                    if (canvas.isVideo) MediaPlayerView(canvas.url, modifier)
+                    else AsyncImage(canvas.url, null, modifier = modifier, contentScale = ContentScale.Crop)
+                }
+            },
+        )
+        return
+    }
+
+    // This slider belongs only to the legacy/PiP presentation. Never create its
+    // frame clock in the primary player, or while paused/backgrounded.
+    val playerLifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
+    val animateLegacyCrossfade =
+        timelineState.isCrossfading && controllerState.isPlaying && playerLifecycleState.isAtLeast(Lifecycle.State.RESUMED)
+    val rainbowColor = if (animateLegacyCrossfade) {
+        val infiniteTransition = rememberInfiniteTransition(label = "crossfadeRainbow")
+        val rainbowHue by infiniteTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = 360f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1000, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart,
+            ),
+            label = "rainbowHue",
+        )
+        hsvToColor(rainbowHue, 1f, 1f)
+    } else {
+        Color.White
+    }
+    val sliderTrackColor by animateColorAsState(
+        targetValue = rainbowColor,
+        animationSpec = tween(300),
+        label = "sliderCrossfadeColor",
+    )
     Box {
         if (blurBg && screenDataState.canvasData == null) {
             AsyncImage(
@@ -1065,7 +1144,7 @@ fun NowPlayingScreenContent(
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 20.dp)
+                                        .padding(horizontal = 24.dp)
                                         .alpha(if (pageHasCanvas) 0f else 1f)
                                         .aspectRatio(1f),
                             ) {
@@ -1335,6 +1414,9 @@ fun NowPlayingScreenContent(
                     }
                 }
 
+                Box(Modifier.fillMaxSize().background(
+                    Brush.verticalGradient(listOf(Color.Transparent, GratifyColors.Background.copy(alpha = 0.64f)))
+                ))
                 CenterAlignedTopAppBar(
                     modifier =
                         Modifier
@@ -1365,12 +1447,12 @@ fun NowPlayingScreenContent(
                         ) {
                             Text(
                                 text = stringResource(Res.string.now_playing_upper),
-                                style = typo().bodyMedium,
+                                style = typo().labelSmall,
                                 color = Color.White,
                             )
                             Text(
                                 text = screenDataState.playlistName,
-                                style = typo().labelMedium,
+                                style = typo().titleSmall,
                                 color = Color.White,
                                 textAlign = TextAlign.Center,
                                 maxLines = 1,
@@ -1392,7 +1474,7 @@ fun NowPlayingScreenContent(
                         }) {
                             Icon(
                                 imageVector = dismissIcon,
-                                contentDescription = "",
+                                contentDescription = "Tutup pemutar",
                                 tint = Color.White,
                             )
                         }
@@ -1413,7 +1495,7 @@ fun NowPlayingScreenContent(
                         }) {
                             Icon(
                                 painter = painterResource(Res.drawable.baseline_more_vert_24),
-                                contentDescription = "",
+                                contentDescription = "Pilihan lagu",
                                 tint = Color.White,
                             )
                         }
@@ -1448,7 +1530,7 @@ fun NowPlayingScreenContent(
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 20.dp)
+                                        .padding(horizontal = 24.dp)
                                         .onGloballyPositioned { coords ->
                                             middleLayoutHeightDp =
                                                 with(localDensity) {
@@ -1488,7 +1570,7 @@ fun NowPlayingScreenContent(
                                         modifier =
                                             Modifier
                                                 .fillMaxWidth()
-                                                .padding(horizontal = 20.dp),
+                                                .padding(horizontal = 24.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         AnimatedVisibility(screenDataState.canvasData != null) {
@@ -1520,7 +1602,7 @@ fun NowPlayingScreenContent(
                                         Column(Modifier.weight(1f)) {
                                             Text(
                                                 text = screenDataState.nowPlayingTitle,
-                                                style = typo().titleMedium,
+                                                style = typo().headlineSmall,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis,
                                                 color = Color.White,
@@ -1634,7 +1716,7 @@ fun NowPlayingScreenContent(
                                             Modifier
                                                 .padding(
                                                     top = 15.dp,
-                                                ).padding(horizontal = 20.dp)
+                                                ).padding(horizontal = 24.dp)
                                                 .isElementVisible {
                                                     shouldShowToolbar = !it && isExpanded && mainScrollState.value > 0
                                                 },
@@ -1758,7 +1840,7 @@ fun NowPlayingScreenContent(
                                         Row(
                                             Modifier
                                                 .fillMaxWidth()
-                                                .padding(horizontal = 20.dp),
+                                                .padding(horizontal = 24.dp),
                                         ) {
                                             Text(
                                                 text = formatDuration((timelineState.total * (sliderValue / 100f)).roundToLong()),
@@ -1805,9 +1887,9 @@ fun NowPlayingScreenContent(
                                     Row(
                                         modifier =
                                             Modifier
-                                                .height(32.dp)
+                                                .height(48.dp)
                                                 .fillMaxWidth()
-                                                .padding(horizontal = 20.dp),
+                                                .padding(horizontal = 24.dp),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
@@ -1815,14 +1897,14 @@ fun NowPlayingScreenContent(
                                         IconButton(
                                             modifier =
                                                 Modifier
-                                                    .size(24.dp)
+                                                    .size(48.dp)
                                                     .aspectRatio(1f)
                                                     .clip(CircleShape),
                                             onClick = {
                                                 showInfoBottomSheet = true
                                             },
                                         ) {
-                                            Icon(imageVector = Icons.Outlined.Info, tint = Color.White, contentDescription = "")
+                                            Icon(imageVector = Icons.Outlined.Info, tint = Color.White, contentDescription = "Informasi lagu")
                                         }
 
                                         Row(
@@ -1833,7 +1915,7 @@ fun NowPlayingScreenContent(
                                             IconButton(
                                                 modifier =
                                                     Modifier
-                                                        .size(24.dp)
+                                                        .size(48.dp)
                                                         .aspectRatio(1f)
                                                         .clip(CircleShape),
                                                 onClick = {
@@ -1843,7 +1925,7 @@ fun NowPlayingScreenContent(
                                                 Icon(
                                                     painter = painterResource(Res.drawable.baseline_playlist_add_24),
                                                     tint = Color.White,
-                                                    contentDescription = "Add to Playlist",
+                                                    contentDescription = "Tambahkan ke playlist",
                                                 )
                                             }
 
@@ -1851,7 +1933,7 @@ fun NowPlayingScreenContent(
                                             IconButton(
                                                 modifier =
                                                     Modifier
-                                                        .size(24.dp)
+                                                        .size(48.dp)
                                                         .aspectRatio(1f)
                                                         .clip(CircleShape),
                                                 onClick = {
@@ -1861,7 +1943,7 @@ fun NowPlayingScreenContent(
                                                 Icon(
                                                     imageVector = Icons.AutoMirrored.Rounded.QueueMusic,
                                                     tint = Color.White,
-                                                    contentDescription = "",
+                                                    contentDescription = "Antrean pemutaran",
                                                 )
                                             }
                                         }
@@ -1939,7 +2021,7 @@ fun NowPlayingScreenContent(
                                                             modifier =
                                                                 Modifier
                                                                     .fillMaxWidth()
-                                                                    .padding(horizontal = 20.dp)
+                                                                    .padding(horizontal = 24.dp)
                                                                     .padding(bottom = 4.dp)
                                                                     .basicMarquee(
                                                                         iterations = Int.MAX_VALUE,
@@ -1965,7 +2047,7 @@ fun NowPlayingScreenContent(
                                                                 modifier =
                                                                     Modifier
                                                                         .fillMaxWidth()
-                                                                        .padding(horizontal = 20.dp)
+                                                                        .padding(horizontal = 24.dp)
                                                                         .padding(bottom = 8.dp)
                                                                         .basicMarquee(
                                                                             iterations = Int.MAX_VALUE,
@@ -1985,7 +2067,7 @@ fun NowPlayingScreenContent(
                                                 modifier =
                                                     Modifier
                                                         .fillMaxWidth()
-                                                        .padding(horizontal = 20.dp),
+                                                        .padding(horizontal = 24.dp),
                                                 verticalAlignment = Alignment.CenterVertically,
                                             ) {
                                                 AnimatedVisibility(screenDataState.canvasData != null) {
@@ -2139,7 +2221,7 @@ fun NowPlayingScreenContent(
                         // drag gestures reach HorizontalPager without competing with a
                         // sibling clickable.
                     }
-                    Column(Modifier.padding(horizontal = 20.dp)) {
+                    Column(Modifier.padding(horizontal = 24.dp)) {
                         // Lyrics Layout
                         AnimatedVisibility(
                             visible = screenDataState.lyricsData != null,
@@ -2147,18 +2229,18 @@ fun NowPlayingScreenContent(
                         ) {
                             ElevatedCard(
                                 onClick = {},
-                                shape = GratifyShapes.small,
+                                shape = GratifyShapes.large,
                                 colors =
                                     CardDefaults.elevatedCardColors().copy(
-                                        containerColor = startColor.value,
+                                        containerColor = lyricsBackground,
                                     ),
                             ) {
-                                Column(modifier = Modifier.padding(15.dp)) {
+                                Column(modifier = Modifier.padding(20.dp)) {
                                     Spacer(modifier = Modifier.height(5.dp))
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text(
                                             text = stringResource(Res.string.lyrics),
-                                            style = typo().labelMedium,
+                                            style = typo().titleLarge,
                                             color = Color.White,
                                         )
                                         if (screenDataState.lyricsData?.translatedLyrics?.second == LyricsProvider.AI) {
@@ -2206,7 +2288,7 @@ fun NowPlayingScreenContent(
                                                         .height(20.dp)
                                                         .wrapContentWidth(),
                                             ) {
-                                                Text(text = stringResource(Res.string.show))
+                                                Text(text = stringResource(Res.string.show), color = lyricsColors.translation)
                                             }
                                         }
                                     }
@@ -2221,6 +2303,8 @@ fun NowPlayingScreenContent(
                                         screenDataState.lyricsData?.let {
                                             LyricsView(
                                                 lyricsData = it,
+                                                backgroundColor = lyricsBackground,
+                                                accentColor = lyricsColors.translation,
                                                 timeLine = sharedViewModel.timeline,
                                                 onLineClick = { f ->
                                                     sharedViewModel.onUIEvent(UIEvent.UpdateProgress(f))
@@ -2233,8 +2317,7 @@ fun NowPlayingScreenContent(
                                         Text(
                                             text =
                                                 when (screenDataState.lyricsData?.lyrics?.syncType) {
-                                                    "LINE_SYNCED" -> stringResource(Res.string.line_synced)
-                                                    "RICH_SYNCED" -> stringResource(Res.string.rich_synced)
+                                                    "LINE_SYNCED", "RICH_SYNCED" -> stringResource(Res.string.line_synced)
                                                     else -> stringResource(Res.string.unsynced)
                                                 },
                                             style = typo().bodySmall,
@@ -2247,6 +2330,10 @@ fun NowPlayingScreenContent(
                                         Text(
                                             text =
                                                 when (screenDataState.lyricsData?.lyricsProvider) {
+                                                    LyricsProvider.SIMPMUSIC -> {
+                                                        "Gratify"
+                                                    }
+
                                                     LyricsProvider.GRATIFYMUSIC -> {
                                                         stringResource(Res.string.lyrics_provider_gratify)
                                                     }
@@ -2302,10 +2389,10 @@ fun NowPlayingScreenContent(
                                         )
                                     }
                                 },
-                                shape = GratifyShapes.small,
+                                shape = GratifyShapes.large,
                                 colors =
                                     CardDefaults.elevatedCardColors().copy(
-                                        containerColor = startColor.value,
+                                        containerColor = GratifyColors.AccentContainer,
                                     ),
                             ) {
                                 Box(
@@ -2373,10 +2460,10 @@ fun NowPlayingScreenContent(
                         AnimatedVisibility(visible = screenDataState.songInfoData != null) {
                             ElevatedCard(
                                 onClick = {},
-                                shape = GratifyShapes.small,
+                                shape = GratifyShapes.large,
                                 colors =
                                     CardDefaults.elevatedCardColors().copy(
-                                        containerColor = startColor.value,
+                                        containerColor = GratifyColors.AccentContainer,
                                     ),
                             ) {
                                 Column(

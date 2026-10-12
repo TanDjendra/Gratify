@@ -20,6 +20,7 @@ import kotlinx.coroutines.IO
 import org.koin.dsl.module
 import com.tan.gratify.aiservice.AiClient
 import com.tan.gratify.lyrics.GratifyLyricsClient
+import com.tan.gratify.lyrics.SimpMusicLyricsClient
 import kotlin.time.ExperimentalTime
 
 @OptIn(ExperimentalTime::class)
@@ -74,5 +75,7 @@ val databaseModule =
         single(createdAtStart = true) {
             GratifyLyricsClient()
         }
+
+        single { SimpMusicLyricsClient() }
 
     }

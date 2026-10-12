@@ -102,7 +102,9 @@ internal class AccountLibraryStore(private val database: MusicDatabase) {
             }
         }
         return names.map { name ->
-            connection.usePrepared("SELECT * FROM ${identifier(name)}") { statement ->
+            // Search recency is stored by insertion order; preserve it when archiving an account.
+            val order = if (name == "search_history") " ORDER BY rowid ASC" else ""
+            connection.usePrepared("SELECT * FROM ${identifier(name)}$order") { statement ->
                 val columns = (0 until statement.getColumnCount()).map { statement.getColumnName(it) }
                 val rows = buildList {
                     while (statement.step()) add(columns.indices.map { index ->

@@ -37,7 +37,7 @@ internal class MusicDownloadService :
         (downloadUtil as DownloadUtils).downloadNotificationHelper.buildProgressNotification(
             this,
             R.drawable.monochrome,
-            null,
+            contentIntent(this),
             if (downloads.size == 1) {
                 Util.fromUtf8Bytes(downloads[0].request.data)
             } else {
@@ -50,45 +50,60 @@ internal class MusicDownloadService :
     class TerminalStateNotificationHelper(
         private val context: Context,
         private val notificationHelper: DownloadNotificationHelper,
-        private var nextNotificationId: Int,
     ) : DownloadManager.Listener {
+        private val terminalStates = TerminalDownloadStates()
+
+        override fun onDownloadRemoved(downloadManager: DownloadManager, download: Download) {
+            terminalStates.removed(download.request.id)
+        }
         override fun onDownloadChanged(
             downloadManager: DownloadManager,
             download: Download,
             finalException: Exception?,
         ) {
+            if (download.state != Download.STATE_FAILED && download.state != Download.STATE_COMPLETED) {
+                terminalStates.removed(download.request.id)
+                return
+            }
+            if (!terminalStates.changed(download.request.id, download.state)) return
+            val manager = androidx.core.app.NotificationManagerCompat.from(context)
+            if (!manager.areNotificationsEnabled()) return
+            if (android.os.Build.VERSION.SDK_INT >= 33 && androidx.core.content.ContextCompat.checkSelfPermission(context,
+                    android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) return
             if (download.state == Download.STATE_FAILED) {
                 val notification =
                     notificationHelper.buildDownloadFailedNotification(
                         context,
                         R.drawable.baseline_error_outline_24,
-                        null,
+                        contentIntent(context),
                         Util.fromUtf8Bytes(download.request.data),
                     )
-                NotificationUtil.setNotification(context, nextNotificationId++, notification)
+                try { manager.notify("download:${download.request.id}", download.state, notification) }
+                catch (_: SecurityException) { }
             } else if (download.state == Download.STATE_COMPLETED) {
                 val notification =
                     notificationHelper.buildDownloadCompletedNotification(
                         context,
                         R.drawable.baseline_downloaded,
-                        null,
+                        contentIntent(context),
                         Util.fromUtf8Bytes(download.request.data),
                     )
-                NotificationUtil.setNotification(context, nextNotificationId++, notification)
+                try { manager.notify("download:${download.request.id}", download.state, notification) }
+                catch (_: SecurityException) { }
             }
         }
 
-        override fun onDownloadsPausedChanged(
-            downloadManager: DownloadManager,
-            downloadsPaused: Boolean,
-        ) {
-            if (downloadsPaused) {
-                downloadManager.resumeDownloads()
-            }
-        }
+
     }
 
     companion object {
+        private fun contentIntent(context: Context): android.app.PendingIntent? {
+            val intent = context.packageManager.getLaunchIntentForPackage(context.packageName) ?: return null
+            intent.data = android.net.Uri.parse("gratify://downloads")
+            intent.flags = android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP
+            return android.app.PendingIntent.getActivity(context, NOTIFICATION_ID, intent,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE)
+        }
         const val CHANNEL_ID = "download"
         const val NOTIFICATION_ID = 1000
         const val JOB_ID = 1000

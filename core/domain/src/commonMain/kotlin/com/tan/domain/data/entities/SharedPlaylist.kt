@@ -20,6 +20,8 @@ data class SharedPlaylist(
     @SerialName("created_at")
     val createdAt: String? = null,
     @SerialName("client_sync_id") val clientSyncId: String? = null,
+    @SerialName("is_public") val isPublic: Boolean = true,
+    @kotlinx.serialization.Transient val automaticImages: List<String> = emptyList(),
 )
 
 @Serializable

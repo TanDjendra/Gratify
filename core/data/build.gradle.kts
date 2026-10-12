@@ -91,6 +91,7 @@ kotlin {
                 implementation(libs.supabase.auth)
                 implementation(libs.supabase.postgrest)
                 implementation(libs.supabase.storage)
+                implementation(libs.ktor.client.core)
                 implementation(libs.multiplatform.settings)
                 implementation(libs.kotlinx.datetime)
             }
@@ -108,11 +109,13 @@ kotlin {
                 implementation(libs.koin.android)
                 implementation(projects.media3)
                 implementation(libs.room.ktx)
+                implementation(libs.ktor.client.okhttp)
             }
         }
 
         iosMain {
             dependencies {
+                implementation(libs.ktor.client.darwin)
                 // Add iOS-specific dependencies here. This a source set created by Kotlin Gradle
                 // Plugin (KGP) that each specific iOS target (e.g., iosX64) depends on as
                 // part of KMP’s default source set hierarchy. Note that this source set depends
@@ -123,6 +126,7 @@ kotlin {
 
         jvmMain {
             dependencies {
+                implementation(libs.ktor.client.cio)
                 implementation(projects.mediaJvm)
                 implementation(projects.nowplayingcenter)
                 implementation(libs.jna)

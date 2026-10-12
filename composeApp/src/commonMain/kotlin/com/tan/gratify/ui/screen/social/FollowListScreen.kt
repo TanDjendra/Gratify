@@ -28,6 +28,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -55,6 +56,9 @@ import com.tan.gratify.expect.ui.rememberQrScannerLauncher
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.tan.domain.utils.parseProfileUserId
+import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.auth.auth
 
 @Composable
 fun FollowListScreen(
@@ -64,22 +68,20 @@ fun FollowListScreen(
     viewModel: FollowListViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    var selectedTabIndex by remember { mutableIntStateOf(initialTab) }
+    var selectedTabIndex by remember { mutableIntStateOf(initialTab.coerceIn(0, 1)) }
     val navBackStackEntry by navController.currentBackStackEntryAsState()
 
+    val supabase: SupabaseClient = koinInject()
+    val sessionStatus by supabase.auth.sessionStatus.collectAsStateWithLifecycle()
+
     val scanLauncher = rememberQrScannerLauncher { scannedValue ->
-        val scannedId = when {
-            scannedValue.startsWith("gratify://profile/") -> scannedValue.removePrefix("gratify://profile/")
-            scannedValue.contains("/profile/") -> scannedValue.substringAfterLast("/profile/")
-            else -> scannedValue
-        }.trim()
-        if (scannedId.isNotBlank() && scannedId != "gratify://profile/") {
-            navController.navigate(UserProfileDestination(userId = scannedId))
-        }
+        val scannedId = parseProfileUserId(scannedValue)
+        if (scannedId != null) navController.navigate(UserProfileDestination(userId = scannedId))
+        else viewModel.makeToast("QR ini bukan tautan profil Gratify.")
     }
 
 
-    LaunchedEffect(userId, navBackStackEntry) {
+    LaunchedEffect(userId, navBackStackEntry, sessionStatus) {
         viewModel.loadData(userId)
     }
 
@@ -150,54 +152,39 @@ fun FollowListScreen(
             }
         }
 
-        if (state.isLoading) {
+        Text("Menampilkan akun yang dapat kamu lihat.", style = typo().bodySmall,
+            color = GratifyColors.TextSecondary, modifier = Modifier.padding(16.dp))
+        val followers = selectedTabIndex == 0
+        val list = if (followers) state.followers else state.following
+        val loading = if (followers) state.followersLoading else state.followingLoading
+        val error = if (followers) state.followersError else state.followingError
+        val more = if (followers) state.moreFollowers else state.moreFollowing
+        val retry = { if (followers) viewModel.retryFollowers() else viewModel.retryFollowing() }
+        if (loading && list.isEmpty()) {
             CenterLoadingBox(Modifier.fillMaxSize())
         } else {
-            val list = if (selectedTabIndex == 0) state.followers else state.following
-            
-            if (list.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Belum ada ${tabs[selectedTabIndex].lowercase()}",
-                        style = typo().bodyMedium,
-                        color = GratifyColors.TextSecondary
-                    )
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                items(list, key = { it.id }) { profile ->
+                    Row(modifier = Modifier.fillMaxWidth()
+                        .clickable { navController.navigate(UserProfileDestination(profile.id)) }
+                        .padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        UserAvatar(imageUrl = profile.avatarUrl, name = profile.displayName, modifier = Modifier.size(50.dp))
+                        Spacer(Modifier.width(16.dp))
+                        Text(profile.displayName ?: "Pengguna Gratify", style = typo().bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                            color = Color.White, modifier = Modifier.weight(1f))
+                    }
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    items(list) { profile ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    navController.navigate(UserProfileDestination(profile.id))
-                                }
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            UserAvatar(
-                                imageUrl = profile.avatarUrl,
-                                name = profile.displayName,
-                                modifier = Modifier.size(50.dp)
-                            )
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = profile.displayName ?: "User",
-                                    style = typo().bodyLarge.copy(fontWeight = FontWeight.SemiBold),
-                                    color = Color.White
-                                )
-                                Text(
-                                    text = "Pengguna",
-                                    style = typo().bodySmall,
-                                    color = GratifyColors.TextSecondary
-                                )
-                            }
+                item {
+                    Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        if (error != null) {
+                            Text(error, color = GratifyColors.TextSecondary)
+                            TextButton(onClick = retry, enabled = !loading) { Text("Coba lagi") }
+                        } else if (list.isEmpty()) {
+                            Text("Belum ada ${tabs[selectedTabIndex].lowercase()} yang dapat ditampilkan.", color = GratifyColors.TextSecondary)
+                        } else if (loading) {
+                            Text("Memuat akun…", color = GratifyColors.TextSecondary)
+                        } else if (more) {
+                            TextButton(onClick = { if (followers) viewModel.loadMoreFollowers() else viewModel.loadMoreFollowing() }) { Text("Lihat lainnya") }
                         }
                     }
                 }

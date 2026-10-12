@@ -2,6 +2,7 @@ package com.tan.gratify.ui.screen.search
 
 import com.tan.gratify.ui.theme.GratifyColors
 import com.tan.gratify.ui.theme.GratifyShapes
+import com.tan.gratify.viewModel.BrowseArtworkLoader
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -12,6 +13,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -19,6 +24,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -45,6 +51,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -62,17 +69,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
-import com.tan.gratify.ui.component.UserAvatar
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
-import coil3.compose.AsyncImage
-import coil3.compose.LocalPlatformContext
-import coil3.request.CachePolicy
-import coil3.request.ImageRequest
-import coil3.request.crossfade
 import com.tan.common.Config
 import com.tan.domain.data.entities.SongEntity
 import com.tan.domain.data.model.browse.album.Track
@@ -84,18 +87,14 @@ import com.tan.domain.data.model.searchResult.videos.VideosResult
 import com.tan.domain.data.type.SearchResultType
 import com.tan.domain.mediaservice.handler.PlaylistType
 import com.tan.domain.mediaservice.handler.QueueData
-import com.tan.domain.utils.connectArtists
 import com.tan.domain.utils.toSongEntity
 import com.tan.domain.utils.toTrack
 import com.tan.gratify.extension.getStringBlocking
-import com.tan.gratify.ui.component.ArtistFullWidthItems
 import com.tan.gratify.ui.component.Chip
 import com.tan.gratify.ui.component.EndOfPage
 import com.tan.gratify.ui.component.NowPlayingBottomSheet
-import com.tan.gratify.ui.component.PlaylistFullWidthItems
 import com.tan.gratify.ui.component.CenterLoadingBox
 import com.tan.gratify.ui.component.GratifyChartButton
-import com.tan.gratify.ui.component.SongFullWidthItems
 import com.tan.gratify.ui.navigation.destination.list.AlbumDestination
 import com.tan.gratify.ui.navigation.destination.list.ArtistDestination
 import com.tan.gratify.ui.navigation.destination.list.PlaylistDestination
@@ -111,16 +110,19 @@ import com.tan.gratify.viewModel.SearchType
 import com.tan.gratify.viewModel.SearchViewModel
 import com.tan.gratify.viewModel.SharedViewModel
 import com.tan.gratify.viewModel.toStringRes
+import com.tan.gratify.viewModel.searchIdentity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.map
+import com.tan.domain.repository.SongRepository
+import com.tan.domain.data.entities.DownloadState
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.layout.Arrangement
-import gratify.composeapp.generated.resources.search
+import gratify.composeapp.generated.resources.*
 import gratify.composeapp.generated.resources.Res
 import gratify.composeapp.generated.resources.albums
 import gratify.composeapp.generated.resources.artists
@@ -152,6 +154,10 @@ fun SearchScreen(
     onOpenDrawer: () -> Unit = {}
 ) {
     val dataStoreManager: DataStoreManager = koinInject()
+    val songRepository: SongRepository = koinInject()
+    val artworkHomeRepository: com.tan.domain.repository.HomeRepository = koinInject()
+    val artworkSearchRepository: com.tan.domain.repository.SearchRepository = koinInject()
+    val contentCache: com.tan.data.cache.JsonContentCache = koinInject()
     val appProfileImage by dataStoreManager.getString("AppProfileImage").collectAsStateWithLifecycle(initialValue = "")
     val appProfileName by dataStoreManager.getString("AppProfileName").collectAsStateWithLifecycle(initialValue = "")
 
@@ -161,9 +167,28 @@ fun SearchScreen(
     val uiState by searchViewModel.searchScreenUIState.collectAsStateWithLifecycle()
     val searchHistory by searchViewModel.searchHistory.collectAsStateWithLifecycle()
     val exploreMoodItem by homeViewModel.exploreMoodItem.collectAsStateWithLifecycle()
+    val discoveryItems by homeViewModel.homeItemList.collectAsStateWithLifecycle()
+    val discoveryState by homeViewModel.homeListState.collectAsStateWithLifecycle()
+    val discoveryLoading by homeViewModel.loading.collectAsStateWithLifecycle()
+    val discoveryCursor by homeViewModel.continuation.collectAsStateWithLifecycle()
+    val discoveryScroll = rememberLazyListState()
+    val resultsScroll = rememberLazyListState()
 
     var searchUIType by rememberSaveable { mutableStateOf(SearchUIType.EMPTY) }
-    var searchText by rememberSaveable { mutableStateOf("") }
+    val nearDiscoveryEnd by remember {
+        androidx.compose.runtime.derivedStateOf {
+            discoveryScroll.layoutInfo.totalItemsCount > 0 &&
+                (discoveryScroll.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1) >=
+                discoveryScroll.layoutInfo.totalItemsCount - 3
+        }
+    }
+    LaunchedEffect(searchUIType, nearDiscoveryEnd, discoveryState, discoveryCursor) {
+        if (searchUIType == SearchUIType.EMPTY && nearDiscoveryEnd && !discoveryLoading &&
+            discoveryState == com.tan.gratify.viewModel.ListState.IDLE) {
+            homeViewModel.getContinueHomeItem(discoveryCursor)
+        }
+    }
+    var searchText by rememberSaveable { mutableStateOf(searchScreenState.query) }
     var isSearchSubmitted by rememberSaveable { mutableStateOf(false) }
     var isExpanded by rememberSaveable { mutableStateOf(false) }
 
@@ -178,13 +203,77 @@ fun SearchScreen(
     val pullToRefreshState = rememberPullToRefreshState()
     var isRefreshingEmpty by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val browseArtwork = remember(scope, artworkHomeRepository, artworkSearchRepository) {
+        BrowseArtworkLoader(scope, artworkHomeRepository, artworkSearchRepository, cache = contentCache)
+    }
+    val categoryCovers by browseArtwork.covers.collectAsStateWithLifecycle()
+    val reselect by sharedViewModel.reloadDestination.collectAsStateWithLifecycle()
+    LaunchedEffect(reselect) {
+        if (reselect == com.tan.gratify.ui.navigation.destination.search.SearchDestination::class) {
+            focusManager.clearFocus()
+            isFocused = false; isExpanded = false
+            discoveryScroll.animateScrollToItem(0)
+            resultsScroll.animateScrollToItem(0)
+            sharedViewModel.reloadDestinationDone()
+            searchViewModel.getPublicPlaylists(refresh = true)
+        }
+    }
+    val searchEntry = remember(navController) { navController.getBackStackEntry(com.tan.gratify.ui.navigation.destination.search.SearchDestination) }
+    DisposableEffect(searchEntry, searchViewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) searchViewModel.getPublicPlaylists(refresh = true)
+        }
+        searchEntry.lifecycle.addObserver(observer)
+        if (searchEntry.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))
+            searchViewModel.getPublicPlaylists(refresh = true)
+        onDispose { searchEntry.lifecycle.removeObserver(observer) }
+    }
+    val peopleRequest by searchEntry.savedStateHandle
+        .getStateFlow("people_search_requested", false).collectAsStateWithLifecycle()
+    LaunchedEffect(peopleRequest) {
+        if (peopleRequest) {
+            searchViewModel.cancelSearch()
+            searchViewModel.setSearchType(SearchType.USERS)
+            searchText = "@"; isSearchSubmitted = false; isExpanded = true
+            focusRequester.requestFocus()
+            searchEntry.savedStateHandle["people_search_requested"] = false
+        }
+    }
+    com.tan.gratify.ui.component.LayerBackHandler(isFocused) {
+        focusManager.clearFocus(); isFocused = false; isExpanded = false
+    }
+
+    val accountRevision by searchViewModel.accountRevision.collectAsStateWithLifecycle()
+    var previousAccountRevision by remember { mutableIntStateOf(accountRevision) }
+    LaunchedEffect(accountRevision) {
+        if (previousAccountRevision != accountRevision) {
+            searchText = ""; isExpanded = false; isSearchSubmitted = false; focusManager.clearFocus()
+            previousAccountRevision = accountRevision
+        }
+    }
+    LaunchedEffect(searchScreenState.query, searchScreenState.searchType) { resultsScroll.scrollToItem(0) }
+    val submitSearch: (String) -> Unit = { raw ->
+        val query = raw.trim().take(200)
+        if (canSubmitQuery(query, searchScreenState.searchType)) {
+            searchText = query; isSearchSubmitted = true; isExpanded = false; focusManager.clearFocus()
+            searchViewModel.insertSearchHistory(query)
+            searchViewModel.search(query, searchScreenState.searchType)
+        }
+    }
 
     val onMoreClick: (SongEntity) -> Unit = { song ->
         sheetSong = song
         showBottomSheet = true
     }
 
-    LaunchedEffect(searchText) {
+    LaunchedEffect(searchText, searchScreenState.searchType, isFocused) {
+        if (isFocused && searchScreenState.searchType == SearchType.USERS) {
+            isExpanded = false
+            isSearchSubmitted = true
+            delay(250)
+            searchViewModel.searchUsers(searchText)
+            return@LaunchedEffect
+        }
         if (isFocused) {
             isSearchSubmitted = false
             isExpanded = true
@@ -202,13 +291,15 @@ fun SearchScreen(
 
     LaunchedEffect(isFocused) {
         if (isFocused) {
-            isExpanded = true
+            isExpanded = searchScreenState.searchType != SearchType.USERS
         }
     }
 
-    LaunchedEffect(isExpanded, searchText, isFocused) {
+    LaunchedEffect(isExpanded, searchText, isFocused, searchScreenState.searchType) {
         searchUIType =
-            if (searchText.isNotEmpty() && isExpanded) {
+            if (searchScreenState.searchType == SearchType.USERS) {
+                SearchUIType.SEARCH_RESULTS
+            } else if (searchText.isNotEmpty() && isExpanded) {
                 SearchUIType.SEARCH_SUGGESTIONS
             } else if (isFocused && isExpanded) {
                 SearchUIType.SEARCH_HISTORY
@@ -239,91 +330,21 @@ fun SearchScreen(
         com.tan.gratify.ui.component.ScreenHeader(
             title = stringResource(Res.string.search), profileName = appProfileName,
             profileImage = appProfileImage, onOpenProfile = onOpenDrawer,
+            titleStyle = MaterialTheme.typography.headlineMedium.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif, fontWeight = FontWeight.Bold),
         )
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 4.dp)
-                .height(56.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(modifier = Modifier.weight(1f)) {
-                TextField(
-                    value = searchText,
-                    onValueChange = { newText ->
-                        searchViewModel.cancelSearch()
-                        searchText = newText
-                    },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(onSearch = {
-                        val query = searchText.trim()
-                        if (query.isNotEmpty()) {
-                            searchText = query
-                            isSearchSubmitted = true
-                            focusManager.clearFocus()
-                            searchViewModel.insertSearchHistory(query)
-                            if (query.startsWith("@")) searchViewModel.searchUsers(query)
-                            else searchViewModel.search(query)
-                        }
-                    }),
-                    placeholder = {
-                        Text(stringResource(Res.string.what_do_you_want_to_listen_to), style = typo().bodyMedium)
-                    },
-                    leadingIcon = {
-                        Icon(painterResource(Res.drawable.baseline_search_24), contentDescription = null)
-                    },
-                    trailingIcon = {
-                        if (searchText.isNotEmpty()) {
-                            IconButton(onClick = {
-                                searchViewModel.cancelSearch()
-                                searchText = ""
-                                isSearchSubmitted = false
-                            }) {
-                                Icon(painterResource(Res.drawable.baseline_close_24), contentDescription = "Clear search")
-                            }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth().focusRequester(focusRequester)
-                        .onFocusChanged { isFocused = it.isFocused },
-                    shape = GratifyShapes.large,
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = GratifyColors.Surface,
-                        unfocusedContainerColor = GratifyColors.Surface,
-                        focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-                        unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-                    ),
-                )
-            }
-        }
-
-        // Filter chips (Selalu muncul di bawah kolom pencarian)
-        Row(
-            modifier = Modifier
-                .horizontalScroll(chipRowState)
-                .padding(top = 10.dp, bottom = 4.dp)
-                .padding(horizontal = 12.dp),
-        ) {
-            SearchType.entries.forEach { id ->
-                val isSelected = id == searchScreenState.searchType
-                Spacer(modifier = Modifier.width(4.dp))
-                Chip(
-                    isAnimated = uiState is SearchScreenUIState.Loading,
-                    isSelected = isSelected,
-                    text = stringResource(id.toStringRes()),
-                ) {
-                    searchViewModel.setSearchType(id)
-                    // Jika user sudah mencari sesuatu, otomatis refresh pencarian dengan filter baru
-                    if (isSearchSubmitted && searchText.isNotEmpty()) {
-                        if (searchText.startsWith("@")) {
-                            searchViewModel.searchUsers(searchText)
-                        } else {
-                            searchViewModel.search(searchText, id)
-                        }
-                    }
+        val browsing = searchUIType == SearchUIType.EMPTY && !isFocused && searchScreenState.searchType != SearchType.USERS
+        SearchScrollingControls(visible = !browsing || discoveryScroll.firstVisibleItemIndex == 0 && discoveryScroll.firstVisibleItemScrollOffset <= 16) {
+        SearchControls(searchText, searchScreenState.searchType,
+            onQuery = { newText -> searchViewModel.cancelSearch(); searchText = newText; isSearchSubmitted = false },
+            onSubmit = { submitSearch(searchText) },
+            onType = { type ->
+                if (type != searchScreenState.searchType) {
+                    val submitted = isSearchSubmitted
+                    searchViewModel.setSearchType(type)
+                    if (submitted && searchText.isNotBlank()) { isSearchSubmitted = true; searchViewModel.search(searchText, type) }
                 }
-                Spacer(modifier = Modifier.width(4.dp))
-            }
+            }, focusRequester = focusRequester, onFocus = { isFocused = it },
+            landing = searchText.isEmpty() && !isFocused && !isExpanded && searchScreenState.searchType != SearchType.USERS)
         }
 
         if (searchScreenState.isSearching && uiState is SearchScreenUIState.Success) {
@@ -333,12 +354,10 @@ fun SearchScreen(
         Crossfade(targetState = searchUIType, modifier = Modifier.weight(1f).padding(bottom = innerPadding.calculateBottomPadding())) {
             when (it) {
                 SearchUIType.SEARCH_SUGGESTIONS -> {
-                    LazyColumn(
-                        Modifier.padding(
-                            horizontal = 16.dp,
-                            vertical = 10.dp,
-                        ),
-                    ) {
+                    SearchQueryList(searchScreenState.suggestQueries, history = false,
+                        problem = searchScreenState.suggestionFailed, suggestionLoading = searchScreenState.suggestionLoading,
+                        onSubmit = submitSearch, onFill = { searchText = it; focusRequester.requestFocus() },
+                        recommendations = {
                         items(searchScreenState.suggestYTItems) { item ->
                             SuggestItemRow(
                                 searchResult = item,
@@ -356,7 +375,7 @@ fun SearchScreen(
                                                     continuation = null,
                                                 ),
                                             )
-                                            searchViewModel.loadMediaItem(firstTrack, type = Config.SONG_CLICK)
+                                            searchViewModel.loadMediaItem(firstTrack, type = if (item is VideosResult) Config.VIDEO_CLICK else Config.SONG_CLICK)
                                         }
 
                                         is ArtistsResult -> {
@@ -372,290 +391,147 @@ fun SearchScreen(
                                         }
 
                                         is PlaylistsResult -> {
-                                            navController.navigate(
-                                                PlaylistDestination(
-                                                    item.browseId,
-                                                ),
-                                            )
+                                            navController.navigate(if (item.resultType == "Podcast") PodcastDestination(item.browseId) else PlaylistDestination(item.browseId))
                                         }
                                     }
                                 },
                             )
                         }
-                        items(searchScreenState.suggestQueries) { suggestion ->
-                            Row(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .clickable(
-                                            interactionSource = remember { MutableInteractionSource() },
-                                            indication = ripple(),
-                                            onClick = {
-                                                searchText = suggestion
-                                                focusManager.clearFocus()
-                                                isSearchSubmitted = true
-                                                searchViewModel.insertSearchHistory(suggestion)
-                                                if (suggestion.startsWith("@")) {
-                                                    searchViewModel.searchUsers(suggestion)
-                                                } else {
-                                                    searchViewModel.search(suggestion)
-                                                }
-                                            },
-                                        ).padding(horizontal = 12.dp, vertical = 2.dp)
-                                        .clip(GratifyShapes.small),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(
-                                    text = suggestion,
-                                    style = typo().bodyMedium,
-                                )
-                                Spacer(modifier = Modifier.weight(1f))
-                                IconButton(
-                                    onClick = {
-                                        searchText = suggestion
-                                        focusRequester.requestFocus()
-                                    },
-                                ) {
-                                    Icon(
-                                        painter = painterResource(Res.drawable.baseline_arrow_outward_24),
-                                        contentDescription = "Search suggestion",
-                                        modifier = Modifier.size(24.dp),
-                                    )
-                                }
-                            }
-                        }
-                        item {
-                            EndOfPage(
-                                withoutCredit = true,
-                            )
-                        }
-                    }
+                        })
                 }
 
                 SearchUIType.SEARCH_HISTORY -> {
-                    // Search history state
-                    Column(
-                        modifier =
-                            Modifier
-                                .fillMaxSize()
-                                .padding(
-                                    horizontal = 16.dp,
-                                    vertical = 10.dp,
-                                ),
-                    ) {
-                        LazyColumn {
-                            stickyHeader {
-                                Crossfade(
-                                    targetState = searchHistory.isNotEmpty(),
-                                ) {
-                                    if (it) {
-                                        Row(
-                                            modifier =
-                                                Modifier
-                                                    .fillMaxWidth()
-                                                    .background(GratifyColors.Background),
-                                        ) {
-                                            TextButton(
-                                                onClick = { searchViewModel.deleteSearchHistory() },
-                                            ) {
-                                                Text(
-                                                    text = stringResource(Res.string.clear_search_history),
-                                                    color = MaterialTheme.colorScheme.onBackground,
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            items(searchHistory) { historyItem ->
-                                Row(
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                searchText = historyItem
-                                                focusManager.clearFocus()
-                                                isSearchSubmitted = true
-                                                searchViewModel.insertSearchHistory(historyItem)
-                                                if (historyItem.startsWith("@")) {
-                                                    searchViewModel.searchUsers(historyItem)
-                                                } else {
-                                                    searchViewModel.search(historyItem)
-                                                }
-                                            }.padding(horizontal = 12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Icon(
-                                        painter = painterResource(Res.drawable.baseline_history_24),
-                                        contentDescription = "Search history",
-                                        modifier = Modifier.size(24.dp),
-                                    )
-                                    Spacer(modifier = Modifier.padding(horizontal = 12.dp))
-                                    Text(
-                                        text = historyItem,
-                                        style = typo().bodyMedium,
-                                    )
-                                    Spacer(modifier = Modifier.weight(1f))
-                                    IconButton(
-                                        onClick = {
-                                            searchText = historyItem
-                                            focusRequester.requestFocus()
-                                        },
-                                    ) {
-                                        Icon(
-                                            painter = painterResource(Res.drawable.baseline_arrow_outward_24),
-                                            contentDescription = "Search suggestion",
-                                            modifier = Modifier.size(24.dp),
-                                        )
-                                    }
-                                }
-                            }
-                            item {
-                                EndOfPage(
-                                    withoutCredit = true,
-                                )
-                            }
-                        }
-                    }
+                    SearchQueryList(searchHistory, history = true, busy = searchScreenState.historyBusy,
+                        problem = searchScreenState.historyProblem, onSubmit = submitSearch,
+                        onFill = { searchText = it; focusRequester.requestFocus() },
+                        onRemove = { searchViewModel.deleteSearchHistory(it) },
+                        onClear = { searchViewModel.deleteSearchHistory() }, onRetry = { searchViewModel.observeHistory() })
                 }
 
                 SearchUIType.EMPTY -> {
-                    val curatedGradients = remember {
-                        GratifyColors.BrowseArtwork.map { color ->
-                            Brush.linearGradient(listOf(color, color.copy(alpha = 0.8f)))
-                        }
-                    }
-
-
+                    BoxWithConstraints(Modifier.fillMaxSize()) {
+                    val browseColumns = searchBrowseColumns(maxWidth - 32.dp, LocalDensity.current.fontScale)
                     PullToRefreshBox(
                         isRefreshing = isRefreshingEmpty,
                         onRefresh = {
                             scope.launch {
                                 isRefreshingEmpty = true
-                                searchViewModel.getPublicPlaylists()
-                                homeViewModel.getHomeItemList()
-                                delay(1000)
-                                isRefreshingEmpty = false
+                                try {
+                                    searchViewModel.getPublicPlaylists()
+                                    homeViewModel.getHomeItemList()
+                                    delay(1000)
+                                } finally { isRefreshingEmpty = false }
                             }
                         },
                         state = pullToRefreshState,
                         modifier = Modifier.fillMaxSize()
                     ) {
                         LazyColumn(
+                            state = discoveryScroll,
                             modifier = Modifier
                                 .fillMaxSize(),
                             contentPadding = PaddingValues(bottom = 120.dp, start = 16.dp, end = 16.dp, top = 8.dp)
                         ) {
                         item {
                             Text(
-                                text = "Playlist Publik",
-                                style = typo().titleMedium.copy(fontWeight = FontWeight.Bold, color = Color.White),
+                                text = stringResource(Res.string.search_public_title),
+                                style = MaterialTheme.typography.titleMedium.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif, fontWeight = FontWeight.Bold, color = Color.White),
                                 modifier = Modifier.padding(vertical = 12.dp)
                             )
                         }
 
-                        val chunkedExplore = searchScreenState.publicPlaylists.chunked(2)
+                        val chunkedExplore = searchScreenState.publicPlaylists.filter { !it.id.isNullOrBlank() }.distinctBy { it.id }.chunked(browseColumns)
                         if (chunkedExplore.isEmpty()) {
                             item {
                                 Text(
-                                    text = "Belum ada playlist publik",
+                                    text = stringResource(when {
+                                        searchScreenState.publicPlaylistsLoading -> Res.string.search_public_loading
+                                        searchScreenState.publicPlaylistsProblem -> Res.string.search_public_failed
+                                        else -> Res.string.search_public_empty
+                                    }),
                                     style = typo().bodyMedium.copy(color = GratifyColors.TextSecondary),
                                     modifier = Modifier.padding(bottom = 12.dp)
                                 )
+                                if (searchScreenState.publicPlaylistsProblem) TextButton(onClick = { searchViewModel.getPublicPlaylists(refresh = true) }, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(Res.string.retry)) }
                             }
                         } else {
-                            items(chunkedExplore.size) { rowIndex ->
+                            items(chunkedExplore.size, key = { "public:${chunkedExplore[it].first().id}" }) { rowIndex ->
                                 val rowItems = chunkedExplore[rowIndex]
                                 Row(
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp).height(IntrinsicSize.Min),
                                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
-                                    rowItems.forEachIndexed { colIndex, item ->
-                                        val gradIndex = (rowIndex * 2 + colIndex) % curatedGradients.size
-                                        ExploreCard(
-                                            title = item.title,
-                                            gradient = curatedGradients[gradIndex],
-                                            imageUrl = item.thumbnailUrl?.ifEmpty { "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200&auto=format&fit=crop&q=60" } ?: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200&auto=format&fit=crop&q=60",
-                                            modifier = Modifier.weight(1f),
-                                            onClick = {
-                                                navController.navigate(SharedPlaylistDestination(item.id ?: ""))
-                                            }
-                                        )
+                                    rowItems.forEach { item ->
+                                        SearchCategoryTile(SearchCategoryEntry(item.id.orEmpty(), item.title, item.thumbnailUrl,
+                                            item.creatorName?.takeIf { it.isNotBlank() } ?: stringResource(Res.string.search_kind_playlist),item.automaticImages),
+                                            modifier = Modifier.weight(1f).fillMaxHeight()) {
+                                            navController.navigate(SharedPlaylistDestination(item.id.orEmpty()))
+                                        }
                                     }
-                                    if (rowItems.size < 2) {
-                                        Spacer(modifier = Modifier.weight(1f))
-                                    }
-                                }
-                            }
-                        }
-
-                        val moments = exploreMoodItem?.moodsMoments
-                        // Hanya mood/momen NYATA dari data explore (punya params → ada lagunya).
-                        // Fallback hardcoded dihapus karena dummy (judul & params tidak nyambung).
-                        if (!moments.isNullOrEmpty()) {
-                            item {
-                                Text(
-                                    text = "Temukan sesuatu yang lain",
-                                    style = typo().titleMedium.copy(fontWeight = FontWeight.Bold, color = Color.White),
-                                    modifier = Modifier.padding(top = 20.dp, bottom = 12.dp)
-                                )
-                                LazyRow(
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    items(moments.size) { index ->
-                                        val item = moments[index]
-                                        val gradIndex = (index + 4) % curatedGradients.size
-                                        MoodMomentRowItem(
-                                            title = item.title,
-                                            params = item.params,
-                                            gradient = curatedGradients[gradIndex],
-                                            imageUrl = getUnsplashImageForGenre(item.title),
-                                            navController = navController
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        val genres = exploreMoodItem?.genres
-                        // Hanya genre NYATA dari data explore (punya params valid → ada lagunya).
-                        // Fallback genre dummy (mis. "K-pop" → Energize, "Jazz" → Relax) dihapus.
-                        if (!genres.isNullOrEmpty()) {
-                            item {
-                                Text(
-                                    text = "Jelajahi semua",
-                                    style = typo().titleMedium.copy(fontWeight = FontWeight.Bold, color = Color.White),
-                                    modifier = Modifier.padding(top = 24.dp, bottom = 12.dp)
-                                )
-                            }
-                            val chunkedGenres = genres.chunked(2)
-                            items(chunkedGenres.size) { rowIndex ->
-                                val rowItems = chunkedGenres[rowIndex]
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    rowItems.forEachIndexed { colIndex, item ->
-                                        val gradIndex = (rowIndex * 2 + colIndex + 2) % curatedGradients.size
-                                        ExploreCard(
-                                            title = item.title,
-                                            gradient = curatedGradients[gradIndex],
-                                            imageUrl = getUnsplashImageForGenre(item.title),
-                                            modifier = Modifier.weight(1f),
-                                            onClick = {
-                                                navController.navigate(MoodDestination(item.params))
-                                            }
-                                        )
-                                    }
-                                    if (rowItems.size < 2) {
-                                        Spacer(modifier = Modifier.weight(1f))
-                                    }
+                                    repeat(browseColumns - rowItems.size) { Spacer(modifier = Modifier.weight(1f)) }
                                 }
                             }
                         }
 
                         item {
+                            LaunchedEffect(Unit) { browseArtwork.podcasts() }
+                            val musicCover = discoveryItems.asSequence().flatMap { it.contents.asSequence() }.filterNotNull()
+                                .mapNotNull { it.thumbnails.lastOrNull { thumbnail -> thumbnail.url.isNotBlank() }?.url }.firstOrNull()
+                            val shortcuts = listOf(
+                                SearchCategoryEntry("quick:music", stringResource(Res.string.search_browse_music), musicCover),
+                                SearchCategoryEntry("quick:podcasts", stringResource(Res.string.podcasts), categoryCovers["quick:podcasts"]),
+                            )
+                            Column(Modifier.padding(top = 12.dp, bottom = 8.dp)) {
+                                shortcuts.chunked(browseColumns).forEach { row ->
+                                    SearchCategoryRow(row, browseColumns, compact = true) { entry ->
+                                        searchViewModel.setSearchType(if (entry.id == "quick:podcasts") SearchType.PODCASTS else SearchType.SONGS)
+                                        isSearchSubmitted = false
+                                        isExpanded = true
+                                        focusRequester.requestFocus()
+                                    }
+                                }
+                            }
+                        }
+                        // Only server-provided browse IDs are navigable; category labels never invent destinations.
+                        val categories = searchBrowseCategories(exploreMoodItem)
+                        if (categories.isNotEmpty()) {
+                            item {
+                                Text(stringResource(Res.string.search_explore_all),
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    modifier = Modifier.padding(top = 12.dp, bottom = 8.dp))
+                            }
+                            val categoryRows = categories.chunked(browseColumns)
+                            items(categoryRows.size, key = { "category:${categoryRows[it].first().id}" }) { row ->
+                                LaunchedEffect(categoryRows[row].map { it.id }) {
+                                    categoryRows[row].forEach { browseArtwork.category(it.id) }
+                                }
+                                SearchCategoryRow(categoryRows[row].map { it.copy(imageUrl = categoryCovers[it.id]) }, browseColumns) { entry ->
+                                    navController.navigate(MoodDestination(entry.id))
+                                }
+                            }
+                        }
+
+                        item {
+                            com.tan.gratify.ui.component.HomeSectionHeading(
+                                title = stringResource(Res.string.search_discover_title),
+                                subtitle = stringResource(Res.string.search_discover_body),
+                                modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
+                            )
+                        }
+                        items(discoveryItems.size) { index ->
+                            com.tan.gratify.ui.component.HomeItem(
+                                homeViewModel = homeViewModel, navController = navController,
+                                data = discoveryItems[index],
+                            )
+                            Spacer(Modifier.height(24.dp))
+                        }
+                        item {
+                            com.tan.gratify.ui.component.DiscoveryFooter(
+                                loading = discoveryLoading || discoveryState == com.tan.gratify.viewModel.ListState.PAGINATING,
+                                failed = homeViewModel.canRetryDiscovery,
+                                exhausted = discoveryState == com.tan.gratify.viewModel.ListState.PAGINATION_EXHAUST,
+                                onRetry = homeViewModel::retryDiscovery,
+                            )
                             Spacer(modifier = Modifier.height(20.dp))
                             GratifyChartButton(
                                 modifier = Modifier
@@ -665,6 +541,7 @@ fun SearchScreen(
                                 uriHandler.openUri("https://chart.gratify.org")
                             }
                         }
+                    }
                     }
                 }
                 }
@@ -701,13 +578,14 @@ fun SearchScreen(
                             Crossfade(targetState = uiState) { uiState ->
                                 when (uiState) {
                                     is SearchScreenUIState.Loading -> {
-                                        // Loading state
-                                        CenterLoadingBox(Modifier.fillMaxSize())
+                                        SearchResultStatus(uiState, searchText, searchScreenState.searchType)
                                     }
 
                                     is SearchScreenUIState.Success -> {
-                                        // Success state with results
                                         Column(modifier = Modifier.fillMaxSize()) {
+                                            if (searchScreenState.incomplete) SearchPartialNotice(searchScreenState.isSearching) {
+                                                searchViewModel.search(searchText)
+                                            }
                                             // Search Results List
                                             val currentResults =
                                                 when (searchScreenState.searchType) {
@@ -726,214 +604,77 @@ fun SearchScreen(
                                                 if (hasResults) {
                                                     LazyColumn(
                                                         contentPadding = PaddingValues(horizontal = 4.dp),
-                                                        state = rememberLazyListState(),
+                                                        state = resultsScroll,
                                                     ) {
                                                         if (searchScreenState.searchType == SearchType.USERS) {
-                                                            items(searchScreenState.searchUsersResult) { user ->
-                                                                Row(
-                                                                    modifier = Modifier
-                                                                        .fillMaxWidth()
-                                                                        .clickable {
-                                                                            navController.navigate(UserProfileDestination(user.id))
-                                                                        }
-                                                                        .padding(vertical = 8.dp, horizontal = 12.dp),
-                                                                    verticalAlignment = Alignment.CenterVertically
-                                                                ) {
-                                                                    UserAvatar(
-                                                                        imageUrl = user.avatarUrl,
-                                                                        name = user.displayName,
-                                                                        modifier = Modifier.size(48.dp)
-                                                                    )
-                                                                    Spacer(modifier = Modifier.width(16.dp))
-                                                                    Text(
-                                                                        text = user.displayName ?: "User",
-                                                                        style = typo().titleMedium,
-                                                                        color = Color.White
-                                                                    )
+                                                            items(searchScreenState.searchUsersResult, key = { it.id }) { user ->
+                                                                SearchPersonCard(user.id, user.displayName, user.avatarUrl) {
+                                                                    navController.navigate(UserProfileDestination(user.id))
+                                                                }
+                                                            }
+                                                            item {
+                                                                Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                                                    searchScreenState.usersPageError?.let { Text(stringResource(Res.string.search_people_page_failed), color = GratifyColors.TextSecondary) }
+                                                                    if (searchScreenState.usersLoadingMore) Text(stringResource(Res.string.search_people_loading), color = GratifyColors.TextSecondary)
+                                                                    else if (searchScreenState.usersMore) androidx.compose.material3.TextButton(onClick = { searchViewModel.loadMoreUsers() }, modifier = Modifier.heightIn(min = 48.dp)) {
+                                                                        Text(stringResource(if (searchScreenState.usersPageError != null) Res.string.retry else Res.string.search_more_people))
+                                                                    }
                                                                 }
                                                             }
                                                         } else {
-                                                            items(currentResults) { result ->
-                                                            when (result) {
-                                                                is SongsResult -> {
-                                                                    SongFullWidthItems(
-                                                                        track = result.toTrack(),
-                                                                        isPlaying = result.videoId == currentVideoId,
-                                                                        modifier = Modifier,
-                                                                        onMoreClickListener = {
-                                                                            onMoreClick(result.toTrack().toSongEntity())
-                                                                        },
-                                                                        onClickListener = {
-                                                                            val firstTrack = result.toTrack()
-                                                                            searchViewModel.setQueueData(
-                                                                                QueueData.Data(
-                                                                                    listTracks = arrayListOf(firstTrack),
-                                                                                    firstPlayedTrack = firstTrack,
-                                                                                    playlistId = "RDAMVM${result.videoId}",
-                                                                                    playlistName =
-                                                                                        "\"${searchText}\" ${
-                                                                                            getStringBlocking(
-                                                                                                Res.string.in_search,
-                                                                                            )
-                                                                                        }",
-                                                                                    playlistType = PlaylistType.RADIO,
-                                                                                    continuation = null,
-                                                                                ),
-                                                                            )
-                                                                            searchViewModel.loadMediaItem(firstTrack, Config.SONG_CLICK)
-                                                                        },
-                                                                        onAddToQueue = {
-                                                                            sharedViewModel.addListToQueue(
-                                                                                arrayListOf(result.toTrack()),
-                                                                            )
-                                                                        },
-                                                                    )
+                                                            items(currentResults, key = { it.searchIdentity() }) { result ->
+                                                                val info = result.searchCardInfo()
+                                                                val track = when (result) {
+                                                                    is SongsResult -> result.toTrack()
+                                                                    is VideosResult -> result.toTrack()
+                                                                    else -> null
                                                                 }
-
-                                                                is VideosResult -> {
-                                                                    SongFullWidthItems(
-                                                                        track = result.toTrack(),
-                                                                        isPlaying = result.videoId == currentVideoId,
-                                                                        modifier = Modifier,
-                                                                        onMoreClickListener = {
-                                                                            onMoreClick(result.toTrack().toSongEntity())
-                                                                        },
-                                                                        onClickListener = {
-                                                                            val firstTrack = result.toTrack()
-                                                                            searchViewModel.setQueueData(
-                                                                                QueueData.Data(
-                                                                                    listTracks = arrayListOf(firstTrack),
-                                                                                    firstPlayedTrack = firstTrack,
-                                                                                    playlistId = "RDAMVM${result.videoId}",
-                                                                                    playlistName =
-                                                                                        "\"${searchText}\" ${
-                                                                                            getStringBlocking(
-                                                                                                Res.string.in_search,
-                                                                                            )
-                                                                                        }",
-                                                                                    playlistType = PlaylistType.RADIO,
-                                                                                    continuation = null,
-                                                                                ),
-                                                                            )
-                                                                            searchViewModel.loadMediaItem(firstTrack, Config.VIDEO_CLICK)
-                                                                        },
-                                                                        onAddToQueue = {
-                                                                            sharedViewModel.addListToQueue(
-                                                                                arrayListOf(result.toTrack()),
-                                                                            )
-                                                                        },
-                                                                    )
-                                                                }
-
-                                                                is AlbumsResult -> {
-                                                                    PlaylistFullWidthItems(
-                                                                        data = result,
-                                                                        onClickListener = {
-                                                                            navController.navigate(
-                                                                                AlbumDestination(
-                                                                                    result.browseId,
-                                                                                ),
-                                                                            )
-                                                                        },
-                                                                    )
-                                                                }
-
-                                                                is ArtistsResult -> {
-                                                                    ArtistFullWidthItems(
-                                                                        data = result,
-                                                                        onClickListener = {
-                                                                            navController.navigate(
-                                                                                ArtistDestination(
-                                                                                    result.browseId,
-                                                                                ),
-                                                                            )
-                                                                        },
-                                                                    )
-                                                                }
-
-                                                                is PlaylistsResult -> {
-                                                                    PlaylistFullWidthItems(
-                                                                        data = result,
-                                                                        onClickListener = {
-                                                                            if (result.resultType == "Podcast") {
-                                                                                navController.navigate(
-                                                                                    PodcastDestination(
-                                                                                        result.browseId,
-                                                                                    ),
-                                                                                )
-                                                                            } else {
-                                                                                navController.navigate(
-                                                                                    PlaylistDestination(
-                                                                                        result.browseId,
-                                                                                    ),
-                                                                                )
-                                                                            }
-                                                                        },
-                                                                    )
-                                                                }
-                                                                }
+                                                                val downloaded = if (track != null) {
+                                                                    val state by remember(track.videoId) {
+                                                                        songRepository.getSongAsFlow(track.videoId).map { it?.downloadState == DownloadState.STATE_DOWNLOADED }
+                                                                    }.collectAsStateWithLifecycle(initialValue = false)
+                                                                    state
+                                                                } else false
+                                                                SearchResultCard(
+                                                                    info = info,
+                                                                    isCurrent = info.playable && info.id.isNotBlank() && info.id == currentVideoId,
+                                                                    downloaded = downloaded,
+                                                                    onClick = {
+                                                                        if (track != null) {
+                                                                            searchViewModel.setQueueData(QueueData.Data(
+                                                                                listTracks = arrayListOf(track), firstPlayedTrack = track,
+                                                                                playlistId = "RDAMVM${info.id}",
+                                                                                playlistName = "\"${searchText}\" ${getStringBlocking(Res.string.in_search)}",
+                                                                                playlistType = PlaylistType.RADIO, continuation = null,
+                                                                            ))
+                                                                            searchViewModel.loadMediaItem(track, if (result is VideosResult) Config.VIDEO_CLICK else Config.SONG_CLICK)
+                                                                        } else when (result) {
+                                                                            is AlbumsResult -> navController.navigate(AlbumDestination(result.browseId))
+                                                                            is ArtistsResult -> navController.navigate(ArtistDestination(result.browseId))
+                                                                            is PlaylistsResult -> if (result.resultType == "Podcast") navController.navigate(PodcastDestination(result.browseId))
+                                                                                else navController.navigate(PlaylistDestination(result.browseId))
+                                                                            else -> Unit
+                                                                        }
+                                                                    },
+                                                                    onMore = track?.let { { onMoreClick(it.toSongEntity()) } },
+                                                                    onQueue = track?.let { { sharedViewModel.addListToQueue(arrayListOf(it)) } },
+                                                                )
                                                             }
                                                         }
-                                                        // Space at bottom to account for bottom navigation and mini player
-                                                        item { Spacer(modifier = Modifier.height(150.dp)) }
+                                                        item { Spacer(modifier = Modifier.height(24.dp)) }
                                                     }
                                                 } else {
-                                                    Box(
-                                                        modifier = Modifier.fillMaxSize(),
-                                                        contentAlignment = Alignment.Center,
-                                                    ) {
-                                                        Text(
-                                                            text = stringResource(Res.string.no_results_found),
-                                                            style = typo().titleMedium,
-                                                            textAlign = TextAlign.Center,
-                                                            modifier = Modifier.fillMaxWidth(),
-                                                        )
-                                                    }
+                                                    SearchResultStatus(if (searchScreenState.incomplete && !searchScreenState.isSearching) SearchScreenUIState.Error else uiState, searchText, searchScreenState.searchType,
+                                                        onRetry = { searchViewModel.search(searchText) }, loading = searchScreenState.isSearching,
+                                                        onAll = { searchViewModel.search(searchText, SearchType.ALL) })
                                                 }
                                             }
                                         }
                                     }
 
-                                    is SearchScreenUIState.Error -> {
-                                        Box(Modifier.fillMaxSize()) {
-                                            // Error state
-                                            Column(
-                                                modifier = Modifier.align(Alignment.Center),
-                                                horizontalAlignment = Alignment.CenterHorizontally,
-                                            ) {
-                                                Text(
-                                                    text = stringResource(Res.string.error_occurred),
-                                                    style = typo().titleMedium,
-                                                    fontWeight = FontWeight.Bold,
-                                                    textAlign = TextAlign.Center,
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                )
-                                                Spacer(modifier = Modifier.height(10.dp))
-                                                Button(onClick = {
-                                                    if (searchText.isNotEmpty()) {
-                                                        searchViewModel.search(searchText)
-                                                    }
-                                                }) {
-                                                    Text(text = stringResource(Res.string.retry))
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    SearchScreenUIState.Empty -> {
-                                        // Empty state
-                                        Box(
-                                            modifier = Modifier.fillMaxSize(),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            Text(
-                                                text = stringResource(Res.string.no_results_found),
-                                                style = typo().titleMedium,
-                                                textAlign = TextAlign.Center,
-                                                modifier = Modifier.fillMaxWidth(),
-                                            )
-                                        }
-                                    }
+                                    is SearchScreenUIState.Error -> SearchResultStatus(uiState, searchText, searchScreenState.searchType,
+                                        onRetry = { searchViewModel.search(searchText) })
+                                    SearchScreenUIState.Empty -> SearchResultStatus(uiState, searchText, searchScreenState.searchType)
                                 }
                             }
                         }
@@ -945,137 +686,8 @@ fun SearchScreen(
 }
 
 @Composable
-fun SuggestItemRow(
-    searchResult: SearchResultType,
-    onItemClick: (SearchResultType) -> Unit,
-) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable { onItemClick(searchResult) }
-                .padding(vertical = 8.dp, horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        val url =
-            when (searchResult) {
-                is SongsResult -> {
-                    searchResult.thumbnails?.lastOrNull()?.url
-                }
-
-                is AlbumsResult -> {
-                    searchResult.thumbnails.lastOrNull()?.url
-                }
-
-                is ArtistsResult -> {
-                    searchResult.thumbnails.lastOrNull()?.url
-                }
-
-                is PlaylistsResult -> {
-                    searchResult.thumbnails.lastOrNull()?.url
-                }
-
-                is VideosResult -> {
-                    searchResult.thumbnails?.lastOrNull()?.url
-                }
-
-                else -> {
-                    null
-                }
-            }
-
-        Box(
-            modifier =
-                Modifier
-                    .size(40.dp)
-                    .clip(GratifyShapes.extraSmall),
-        ) {
-            AsyncImage(
-                model =
-                    ImageRequest
-                        .Builder(LocalPlatformContext.current)
-                        .data(url)
-                        .diskCachePolicy(CachePolicy.ENABLED)
-                        .diskCacheKey(url)
-                        .crossfade(true)
-                        .build(),
-                placeholder = painterResource(Res.drawable.holder),
-                error = painterResource(Res.drawable.holder),
-                fallback = painterResource(Res.drawable.holder),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier =
-                    Modifier
-                        .size(40.dp)
-                        .clip(
-                            if (searchResult is ArtistsResult) {
-                                CircleShape
-                            } else {
-                                GratifyShapes.extraSmall
-                            },
-                        ),
-            )
-        }
-
-        Spacer(modifier = Modifier.padding(horizontal = 12.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            val title =
-                when (searchResult) {
-                    is SongsResult -> {
-                        searchResult.title
-                    }
-
-                    is AlbumsResult -> {
-                        searchResult.title
-                    }
-
-                    is ArtistsResult -> {
-                        searchResult.artist
-                    }
-
-                    is PlaylistsResult -> {
-                        searchResult.title
-                    }
-
-                    is VideosResult -> {
-                        searchResult.title
-                    }
-
-                    else -> {
-                        null
-                    }
-                } ?: "Unknown"
-
-            Text(
-                text = title,
-                style = typo().labelSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-
-            val subtitle =
-                when (searchResult) {
-                    is SongsResult -> searchResult.artists?.map { it.name }?.connectArtists()
-                    is AlbumsResult -> searchResult.artists.map { it.name }.connectArtists()
-                    is PlaylistsResult -> searchResult.author.ifEmpty { "YouTube Music" }
-                    is ArtistsResult -> stringResource(Res.string.artists)
-                    is VideosResult -> searchResult.artists?.map { it.name }?.connectArtists()
-                    else -> null
-                } ?: "Unknown"
-
-            if (subtitle.isNotEmpty()) {
-                Text(
-                    text = subtitle,
-                    style = typo().bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-    }
+fun SuggestItemRow(searchResult: SearchResultType, onItemClick: (SearchResultType) -> Unit) {
+    SearchResultCard(info = searchResult.searchCardInfo(), modifier = Modifier.padding(horizontal = 16.dp), onClick = { onItemClick(searchResult) })
 }
 
 enum class SearchUIType {
@@ -1083,118 +695,4 @@ enum class SearchUIType {
     SEARCH_HISTORY,
     SEARCH_SUGGESTIONS,
     SEARCH_RESULTS,
-}
-
-@Composable
-fun ExploreCard(
-    title: String,
-    gradient: Brush,
-    imageUrl: String,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = modifier
-            .height(110.dp)
-            .clip(GratifyShapes.medium)
-            .background(gradient)
-            .clickable(onClick = onClick)
-            .padding(12.dp)
-    ) {
-        Text(
-            text = title,
-            style = typo().titleMedium.copy(fontWeight = FontWeight.Bold, color = Color.White),
-            modifier = Modifier.align(Alignment.TopStart)
-        )
-        Box(
-            modifier = Modifier
-                .size(60.dp)
-                .align(Alignment.BottomEnd)
-                .graphicsLayer {
-                    rotationZ = -20f
-                    translationX = 15f
-                    translationY = 15f
-                }
-                .clip(GratifyShapes.small)
-        ) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalPlatformContext.current)
-                    .data(imageUrl)
-                    .crossfade(true)
-                    .diskCachePolicy(CachePolicy.ENABLED)
-                    .build(),
-                placeholder = painterResource(Res.drawable.holder),
-                error = painterResource(Res.drawable.holder),
-                fallback = painterResource(Res.drawable.holder),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
-    }
-}
-
-@Composable
-fun MoodMomentRowItem(
-    title: String,
-    params: String,
-    gradient: Brush,
-    imageUrl: String,
-    navController: NavController
-) {
-    Box(
-        modifier = Modifier
-            .width(130.dp)
-            .height(180.dp)
-            .clip(GratifyShapes.medium)
-            .background(gradient)
-            .clickable {
-                navController.navigate(MoodDestination(params))
-            }
-    ) {
-        AsyncImage(
-            model = ImageRequest.Builder(LocalPlatformContext.current)
-                .data(imageUrl)
-                .crossfade(true)
-                .diskCachePolicy(CachePolicy.ENABLED)
-                .build(),
-            placeholder = painterResource(Res.drawable.holder),
-            error = painterResource(Res.drawable.holder),
-            fallback = painterResource(Res.drawable.holder),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
-            alpha = 0.6f
-        )
-        Text(
-            text = "#${title.lowercase().replace(" ", "").replace("&", "")}",
-            style = typo().bodyMedium.copy(fontWeight = FontWeight.Bold, color = Color.White),
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(12.dp)
-        )
-    }
-}
-
-fun getUnsplashImageForGenre(title: String): String {
-    val lower = title.lowercase()
-    return when {
-        lower.contains("pop") -> "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=200&auto=format&fit=crop&q=60"
-        lower.contains("rock") -> "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=200&auto=format&fit=crop&q=60"
-        lower.contains("hip") || lower.contains("rap") -> "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=200&auto=format&fit=crop&q=60"
-        lower.contains("jazz") -> "https://images.unsplash.com/photo-1511192336575-5a79af67a629?w=200&auto=format&fit=crop&q=60"
-        lower.contains("classic") -> "https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=200&auto=format&fit=crop&q=60"
-        lower.contains("electron") || lower.contains("dance") || lower.contains("edm") -> "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=200&auto=format&fit=crop&q=60"
-        lower.contains("r&b") || lower.contains("rnb") -> "https://images.unsplash.com/photo-1487180142328-054b783fc471?w=200&auto=format&fit=crop&q=60"
-        lower.contains("chill") || lower.contains("relax") -> "https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=200&auto=format&fit=crop&q=60"
-        lower.contains("workout") || lower.contains("gym") || lower.contains("energi") -> "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=200&auto=format&fit=crop&q=60"
-        lower.contains("focus") || lower.contains("study") -> "https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?w=200&auto=format&fit=crop&q=60"
-        lower.contains("sleep") -> "https://images.unsplash.com/photo-1511295742364-92767fa62d9f?w=200&auto=format&fit=crop&q=60"
-        lower.contains("romance") || lower.contains("love") -> "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=200&auto=format&fit=crop&q=60"
-        lower.contains("podcast") -> "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=200&auto=format&fit=crop&q=60"
-        lower.contains("indie") -> "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=200&auto=format&fit=crop&q=60"
-        lower.contains("indonesia") -> "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200&auto=format&fit=crop&q=60"
-        lower.contains("tangga") || lower.contains("chart") -> "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=200&auto=format&fit=crop&q=60"
-        else -> "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=200&auto=format&fit=crop&q=60"
-    }
 }

@@ -1,0 +1,30 @@
+<resources>
+    <string name="about_app_summary">Music, your library, and lyrics in one place.</string>
+    <string name="about_application">Application</string>
+    <string name="about_build">Build %1$d</string>
+    <string name="about_info_copied">Version information copied.</string>
+    <string name="about_copy_failed">Could not copy. Try again.</string>
+    <string name="about_people_support">People &amp; support</string>
+    <string name="about_developer_credits">Developer &amp; credits</string>
+    <string name="about_developer_hint">Tan, the original project, and open source licenses.</string>
+    <string name="about_contact_support">Get help or report a problem</string>
+    <string name="about_support_hint">Your email draft includes the app version. Add what happened and how to reproduce it before sending.</string>
+    <string name="about_privacy_terms">Privacy &amp; terms</string>
+    <string name="about_developer_heading">The people behind Gratify</string>
+    <string name="about_developer_role">Gratify developer</string>
+    <string name="about_connect">Connect with Tan</string>
+    <string name="about_developer_site">Developer website</string>
+    <string name="about_open_source">Built on open source</string>
+    <string name="about_upstream_credit">Gratify is a modified version of SimpMusic by maxrave-dev and its contributors. Thank you to the original project and the libraries that make this app possible.</string>
+    <string name="about_source_code">Gratify source code</string>
+    <string name="about_library_licenses">Libraries &amp; licenses</string>
+    <string name="about_library_hint">Explore the libraries, authors, and license information included with this app.</string>
+    <string name="about_project_license">Gratify license</string>
+    <string name="about_support_development">Support development</string>
+    <string name="about_donation_optional">Donations are optional. The link opens Saweria.</string>
+    <string name="about_link_failed">Could not open the link. You can copy the address and open it in another app.</string>
+    <string name="about_licenses_loading">Loading libraries…</string>
+    <string name="about_licenses_failed">Could not load the library information. Try again.</string>
+    <string name="about_terms_label">Terms of use (draft)</string>
+    <string name="about_privacy_label">Privacy policy</string>
+</resources>

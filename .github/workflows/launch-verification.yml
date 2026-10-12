@@ -37,7 +37,11 @@ jobs:
           test -n "$SUPABASE_URL" && test -n "$SUPABASE_KEY" && test -n "$SENTRY_DSN"
           printf 'SUPABASE_URL=%s\nSUPABASE_KEY=%s\nSENTRY_DSN=%s\n' "$SUPABASE_URL" "$SUPABASE_KEY" "$SENTRY_DSN" > local.properties
       - name: Verify shared behavior and Android lint
-        run: ./gradlew exportLibraryDefinitions :domain:jvmTest :data:jvmTest :ktorExt:jvmTest :kotlinYtmusicScraper:jvmTest :lyricsService:jvmTest :composeApp:jvmTest :androidApp:lintDebug --max-workers=2 --console=plain
+        run: ./gradlew exportLibraryDefinitions :domain:jvmTest :data:jvmTest :ktorExt:jvmTest :kotlinYtmusicScraper:jvmTest :lyricsService:jvmTest :media-jvm:test :composeApp:jvmTest :androidApp:lintDebug --max-workers=2 --console=plain
+      - name: Audit shipped Maven dependencies
+        run: |
+          ./gradlew auditResolvedLibraries -I scripts/resolve-libraries.init.gradle -PisFullBuild=true --max-workers=2 --console=plain
+          python3 scripts/audit-libraries.py --resolved build/reports/library-audit/resolved.json --outdir build/reports/library-audit --fail-on-findings
       - name: Build full Android release and upload crash mapping
         if: github.event_name != 'pull_request'
         env:
@@ -52,6 +56,7 @@ jobs:
           name: launch-verification-reports
           path: |
             **/build/reports/tests/
+            build/reports/library-audit/
             androidApp/build/reports/lint-results-debug.*
             androidApp/build/outputs/apk/release/*.apk
             androidApp/build/outputs/mapping/release/mapping.txt

@@ -2,6 +2,7 @@ package com.tan.gratify.di
 
 import com.tan.data.sync.UserDataSyncManager
 import com.tan.gratify.BuildKonfig
+import com.tan.ktorext.getEngine
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.SettingsSessionManager
 import io.github.jan.supabase.auth.SettingsCodeVerifierCache
@@ -15,22 +16,31 @@ import kotlinx.coroutines.SupervisorJob
 import org.koin.dsl.module
 
 val supabaseModule = module {
+    single {
+        com.tan.data.sync.AccountSessionCoordinator(get(), get(), get(),
+            CoroutineScope(SupervisorJob() + Dispatchers.Default),
+            recoveryPending = { com.tan.gratify.viewModel.auth.PasswordRecoveryCoordinator.pending.value })
+    }
+    single<com.tan.domain.repository.YouTubeLibraryRepository>(createdAtStart = true) {
+        com.tan.data.repository.OfficialYouTubeLibraryRepository(get(), get(),
+            BuildKonfig.SUPABASE_URL, BuildKonfig.SUPABASE_KEY,
+            CoroutineScope(SupervisorJob() + Dispatchers.Default), returnScheme = externalAuthScheme)
+    }
     single<SupabaseClient> {
         val authSettings = createAuthSettings()
         createSupabaseClient(
             supabaseUrl = BuildKonfig.SUPABASE_URL,
             supabaseKey = BuildKonfig.SUPABASE_KEY,
         ) {
+            // Choose the platform engine explicitly. CIO's hostname-unaware TLS
+            // check fails on Android when Network Security Config has domain rules.
+            httpEngine = getEngine().create()
             install(Auth) {
                 sessionManager = SettingsSessionManager(authSettings)
                 codeVerifierCache = SettingsCodeVerifierCache(authSettings)
-                // Deeplink redirect untuk OAuth (mis. Login Google).
-                // WAJIB cocok dengan intent-filter di androidApp/src/main/AndroidManifest.xml:
-                //   <data android:scheme="com.tan.gratify" android:host="login-callback" />
-                // Tanpa ini, scheme/host = null → signInWith(Google) tidak punya redirect
-                // dan handleDeeplinks menolak callback ("wrong scheme or host"),
-                // sehingga login stuck setelah memilih akun.
-                scheme = "com.tan.gratify"
+                // Match the installed Android package so coexisting apps do not
+                // consume each other's OAuth/recovery callbacks.
+                scheme = externalAuthScheme
                 host = "login-callback"
                 configureExternalAuthPlatform()
             }

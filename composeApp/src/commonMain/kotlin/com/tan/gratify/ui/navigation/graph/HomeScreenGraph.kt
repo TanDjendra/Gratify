@@ -22,11 +22,17 @@ fun NavGraphBuilder.homeScreenGraph(
     innerPadding: PaddingValues,
     navController: NavController,
 ) {
+    composable<com.tan.gratify.ui.navigation.destination.home.WrappedDestination> {
+        com.tan.gratify.ui.screen.home.wrapped.WrappedScreen(innerPadding, navController)
+    }
     composable<CreditDestination> {
         CreditScreen(
             paddingValues = innerPadding,
             navController = navController,
         )
+    }
+    composable<com.tan.gratify.ui.navigation.destination.home.OpenSourceDestination> {
+        com.tan.gratify.ui.screen.home.OpenSourceScreen(innerPadding, navController)
     }
     composable<MoodDestination> { entry ->
         val params = entry.toRoute<MoodDestination>().params

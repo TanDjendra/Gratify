@@ -412,18 +412,9 @@ fun Lyrics.toSyncedLyrics(): Lyrics {
     if (lines.isNullOrEmpty() || this.syncType != "RICH_SYNCED") {
         return this
     }
-    val wordTimingRegex = Regex("""<\d{1,2}:\d{2}\.\d{2,3}>""")
     val syncedLines = lines.map { line ->
-        val plainWords = line.words
-            .replace(wordTimingRegex, "")
-            .replace("  ", " ")
-            .trim()
-        Line(
-            endTimeMs = line.endTimeMs,
-            startTimeMs = line.startTimeMs,
-            syllables = line.syllables,
-            words = plainWords.ifBlank { "♫" },
-        )
+        val plainWords = lyricDisplayText(line.words)
+        line.copy(words = plainWords.ifBlank { "♫" })
     }
     return Lyrics(
         error = this.error,

@@ -27,6 +27,7 @@ class UserDataSyncManager(
     private var restoreJob: Job? = null
     private val syncMutex = Mutex()
     private var activeOwner: String? = null
+    private var cloudResumed = false
 
     companion object {
         private const val SYNC_INTERVAL_MS = 5 * 60 * 1000L
@@ -43,10 +44,61 @@ class UserDataSyncManager(
     }
 
     fun stopSync() {
+        cloudResumed = false
         syncJob?.cancel(); syncJob = null
         restoreJob?.cancel(); restoreJob = null
     }
     fun syncNow() { scope.launch { performSyncUp() } }
+
+    /** Offline access never imports expired credentials or activates a different library. */
+    suspend fun resumeOfflineAccount(userId: String) = syncMutex.withLock {
+        check(userId.isNotBlank())
+        check(supabase.auth.sessionStatus.value is io.github.jan.supabase.auth.status.SessionStatus.RefreshFailure)
+        check(supabase.auth.sessionManager.loadSession()?.user?.id == userId)
+        check(dataStoreManager.getString(KEY_LAST_SYNCED_USER_ID).first() == userId)
+        check(userDataSyncRepository.getLocalAccountOwner() == userId)
+        stopSync()
+        activeOwner = userId
+        // Repair older builds' false flag only after all persisted ownership checks pass.
+        if (dataStoreManager.loggedIn.first() != DataStoreManager.TRUE) dataStoreManager.setLoggedIn(true)
+    }
+
+    suspend fun resumeAuthenticatedAccount(userId: String) {
+        check(supabase.auth.currentUserOrNull()?.id == userId)
+        if (activeOwner != userId || userDataSyncRepository.getLocalAccountOwner() != userId) {
+            performLoginSync(waitForCloud = false)
+        } else if (!cloudResumed) {
+            resumeCloudJobs()
+        }
+    }
+
+    private fun resumeCloudJobs() {
+        cloudResumed = true
+        startPeriodicSync()
+        restoreJob = scope.launch {
+            try { performSyncDown() } catch (e: CancellationException) { throw e }
+            catch (_: Exception) { Logger.w(TAG, "Background cloud restore unavailable") }
+        }
+    }
+
+    /** A revoked/missing session hides local account data without deleting its archive. */
+    suspend fun invalidateSessionAccess() = syncMutex.withLock {
+        if (supabase.auth.sessionStatus.value !is io.github.jan.supabase.auth.status.SessionStatus.NotAuthenticated) return@withLock
+        stopSync()
+        val previous = dataStoreManager.getString(KEY_LAST_SYNCED_USER_ID).firstOrNull()
+        if (!previous.isNullOrBlank()) {
+            withContext(Dispatchers.Main) {
+                mediaPlayerHandler.player.pause()
+                mediaPlayerHandler.resetSongAndQueue()
+            }
+            userDataSyncRepository.activateLocalAccount("", previous)
+            dataStoreManager.clearPerUserData()
+        }
+        activeOwner = null
+        dataStoreManager.putString(KEY_LAST_SYNCED_USER_ID, "")
+        dataStoreManager.setLoggedIn(false)
+        dataStoreManager.setCookie("", null)
+    }
 
     private fun requireActiveOwner(): String {
         val userId = supabase.auth.currentUserOrNull()?.id ?: error("No authenticated account")
@@ -106,11 +158,8 @@ class UserDataSyncManager(
             } catch (e: CancellationException) { throw e }
             catch (_: Exception) { Logger.w(TAG, "Cloud restore unavailable; using this account's local library") }
         }
-        startPeriodicSync()
-        if (!waitForCloud) restoreJob = scope.launch {
-            try { performSyncDown() } catch (e: CancellationException) { throw e }
-            catch (_: Exception) { Logger.w(TAG, "Background cloud restore unavailable") }
-        }
+        cloudResumed = true
+        if (waitForCloud) startPeriodicSync() else resumeCloudJobs()
     }
 
     suspend fun performAccountSwitch() = performLoginSync()
@@ -128,11 +177,18 @@ class UserDataSyncManager(
             try {
                 supabase.auth.signOut()
             } catch (e: Exception) {
-                if (!previous.isNullOrEmpty() && supabase.auth.currentUserOrNull()?.id == previous) {
-                    withContext(NonCancellable) { userDataSyncRepository.activateLocalAccount(previous, "") }
-                    startPeriodicSync()
+                try {
+                    if (e is CancellationException) throw e
+                    // Explicit logout must also work without reaching the auth server.
+                    Logger.w(TAG, "Remote logout unavailable; ending the local session")
+                    supabase.auth.clearSession()
+                } catch (localFailure: Exception) {
+                    if (!previous.isNullOrEmpty() && supabase.auth.currentUserOrNull()?.id == previous) {
+                        withContext(NonCancellable) { userDataSyncRepository.activateLocalAccount(previous, "") }
+                        startPeriodicSync()
+                    }
+                    throw localFailure
                 }
-                throw e
             }
             activeOwner = null
             dataStoreManager.clearPerUserData()

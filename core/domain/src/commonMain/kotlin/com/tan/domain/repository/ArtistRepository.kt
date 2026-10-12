@@ -25,6 +25,8 @@ interface ArtistRepository {
 
     fun getFollowedArtists(): Flow<List<ArtistEntity>>
 
+    fun observeFollowedArtists(): Flow<List<ArtistEntity>> = getFollowedArtists()
+
     suspend fun updateArtistInLibrary(
         inLibrary: LocalDateTime,
         channelId: String,

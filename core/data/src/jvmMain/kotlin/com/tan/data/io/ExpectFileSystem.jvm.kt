@@ -9,3 +9,4 @@ actual fun fileSystem(): FileSystem {
 }
 
 actual fun fileDir(): String = File(getHomeFolderPath(listOf(".gratify"))).absolutePath
+actual fun cacheDir(): String = fileDir() + "/cache"

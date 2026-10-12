@@ -1,5 +1,7 @@
 package com.tan.data.mediaservice
 
+import com.tan.domain.utils.uploadedProfileAvatar
+
 import com.tan.domain.data.entities.NowPlayingUpdate
 import com.tan.domain.manager.DataStoreManager
 import com.tan.domain.mediaservice.handler.MediaPlayerHandler
@@ -98,18 +100,14 @@ object ProfileSyncManager {
             val artist = state.songEntity?.artistName?.joinToString(", ")
                 ?: state.track?.artists?.joinToString(", ") { it.name }
                 ?: state.mediaItem.metadata?.artist
-
-            val localName = dataStoreManager.getString("AppProfileName").firstOrNull()?.takeIf { it.isNotBlank() } ?: "Pengguna Gratify"
-            val localAvatar = dataStoreManager.getString("AppProfileImage").firstOrNull()
             val update = NowPlayingUpdate(
-                displayName = localName,
-                avatarUrl = localAvatar,
                 nowPlayingVideoId = videoId,
                 nowPlayingTitle = title,
                 nowPlayingArtist = artist,
                 lastActiveAt = Clock.System.now().toEpochMilliseconds().toString()
             )
-            userRepository.updateNowPlaying(currentUserId, update).collectLatest {}
+            if (supabase.auth.currentUserOrNull()?.id == currentUserId)
+                userRepository.updateNowPlaying(currentUserId, update).collectLatest {}
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
             // Silent catch
@@ -124,17 +122,14 @@ object ProfileSyncManager {
         try {
             val currentUserId = supabase.auth.currentUserOrNull()?.id ?: return
             if (dataStoreManager.getString("last_synced_user_id").firstOrNull() != currentUserId) return
-            val localName = dataStoreManager.getString("AppProfileName").firstOrNull()?.takeIf { it.isNotBlank() } ?: "Pengguna Gratify"
-            val localAvatar = dataStoreManager.getString("AppProfileImage").firstOrNull()
             val update = NowPlayingUpdate(
-                displayName = localName,
-                avatarUrl = localAvatar,
                 nowPlayingVideoId = null,
                 nowPlayingTitle = null,
                 nowPlayingArtist = null,
                 lastActiveAt = Clock.System.now().toEpochMilliseconds().toString()
             )
-            userRepository.updateNowPlaying(currentUserId, update).collectLatest {}
+            if (supabase.auth.currentUserOrNull()?.id == currentUserId)
+                userRepository.updateNowPlaying(currentUserId, update).collectLatest {}
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
             // Silent catch

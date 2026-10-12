@@ -140,6 +140,8 @@ class Ytmusic {
 
     var proxy: ProxyConfig? = null
         set(value) {
+            // Startup preference emissions must not close active requests for the same proxy.
+            if (field == value) return
             field = value
             httpClient.close()
             httpClient = createClient()
@@ -602,6 +604,13 @@ class Ytmusic {
             userAgent("Gratify-Update-Checker")
             contentType(ContentType.Application.Json)
         }
+
+    suspend fun githubUpdateManifest(url: String): com.tan.kotlinytmusicscraper.models.gratify.GithubUpdateManifest {
+        require(url.startsWith("https://github.com/TanDjendra/Gratify/releases/download/"))
+        val text = httpClient.get(url).bodyAsText()
+        require(text.length <= 64 * 1024) { "Metadata pembaruan terlalu besar" }
+        return normalJson.decodeFromString(text)
+    }
 
     suspend fun checkForFdroidUpdate() =
         httpClient.get("https://f-droid.org/api/v1/packages/com.tan.gratify") {

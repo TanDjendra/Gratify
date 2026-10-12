@@ -8,8 +8,7 @@ import com.tan.kotlinytmusicscraper.pages.SearchResult
 
 internal fun parseSearchVideo(result: SearchResult): ArrayList<VideosResult> {
     val songsResult: ArrayList<VideosResult> = arrayListOf()
-    result.items.forEach {
-        val song = it as SongItem
+    result.items.filterIsInstance<SongItem>().forEach { song ->
         songsResult.add(
             VideosResult(
                 artists =

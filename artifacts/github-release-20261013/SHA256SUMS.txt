@@ -1,0 +1,4 @@
+8f907eb872b3b71107a11977e85aef0104fdfc73af66d4ef86c6d9862d439846  Gratify.apk
+2d8dc4e95a0e3b5e0d6ded32e0b94a5d352dfc5c46e74aa581ced73970811aef  Gratify-2.1.5-release-arm64-v8a.apk
+e836d8a2b34ed12c1b42fa2bc770a71ee46c615ac8f12aa36e9b067ea3fdb772  gratify-update.json
+e6cdd879f3b4ce2dfb5a6285c60ac6d6b2474c4137e0a01bee8bdb4aa691035d  Gratify-2.1.5-source.zip

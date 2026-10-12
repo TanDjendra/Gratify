@@ -9,6 +9,9 @@ import kotlinx.datetime.LocalDateTime
 internal class AnalyticsDatasource(
     private val databaseDao: DatabaseDao,
 ) {
+    suspend fun getPlaybackEventsInRange(start: LocalDateTime, endExclusive: LocalDateTime) = databaseDao.getPlaybackEventsInRange(start, endExclusive)
+    suspend fun getPlaybackYears() = databaseDao.getPlaybackYears()
+
     suspend fun insertPlaybackEvent(
         videoId: String,
         channelIds: List<String>,

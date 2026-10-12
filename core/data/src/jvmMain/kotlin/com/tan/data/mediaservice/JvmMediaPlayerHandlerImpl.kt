@@ -2311,7 +2311,7 @@ class JvmMediaPlayerHandlerImpl(
         Logger.w(TAG, "Checking current state before transition ${simpleMediaState.value}")
         val lastPlayed = nowPlayingState.value.songEntity
         val listenedMillis = listeningTimeTracker.takeMillis()
-        if (lastPlayed != null && lastPlayed.durationSeconds > 0) mayBeTrackingListeningLocal(lastPlayed, listenedMillis)
+        if (lastPlayed != null) mayBeTrackingListeningLocal(lastPlayed, listenedMillis)
         Logger.w(TAG, "Smooth Switching Transition Current Position: ${player.currentPosition}")
         mayBeNormalizeVolume()
         Logger.w(TAG, "REASON onMediaItemTransition: $reason")
@@ -2350,27 +2350,22 @@ class JvmMediaPlayerHandlerImpl(
 
     private fun mayBeTrackingListeningLocal(
         song: SongEntity,
-        currentPositionMillis: Long,
+        listenedMillis: Long,
     ) {
+        if (!com.tan.domain.utils.shouldRecordListening(listenedMillis)) return
         coroutineScope.launch {
             val trackingEnabled = dataStoreManager.localTrackingEnabled.first() == TRUE
             if (!trackingEnabled) {
                 return@launch
             }
-            val percent = (currentPositionMillis / (song.durationSeconds * 1000f))
-            Logger.w(TAG, "${song.title} - $currentPositionMillis ms listened, duration: ${song.durationSeconds * 1000} ms, percent: $percent")
-            if (percent < 0.2f) {
-                Logger.d(TAG, "Not enough listening time for ${song.title}, skipping tracking")
-                return@launch
-            }
-            Logger.d(TAG, "Tracking listening for ${song.title} at position $currentPositionMillis ms")
+            Logger.d(TAG, "Tracking ${song.title}: $listenedMillis ms of elapsed listening")
             analyticsRepository
                 .insertPlaybackEvent(
                     videoId = song.videoId,
                     channelIds = song.artistId ?: emptyList(),
                     albumBrowseId = song.albumId,
                     durationSecond = song.durationSeconds.toLong(),
-                    listenedSecond = currentPositionMillis / 1000,
+                    listenedSecond = listenedMillis / 1000,
                 ).collect {
                     Logger.d(TAG, "Inserted playback event for ${song.title}: $it")
                 }

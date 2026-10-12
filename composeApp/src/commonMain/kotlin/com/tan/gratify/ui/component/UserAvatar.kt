@@ -1,5 +1,7 @@
 package com.tan.gratify.ui.component
 
+import com.tan.domain.utils.uploadedProfileAvatar
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -10,6 +12,10 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,8 +41,11 @@ fun UserAvatar(
     modifier: Modifier = Modifier,
     borderWidth: Dp = 0.5.dp,
     borderColor: Color = GratifyColors.Accent.copy(alpha = 0.25f),
-    textStyle: TextStyle? = null
+    textStyle: TextStyle? = null,
+    allowLocalPreview: Boolean = false,
 ) {
+    val uploadedAvatar = if (allowLocalPreview) imageUrl?.takeIf(String::isNotBlank) else imageUrl.uploadedProfileAvatar()
+    var imageFailed by remember(uploadedAvatar) { mutableStateOf(false) }
     Box(
         modifier = modifier
             .clip(CircleShape)
@@ -50,15 +59,16 @@ fun UserAvatar(
             ),
         contentAlignment = Alignment.Center
     ) {
-        if (!imageUrl.isNullOrEmpty()) {
+        if (uploadedAvatar != null && !imageFailed) {
             AsyncImage(
                 model = ImageRequest.Builder(LocalPlatformContext.current)
-                    .data(imageUrl)
+                    .data(uploadedAvatar)
                     .diskCachePolicy(CachePolicy.ENABLED)
-                    .diskCacheKey(imageUrl)
+                    .diskCacheKey(uploadedAvatar)
                     .crossfade(true)
                     .build(),
                 contentDescription = "Avatar",
+                onError = { imageFailed = true },
                 modifier = Modifier.fillMaxSize().clip(CircleShape),
                 contentScale = ContentScale.Crop
             )

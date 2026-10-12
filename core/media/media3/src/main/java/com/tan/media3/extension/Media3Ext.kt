@@ -121,7 +121,7 @@ fun GenericCommandButton.toCommandButton(context: Context): CommandButton =
         is GenericCommandButton.Like -> {
             val liked = this.isLiked
             CommandButton
-                .Builder(0)
+                .Builder(if (liked) CommandButton.ICON_HEART_FILLED else CommandButton.ICON_HEART_UNFILLED)
                 .setIconResId(
                     if (liked) {
                         R.drawable.baseline_favorite_24
@@ -141,7 +141,7 @@ fun GenericCommandButton.toCommandButton(context: Context): CommandButton =
         }
         GenericCommandButton.Radio -> {
             CommandButton
-                .Builder(0)
+                .Builder(CommandButton.ICON_RADIO)
                 .setIconResId(R.drawable.baseline_sensors_24)
                 .setDisplayName(context.getString(R.string.radio))
                 .setSessionCommand(
@@ -154,7 +154,11 @@ fun GenericCommandButton.toCommandButton(context: Context): CommandButton =
         is GenericCommandButton.Repeat -> {
             val repeatMode = this.repeatState
             CommandButton
-                .Builder(0)
+                .Builder(when (repeatMode) {
+                    RepeatState.One -> CommandButton.ICON_REPEAT_ONE
+                    RepeatState.All -> CommandButton.ICON_REPEAT_ALL
+                    else -> CommandButton.ICON_REPEAT_OFF
+                })
                 .setIconResId(
                     when (repeatMode) {
                         RepeatState.One -> R.drawable.baseline_repeat_one_24
@@ -180,7 +184,7 @@ fun GenericCommandButton.toCommandButton(context: Context): CommandButton =
         }
         is GenericCommandButton.Shuffle -> {
             CommandButton
-                .Builder(0)
+                .Builder(if (this.isShuffled) CommandButton.ICON_SHUFFLE_ON else CommandButton.ICON_SHUFFLE_OFF)
                 .setIconResId(
                     if (this.isShuffled) {
                         R.drawable.baseline_shuffle_24_enable

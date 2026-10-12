@@ -1,5 +1,9 @@
 package com.tan.gratify.ui.screen.home
 
+import com.tan.domain.utils.uploadedProfileAvatar
+import com.tan.domain.utils.parseProfileUserId
+import com.tan.domain.utils.profileUrl
+
 import com.tan.gratify.ui.theme.GratifyColors
 import com.tan.gratify.ui.theme.GratifyShapes
 
@@ -19,6 +23,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
@@ -38,8 +43,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -51,8 +54,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Person
@@ -69,7 +70,7 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.foundation.Image
 import com.tan.gratify.expect.shareImage
-import com.tan.gratify.expect.shareUrl
+import com.tan.gratify.expect.copyToClipboard
 import gratify.composeapp.generated.resources.circle_app_icon
 import com.tan.gratify.expect.ui.QrCodeView
 import com.tan.gratify.expect.ui.rememberQrScannerLauncher
@@ -77,12 +78,11 @@ import com.tan.gratify.ui.navigation.destination.social.UserProfileDestination
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.input.ImeAction
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.firstOrNull
 import com.tan.gratify.expect.ui.photoPickerResult
@@ -111,17 +111,12 @@ import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.koinInject
 import gratify.composeapp.generated.resources.Res
 import com.tan.gratify.viewModel.UserProfileViewModel
-import com.tan.gratify.utils.compressImage
-import io.github.jan.supabase.storage.storage
-import kotlinx.datetime.Clock
-import io.ktor.http.ContentType
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import gratify.composeapp.generated.resources.baseline_arrow_back_ios_new_24
 import gratify.composeapp.generated.resources.baseline_settings_24
 import gratify.composeapp.generated.resources.baseline_more_vert_24
 import gratify.composeapp.generated.resources.holder
-import io.github.jan.supabase.postgrest.postgrest
 
 import com.tan.domain.repository.LocalPlaylistRepository
 import com.tan.domain.data.entities.LocalPlaylistEntity
@@ -142,7 +137,8 @@ fun ProfileScreen(
     val localPlaylistRepository: LocalPlaylistRepository = koinInject()
     val socialRepository: com.tan.domain.repository.SocialRepository = koinInject()
     val artistRepository: ArtistRepository = koinInject()
-    val userRepository: com.tan.domain.repository.UserRepository = koinInject()
+    val profileEditor: com.tan.gratify.viewModel.CreateProfileViewModel = koinViewModel()
+    val editorState by profileEditor.uiState.collectAsStateWithLifecycle()
     val userProfileViewModel: UserProfileViewModel = koinViewModel()
     val sharedViewModel: com.tan.gratify.viewModel.SharedViewModel = koinInject()
     
@@ -150,37 +146,42 @@ fun ProfileScreen(
     val nowPlayingData by sharedViewModel.nowPlayingScreenData.collectAsStateWithLifecycle()
     
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-    LaunchedEffect(navBackStackEntry) {
+    val sessionStatus by supabase.auth.sessionStatus.collectAsStateWithLifecycle()
+    LaunchedEffect(navBackStackEntry, sessionStatus) {
         val currentUserId = supabase.auth.currentUserOrNull()?.id
         if (currentUserId != null) {
             userProfileViewModel.loadProfile(currentUserId)
-        }
+        } else userProfileViewModel.clearProfile()
     }
 
-    val localPlaylists by localPlaylistRepository.getAllLocalPlaylists().collectAsStateWithLifecycle(initialValue = emptyList())
+    val localPlaylistsFlow = remember(localPlaylistRepository) { localPlaylistRepository.getAllLocalPlaylists() }
+    val localPlaylists by localPlaylistsFlow.collectAsStateWithLifecycle(initialValue = emptyList())
     // Hanya playlist BUATAN SENDIRI yang boleh dipajang di profil. Playlist hasil menyimpan/
     // menambah dari orang lain punya sourceSharedPlaylistId != null → dikecualikan dari pajangan.
     val ownPlaylists = localPlaylists.filter { it.sourceSharedPlaylistId.isNullOrBlank() }
-    val recentArtists by artistRepository.getFollowedArtists().collectAsStateWithLifecycle(initialValue = emptyList())
-    
-    LaunchedEffect(recentArtists) {
-        if (recentArtists.isNotEmpty()) {
-            userProfileViewModel.syncTopArtists(recentArtists)
-        }
+    val artistsFlow = remember(artistRepository) { artistRepository.observeFollowedArtists() }
+    val loadedArtists by artistsFlow.collectAsStateWithLifecycle(initialValue = null)
+    val libraryOwnerFlow = remember(dataStoreManager) { dataStoreManager.getString("last_synced_user_id") }
+    val libraryOwner by libraryOwnerFlow.collectAsStateWithLifecycle(initialValue = null)
+    val recentArtists = loadedArtists.orEmpty()
+    LaunchedEffect(loadedArtists, libraryOwner, sessionStatus) {
+        if (libraryOwner == supabase.auth.currentUserOrNull()?.id)
+            loadedArtists?.let { userProfileViewModel.syncTopArtists(it) }
     }
     val appProfileName by dataStoreManager.getString("AppProfileName").collectAsStateWithLifecycle(initialValue = "")
     val appProfileImage by dataStoreManager.getString("AppProfileImage").collectAsStateWithLifecycle(initialValue = "")
 
-    val displayImage = userProfileState.profile?.avatarUrl?.takeIf { it.isNotBlank() } ?: appProfileImage
-    val displayName = userProfileState.profile?.displayName?.takeIf { it.isNotBlank() } ?: appProfileName?.takeIf { it.isNotBlank() } ?: "Pengguna"
+    val currentOwner = supabase.auth.currentUserOrNull()?.id
+    val cacheBelongsToOwner = currentOwner != null && libraryOwner == currentOwner
+    val displayImage = if (userProfileState.profile != null) userProfileState.profile?.avatarUrl.uploadedProfileAvatar() else appProfileImage.uploadedProfileAvatar().takeIf { cacheBelongsToOwner }
+    val displayName = userProfileState.profile?.displayName?.takeIf { it.isNotBlank() } ?: appProfileName?.takeIf { it.isNotBlank() && cacheBelongsToOwner } ?: "Pengguna"
 
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
 
-    var showEditProfile by remember { mutableStateOf(false) }
-    var isSavingProfile by remember { mutableStateOf(false) }
-    var editName by remember(displayName) { mutableStateOf(displayName) }
-    var editImage by remember(displayImage) { mutableStateOf(displayImage ?: "") }
+    var showEditProfile by rememberSaveable { mutableStateOf(false) }
+    var avatarSelectionOwner by rememberSaveable { mutableStateOf<String?>(null) }
+
     
     var showPrivacySheet by remember { mutableStateOf(false) }
     var showMoreOptionsSheet by remember { mutableStateOf(false) }
@@ -191,15 +192,17 @@ fun ProfileScreen(
     val graphicsLayer = rememberGraphicsLayer()
     var isPreviewMode by remember { mutableStateOf(false) }
     var showCodeOverlay by remember { mutableStateOf(false) }
+    com.tan.gratify.ui.component.LayerBackHandler(!showEditProfile && (showCodeOverlay || isPreviewMode)) {
+        when {
+            showCodeOverlay -> showCodeOverlay = false
+            isPreviewMode -> isPreviewMode = false
+        }
+    }
 
     val scanLauncher = rememberQrScannerLauncher { scannedValue ->
         showCodeOverlay = false
-        val scannedId = when {
-            scannedValue.startsWith("gratify://profile/") -> scannedValue.removePrefix("gratify://profile/")
-            scannedValue.contains("/profile/") -> scannedValue.substringAfterLast("/profile/")
-            else -> scannedValue
-        }.trim()
-        if (scannedId.isNotBlank() && scannedId != "gratify://profile/") {
+        val scannedId = parseProfileUserId(scannedValue)
+        if (scannedId != null) {
             navController.navigate(UserProfileDestination(userId = scannedId))
         } else {
             userProfileViewModel.makeToast("QR Code tidak memuat ID Profil yang valid.")
@@ -209,285 +212,145 @@ fun ProfileScreen(
 
     var showAddPlaylistSheet by remember { mutableStateOf(false) }
     var selectedPinnedPlaylist by remember { mutableStateOf<LocalPlaylistEntity?>(null) }
-    // Sumber kebenaran "playlist dipajang di profil" adalah SERVER (cloud_playlists is_public=true
-    // milik user), bukan DataStore lokal. Ini membuatnya realtime + tidak hilang saat ganti akun /
-    // logout-login, karena cloud_playlists persist per-user dan ID lokalnya di-remap saat sync-down.
     var pinnedPlaylistIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
+    var publicPinnedPlaylistIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
+    var playlistUpdatePending by remember { mutableStateOf(false) }
+    var profilePlaylistError by remember { mutableStateOf<String?>(null) }
+    // The cloud identity is stable across devices; local row IDs are not.
+    LaunchedEffect(currentOwner) {
+        pinnedPlaylistIds = emptySet()
+        publicPinnedPlaylistIds = emptySet()
+        profilePlaylistError = null
+        showAddPlaylistSheet = false
+        selectedPinnedPlaylist = null
+        showPrivacySheet = false
+        showMoreOptionsSheet = false
+        showShareProfileSheet = false
+        showCodeOverlay = false
+        isPreviewMode = false
+        if (editorState.ownerId != currentOwner) showEditProfile = false
+        if (avatarSelectionOwner != currentOwner) avatarSelectionOwner = null
+    }
     val refreshPinnedPlaylists: suspend () -> Unit = {
         val uid = supabase.auth.currentUserOrNull()?.id
-        pinnedPlaylistIds = if (uid != null) {
-            socialRepository.getUserPublicPlaylists(uid).firstOrNull()?.getOrNull()
-                ?.mapNotNull { it.localPlaylistId }?.toSet() ?: emptySet()
-        } else {
-            emptySet()
+        if (uid == null) pinnedPlaylistIds = emptySet()
+        else try {
+            val result = kotlinx.coroutines.withTimeout(20_000) {
+                socialRepository.getUserProfilePlaylists(uid).first().getOrThrow()
+            }
+            if (supabase.auth.currentUserOrNull()?.id == uid) {
+                val rows = localPlaylistRepository.getAllLocalPlaylists().first()
+                if (supabase.auth.currentUserOrNull()?.id == uid) {
+                    pinnedPlaylistIds = com.tan.gratify.ui.utils.profilePlaylistIds(rows, result)
+                    publicPinnedPlaylistIds = com.tan.gratify.ui.utils.profilePlaylistIds(rows, result.filter { it.isPublic })
+                    profilePlaylistError = null
+                }
+            }
+        } catch (cancelled: CancellationException) {
+            if (cancelled !is kotlinx.coroutines.TimeoutCancellationException) throw cancelled
+            if (supabase.auth.currentUserOrNull()?.id == uid) profilePlaylistError = "Daftar playlist belum dapat dimuat. Coba lagi."
+        } catch (_: Exception) {
+            if (supabase.auth.currentUserOrNull()?.id == uid) profilePlaylistError = "Daftar playlist belum dapat dimuat. Periksa koneksi dan coba lagi."
         }
     }
-    // Selalu ambil daftar playlist yang dipajang langsung dari server (realtime),
-    // termasuk saat kembali ke layar profil setelah ganti akun / logout-login.
-    LaunchedEffect(navBackStackEntry) {
-        refreshPinnedPlaylists()
+    fun updateProfilePlaylists(ids: Set<Long>, visible: Boolean) {
+        if (playlistUpdatePending || ids.isEmpty() || !cacheBelongsToOwner) return
+        val uid = supabase.auth.currentUserOrNull()?.id ?: return
+        playlistUpdatePending = true
+        coroutineScope.launch {
+            try {
+                check(supabase.auth.currentUserOrNull()?.id == uid) { "Account changed" }
+                for (id in ids) {
+                    check(supabase.auth.currentUserOrNull()?.id == uid) { "Account changed" }
+                    kotlinx.coroutines.withTimeout(30_000) {
+                    if (visible) socialRepository.syncUpPlaylist(id, uid, isPublic = null, isProfilePinned = true).first().getOrThrow()
+                    else socialRepository.setPlaylistProfilePinned(id, uid, pinned = false).first().getOrThrow()
+                    }
+                    if (supabase.auth.currentUserOrNull()?.id != uid) return@launch
+                    pinnedPlaylistIds = if (visible) pinnedPlaylistIds + id else pinnedPlaylistIds - id
+                }
+                // Keep the confirmed selection even if the subsequent read fails.
+                refreshPinnedPlaylists()
+                showAddPlaylistSheet = false
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                if (e !is kotlinx.coroutines.TimeoutCancellationException) throw e
+                userProfileViewModel.makeToast("Playlist belum tersimpan. Coba lagi.")
+            }
+            catch (_: Exception) {
+                userProfileViewModel.makeToast("Playlist belum tersimpan. Periksa koneksi lalu coba lagi.")
+            } finally { playlistUpdatePending = false }
+        }
     }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    LaunchedEffect(navBackStackEntry, localPlaylists, sessionStatus) {
+        if (!playlistUpdatePending) refreshPinnedPlaylists()
+    }
+    val sheetState = com.tan.gratify.ui.component.rememberBusyModalSheetState(playlistUpdatePending)
     
     val showFollowersFlow = remember { dataStoreManager.getString("privacy_show_followers") }
     val showPlaylistFlow = remember { dataStoreManager.getString("privacy_show_playlist") }
     val showRecentArtistsFlow = remember { dataStoreManager.getString("privacy_show_recent_artists") }
     
-    val showFollowersStr by showFollowersFlow.collectAsStateWithLifecycle(initialValue = "TRUE")
-    val showPlaylistStr by showPlaylistFlow.collectAsStateWithLifecycle(initialValue = "TRUE")
-    val showRecentArtistsStr by showRecentArtistsFlow.collectAsStateWithLifecycle(initialValue = "TRUE")
+    val showFollowersStr by showFollowersFlow.collectAsStateWithLifecycle(initialValue = "FALSE")
+    val showPlaylistStr by showPlaylistFlow.collectAsStateWithLifecycle(initialValue = "FALSE")
+    val showRecentArtistsStr by showRecentArtistsFlow.collectAsStateWithLifecycle(initialValue = "FALSE")
     
-    val showFollowers = showFollowersStr == "TRUE"
-    val showPlaylist = showPlaylistStr == "TRUE"
-    val showRecentArtists = showRecentArtistsStr == "TRUE"
+    val showFollowers = userProfileState.profile?.showFollowers ?: (showFollowersStr == "TRUE" && cacheBelongsToOwner)
+    val showPlaylist = userProfileState.profile?.showPlaylists ?: (showPlaylistStr == "TRUE" && cacheBelongsToOwner)
+    val showRecentArtists = userProfileState.profile?.showRecentArtists ?: (showRecentArtistsStr == "TRUE" && cacheBelongsToOwner)
 
 
-    val photoPicker = photoPickerResult { uri ->
-        if (uri != null) {
-            editImage = uri
-        }
+    val photoPicker = photoPickerResult(com.tan.gratify.expect.ui.PhotoCropShape.CIRCLE) { uri ->
+        if (profileEditor.applySelectedAvatar(avatarSelectionOwner, uri)) showEditProfile = true
+        avatarSelectionOwner = null
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(GratifyColors.Background)) {
+    Box(modifier = Modifier.fillMaxSize().background(GratifyColors.Background), contentAlignment = Alignment.TopCenter) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .widthIn(max = 760.dp).fillMaxSize()
                 .verticalScroll(scrollState)
         ) {
-            // ── Gradient Header + Profile Info ──────────────────────────
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(280.dp)
-            ) {
-                // Gradient background
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    GratifyColors.AccentContainer.copy(alpha = 0.6f),
-                                    GratifyColors.Divider.copy(alpha = 0.2f),
-                                    GratifyColors.Background
-                                )
-                            )
-                        )
-                )
+            fun countLabel(count: Int, noun: String): String = when {
+                isPreviewMode && !showFollowers -> "$noun disembunyikan"
+                supabase.auth.currentUserOrNull() == null -> "Masuk untuk melihat ${noun.lowercase()}"
+                userProfileState.isLoading || userProfileState.countsLoading -> "Memuat ${noun.lowercase()}…"
+                userProfileState.countsError != null || userProfileState.profileError != null -> "$noun belum dimuat"
+                else -> "$count ${noun.lowercase()}"
+            }
+            com.tan.gratify.ui.component.ProfileIdentityHeader(
+                name = displayName, imageUrl = displayImage,
+                followersLabel = countLabel(userProfileState.followersCount, "Pengikut"),
+                followingLabel = countLabel(userProfileState.followingCount, "Mengikuti"),
+                countsClickable = userProfileState.profile != null && (!isPreviewMode || showFollowers),
+                onBack = { navController.popBackStack() },
+                onFollowers = { supabase.auth.currentUserOrNull()?.id?.let { navController.navigate(FollowListDestination(it, 0)) } },
+                onFollowing = { supabase.auth.currentUserOrNull()?.id?.let { navController.navigate(FollowListDestination(it, 1)) } })
 
-                // Back button
-                IconButton(
-                    onClick = { navController.popBackStack() },
-                    modifier = Modifier
-                        .windowInsetsPadding(WindowInsets.statusBars)
-                        .padding(start = 4.dp, top = 4.dp)
-                        .align(Alignment.TopStart)
-                ) {
-                    Icon(
-                        painter = painterResource(Res.drawable.baseline_arrow_back_ios_new_24),
-                        contentDescription = "Back",
-                        tint = Color.White
-                    )
-                }
-
-                // Profile content
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(horizontal = 20.dp, vertical = 24.dp)
-                ) {
-                    // Profile image
-                    Box(
-                        modifier = Modifier
-                            .size(120.dp)
-                            .clip(CircleShape)
-                            .background(
-                                Brush.linearGradient(
-                                    colors = listOf(GratifyColors.AccentContainer, GratifyColors.SurfaceRaised)
-                                )
-                            )
-                            .border(1.5.dp, GratifyColors.Outline, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (!displayImage.isNullOrEmpty()) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(LocalPlatformContext.current)
-                                    .data(displayImage)
-                                    .diskCachePolicy(CachePolicy.ENABLED)
-                                    .diskCacheKey(displayImage)
-                                    .crossfade(true)
-                                    .build(),
-                                placeholder = painterResource(Res.drawable.holder),
-                                error = painterResource(Res.drawable.holder),
-                                fallback = painterResource(Res.drawable.holder),
-                                contentDescription = "Profile",
-                                modifier = Modifier.fillMaxSize().clip(CircleShape),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            val initial = displayName.trim().takeIf { it.isNotBlank() }?.take(1)?.uppercase() ?: ""
-                            if (initial.isNotEmpty()) {
-                                Text(
-                                    text = initial,
-                                    style = typo().displayMedium.copy(
-                                        fontWeight = FontWeight.ExtraBold,
-                                        fontSize = 48.sp
-                                    ),
-                                    color = Color.White
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Rounded.Person,
-                                    contentDescription = null,
-                                    tint = GratifyColors.TextPrimary,
-                                    modifier = Modifier.size(56.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.width(20.dp))
-
-                    // Name + stats
-                    Column {
-                        Text(
-                            text = displayName,
-                            style = typo().headlineSmall.copy(
-                                fontWeight = FontWeight.ExtraBold
-                            ),
-                            color = Color.White
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        AnimatedVisibility(visible = showFollowers) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "${userProfileState.followersCount} pengikut",
-                                    style = typo().bodySmall,
-                                    color = GratifyColors.TextSecondary,
-                                    modifier = Modifier
-                                        .clip(GratifyShapes.extraSmall)
-                                        .clickable {
-                                            val uid = userProfileState.profile?.id ?: supabase.auth.currentUserOrNull()?.id
-                                            if (uid != null) {
-                                                navController.navigate(FollowListDestination(userId = uid, initialTab = 0))
-                                            }
-                                        }
-                                        .padding(vertical = 2.dp)
-                                )
-                                Text(
-                                    text = " · ",
-                                    style = typo().bodySmall,
-                                    color = GratifyColors.TextSecondary
-                                )
-                                Text(
-                                    text = "${userProfileState.followingCount} mengikuti",
-                                    style = typo().bodySmall,
-                                    color = GratifyColors.TextSecondary,
-                                    modifier = Modifier
-                                        .clip(GratifyShapes.extraSmall)
-                                        .clickable {
-                                            val uid = userProfileState.profile?.id ?: supabase.auth.currentUserOrNull()?.id
-                                            if (uid != null) {
-                                                navController.navigate(FollowListDestination(userId = uid, initialTab = 1))
-                                            }
-                                        }
-                                        .padding(vertical = 2.dp)
-                                )
-                            }
-                        }
-                    }
+            (userProfileState.profileError ?: userProfileState.countsError)?.let { error ->
+                Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+                    Text(error, color = GratifyColors.TextSecondary)
+                    androidx.compose.material3.TextButton(onClick = {
+                        supabase.auth.currentUserOrNull()?.id?.let { userProfileViewModel.loadProfile(it) }
+                    }) { Text("Coba lagi") }
                 }
             }
 
-            // ── Action Buttons (Edit, Settings, More) ───────────────────
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier
-                    .padding(horizontal = 20.dp)
-                    .padding(top = 4.dp, bottom = 20.dp)
-            ) {
-                if (isPreviewMode) {
-                    // Follow button for preview
-                    Box(
-                        modifier = Modifier
-                            .border(1.dp, GratifyColors.Outline, GratifyShapes.large)
-                            .clip(GratifyShapes.large)
-                            .clickable { /* TODO: Follow action */ }
-                            .padding(horizontal = 16.dp, vertical = 6.dp)
-                    ) {
-                        Text(
-                            text = "Ikuti",
-                            style = typo().bodySmall.copy(fontWeight = FontWeight.Bold),
-                            color = Color.White
-                        )
-                    }
-
-                    // More options icon
-                    IconButton(
-                        onClick = { showMoreOptionsSheet = true },
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(Res.drawable.baseline_more_vert_24),
-                            contentDescription = "More",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                } else {
-                    // Edit button
-                    Box(
-                        modifier = Modifier
-                            .border(1.dp, GratifyColors.Outline, GratifyShapes.large)
-                            .clip(GratifyShapes.large)
-                            .clickable {
-                                editName = appProfileName ?: ""
-                                editImage = appProfileImage ?: ""
-                                showEditProfile = true 
-                            }
-                            .padding(horizontal = 16.dp, vertical = 6.dp)
-                    ) {
-                        Text(
-                            text = "Edit",
-                            style = typo().bodySmall.copy(fontWeight = FontWeight.Bold),
-                            color = Color.White
-                        )
-                    }
-
-                    // Settings icon
-                    IconButton(
-                        onClick = { showPrivacySheet = true },
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(Res.drawable.baseline_settings_24),
-                            contentDescription = "Settings",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    // More options icon
-                    IconButton(
-                        onClick = { showMoreOptionsSheet = true },
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(Res.drawable.baseline_more_vert_24),
-                            contentDescription = "More",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
+            com.tan.gratify.ui.component.ProfileActionsContent(
+                editEnabled = currentOwner != null && !userProfileState.isLoading && userProfileState.profileError == null,
+                privacyEnabled = currentOwner != null, preview = isPreviewMode,
+                onEdit = {
+                    profileEditor.beginEditing(currentOwner, displayName, displayImage)
+                    showEditProfile = true
+                }, onPrivacy = { showPrivacySheet = true }, onMore = { showMoreOptionsSheet = true },
+            )
+            if (!showEditProfile && editorState.saveSuccess && editorState.ownerId == currentOwner) {
+                com.tan.gratify.ui.component.ProfileSaveFeedback(editorState,
+                    Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
             }
-
         // ── Add Playlist Sheet ────────────────────────────────────────
         if (showAddPlaylistSheet) {
             ModalBottomSheet(
-                onDismissRequest = { showAddPlaylistSheet = false },
+                onDismissRequest = { if (!playlistUpdatePending) showAddPlaylistSheet = false },
                 sheetState = sheetState,
                 containerColor = GratifyColors.Surface,
                 dragHandle = null
@@ -495,14 +358,14 @@ fun ProfileScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 24.dp)
+                        .verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 24.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
+                        Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
                             Text(
                                 text = "Tambahkan playlist",
                                 style = typo().titleLarge.copy(fontWeight = FontWeight.Bold),
@@ -510,7 +373,7 @@ fun ProfileScreen(
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Playlist akan muncul di profilmu",
+                                text = if (playlistUpdatePending) "Menyimpan pilihan…" else "Playlist privat yang dipajang hanya terlihat oleh Anda. Memajang atau melepas playlist tidak mengubah privasinya.",
                                 style = typo().bodySmall,
                                 color = GratifyColors.TextSecondary
                             )
@@ -520,20 +383,8 @@ fun ProfileScreen(
                             modifier = Modifier
                                 .border(1.dp, GratifyColors.Outline, GratifyShapes.large)
                                 .clip(GratifyShapes.large)
-                                .clickable {
-                                    // Add all local playlists (optimistic, lalu sinkron + refresh dari server)
-                                    val allIds = ownPlaylists.map { it.id }.toSet()
-                                    pinnedPlaylistIds = pinnedPlaylistIds + allIds
-                                    coroutineScope.launch {
-                                        val userId = supabase.auth.currentUserOrNull()?.id
-                                        if (userId != null) {
-                                            ownPlaylists.forEach { pl ->
-                                                socialRepository.syncUpPlaylist(pl.id, userId, isPublic = true).collect {}
-                                            }
-                                            refreshPinnedPlaylists()
-                                        }
-                                    }
-                                    showAddPlaylistSheet = false
+                                .clickable(enabled = !playlistUpdatePending) {
+                                    updateProfilePlaylists(ownPlaylists.map { it.id }.toSet(), true)
                                 }
                                 .padding(horizontal = 16.dp, vertical = 6.dp)
                         ) {
@@ -573,7 +424,9 @@ fun ProfileScreen(
                                             .size(60.dp)
                                             .background(GratifyColors.SurfaceRaised, GratifyShapes.extraSmall)
                                     ) {
-                                        if (playlist.thumbnail != null) {
+                                        if (com.tan.gratify.ui.component.isAutoAssignedOrNullThumbnail(playlist.thumbnail,playlist.youtubePlaylistId) && !playlist.tracks.isNullOrEmpty()) {
+                                            com.tan.gratify.ui.component.PlaylistCollageThumbnail(playlist.tracks.orEmpty(),Modifier.fillMaxSize(),playlist.title)
+                                        } else if (playlist.thumbnail != null) {
                                             AsyncImage(
                                                 model = playlist.thumbnail,
                                                 contentDescription = null,
@@ -598,7 +451,7 @@ fun ProfileScreen(
                                         )
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
-                                            text = "Publik • Kamu",
+                                            text = if (!isAdded) "Belum dipajang" else if (playlist.id !in publicPinnedPlaylistIds) "Dipajang • Privat • Hanya Anda" else if (showPlaylist) "Dipajang • Publik" else "Dipajang • Isi profil disembunyikan",
                                             style = typo().bodySmall,
                                             color = GratifyColors.TextSecondary
                                         )
@@ -610,16 +463,8 @@ fun ProfileScreen(
                                             modifier = Modifier
                                                 .border(1.dp, Color.Transparent, GratifyShapes.large)
                                                 .background(GratifyColors.TextPrimary, GratifyShapes.large)
-                                                .clickable {
-                                                    pinnedPlaylistIds = pinnedPlaylistIds - playlist.id
-                                                    coroutineScope.launch {
-                                                        val userId = supabase.auth.currentUserOrNull()?.id
-                                                        if (userId != null) {
-                                                            socialRepository.syncUpPlaylist(playlist.id, userId, isPublic = false).collect {}
-                                                            socialRepository.unshareOrHideCloudPlaylist(playlist.id, userId).collect {}
-                                                            refreshPinnedPlaylists()
-                                                        }
-                                                    }
+                                                .clickable(enabled = !playlistUpdatePending) {
+                                                    updateProfilePlaylists(setOf(playlist.id), false)
                                                 }
                                                 .padding(horizontal = 16.dp, vertical = 8.dp)
                                         ) {
@@ -634,15 +479,8 @@ fun ProfileScreen(
                                             modifier = Modifier
                                                 .border(1.dp, Color.Transparent, GratifyShapes.large)
                                                 .background(Color.White, GratifyShapes.large)
-                                                .clickable {
-                                                    pinnedPlaylistIds = pinnedPlaylistIds + playlist.id
-                                                    coroutineScope.launch {
-                                                        val userId = supabase.auth.currentUserOrNull()?.id
-                                                        if (userId != null) {
-                                                            socialRepository.syncUpPlaylist(playlist.id, userId, isPublic = true).collect {}
-                                                            refreshPinnedPlaylists()
-                                                        }
-                                                    }
+                                                .clickable(enabled = !playlistUpdatePending) {
+                                                    updateProfilePlaylists(setOf(playlist.id), true)
                                                 }
                                                 .padding(horizontal = 16.dp, vertical = 8.dp)
                                         ) {
@@ -667,7 +505,7 @@ fun ProfileScreen(
             val playlist = selectedPinnedPlaylist!!
             ModalBottomSheet(
                 onDismissRequest = { selectedPinnedPlaylist = null },
-                sheetState = sheetState,
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
                 containerColor = GratifyColors.Surface,
                 dragHandle = null
             ) {
@@ -711,15 +549,7 @@ fun ProfileScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
-                                pinnedPlaylistIds = pinnedPlaylistIds - playlist.id
-                                coroutineScope.launch {
-                                    val userId = supabase.auth.currentUserOrNull()?.id
-                                    if (userId != null) {
-                                        socialRepository.syncUpPlaylist(playlist.id, userId, isPublic = false).collect {}
-                                        socialRepository.unshareOrHideCloudPlaylist(playlist.id, userId).collect {}
-                                        refreshPinnedPlaylists()
-                                    }
-                                }
+                                updateProfilePlaylists(setOf(playlist.id), false)
                                 selectedPinnedPlaylist = null
                             }
                             .padding(vertical = 12.dp),
@@ -744,7 +574,7 @@ fun ProfileScreen(
             }
         }
             // ── Playlist Section ────────────────────────────────────────
-            AnimatedVisibility(visible = showPlaylist) {
+            Column {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -758,7 +588,13 @@ fun ProfileScreen(
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    if (ownPlaylists.none { it.id in pinnedPlaylistIds }) {
+                    if (profilePlaylistError != null && !isPreviewMode) {
+                        Text(profilePlaylistError.orEmpty(), style = typo().bodySmall, color = GratifyColors.TextSecondary)
+                        androidx.compose.material3.TextButton(onClick = { coroutineScope.launch { refreshPinnedPlaylists() } }) { Text("Coba lagi") }
+                    }
+                    if (isPreviewMode && !showPlaylist) {
+                        com.tan.gratify.ui.component.ProfileContentPlaceholder("", "Playlist disembunyikan oleh pemilik profil")
+                    } else if (ownPlaylists.none { it.id in pinnedPlaylistIds && (!isPreviewMode || it.id in publicPinnedPlaylistIds) }) {
                         // Empty state
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
@@ -771,7 +607,7 @@ fun ProfileScreen(
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Orang lain bisa melihat musik yang kamu suka, membagikan playlist-mu, dan menyimpan playlist untuk didengar nanti.",
+                                text = "Pilih playlist untuk ditampilkan di profil. Kamu tetap dapat melihatnya saat visibilitas untuk orang lain dimatikan.",
                                 style = typo().bodySmall,
                                 color = GratifyColors.TextSecondary,
                                 textAlign = TextAlign.Center,
@@ -795,7 +631,7 @@ fun ProfileScreen(
                     } else {
                         // Pinned Playlists list
                         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                            ownPlaylists.filter { it.id in pinnedPlaylistIds }.forEach { playlist ->
+                            ownPlaylists.filter { it.id in pinnedPlaylistIds && (!isPreviewMode || it.id in publicPinnedPlaylistIds) }.forEach { playlist ->
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically, 
                                     modifier = Modifier
@@ -804,7 +640,9 @@ fun ProfileScreen(
                                         .padding(vertical = 4.dp)
                                 ) {
                                     Box(modifier = Modifier.size(60.dp).background(GratifyColors.SurfaceRaised, GratifyShapes.extraSmall)) {
-                                        if (playlist.thumbnail != null) {
+                                        if (com.tan.gratify.ui.component.isAutoAssignedOrNullThumbnail(playlist.thumbnail,playlist.youtubePlaylistId) && !playlist.tracks.isNullOrEmpty()) {
+                                            com.tan.gratify.ui.component.PlaylistCollageThumbnail(playlist.tracks.orEmpty(),Modifier.fillMaxSize(),playlist.title)
+                                        } else if (playlist.thumbnail != null) {
                                             AsyncImage(
                                                 model = playlist.thumbnail,
                                                 contentDescription = null,
@@ -828,7 +666,7 @@ fun ProfileScreen(
                                             color = Color.White
                                         )
                                         Text(
-                                            text = "Publik • Kamu",
+                                            text = if (playlist.id !in publicPinnedPlaylistIds) "Dipajang • Privat • Hanya Anda" else if (showPlaylist) "Dipajang • Publik" else "Dipajang • Isi profil disembunyikan",
                                             style = typo().bodySmall,
                                             color = GratifyColors.TextSecondary
                                         )
@@ -858,22 +696,26 @@ fun ProfileScreen(
             }
 
             // ── Recent Artists Section ──────────────────────────────────
-            AnimatedVisibility(visible = showRecentArtists) {
-                if (recentArtists.isNotEmpty()) {
+            Column {
+                if ((isPreviewMode && !showRecentArtists) || recentArtists.isEmpty()) {
+                    com.tan.gratify.ui.component.ProfileContentPlaceholder("Artis yang diikuti",
+                        if (isPreviewMode && !showRecentArtists) "Aktivitas disembunyikan oleh pemilik profil" else "Artis pilihanmu akan muncul di sini.",
+                        Modifier.padding(horizontal = 20.dp))
+                } else {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 24.dp)
                     ) {
                         Text(
-                            text = "Artis yang baru diputar",
+                            text = "Artis yang diikuti",
                             style = typo().titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = Color.White,
                             modifier = Modifier.padding(horizontal = 20.dp)
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         // Scroll horizontal: tampilkan SEMUA artis yang diikuti (bukan cuma 5).
-                        // recentArtists berasal dari Flow getFollowedArtists() sehingga otomatis
+                        // recentArtists berasal dari Flow observeFollowedArtists() sehingga otomatis
                         // ter-update (realtime) begitu user menambahkan/mengikuti artis baru.
                         Row(
                             modifier = Modifier
@@ -923,7 +765,7 @@ fun ProfileScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(100.dp))
+            Spacer(modifier = Modifier.height(24.dp))
         }
 
         if (isPreviewMode) {
@@ -952,261 +794,39 @@ fun ProfileScreen(
             }
         }
 
-        // ── Edit Profile Overlay ──────────────────────────────────────
-        AnimatedVisibility(
-            visible = showEditProfile,
-            enter = slideInVertically(initialOffsetY = { it }),
-            exit = slideOutVertically(targetOffsetY = { it }),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            Box(modifier = Modifier.fillMaxSize().background(GratifyColors.Background)) {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    // Top Bar
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .windowInsetsPadding(WindowInsets.statusBars)
-                            .padding(horizontal = 16.dp, vertical = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        IconButton(onClick = { showEditProfile = false }, enabled = !isSavingProfile, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Rounded.Close, contentDescription = "Close", tint = Color.White)
-                        }
-                        Text(
-                            text = "Edit profil",
-                            style = typo().titleMedium.copy(fontWeight = FontWeight.Bold, color = Color.White)
-                        )
-                        Text(
-                            text = if (isSavingProfile) "Menyimpan…" else "Simpan",
-                            style = typo().bodyMedium.copy(color = Color.White, fontWeight = FontWeight.Bold),
-                            modifier = Modifier.clickable(enabled = !isSavingProfile) {
-                                val nameToSave = editName.trim()
-                                val imageToSave = editImage
-                                if (nameToSave.isBlank()) {
-                                    userProfileViewModel.makeToast("Nama tidak boleh kosong.")
-                                    return@clickable
-                                }
-                                isSavingProfile = true
-                                coroutineScope.launch {
-                                    try {
-                                        val ownerId = requireNotNull(supabase.auth.currentUserOrNull()?.id) { "Login required" }
-                                        var avatarUrlToSave = imageToSave
-                                        if (imageToSave.isNotEmpty() && !imageToSave.startsWith("http")) {
-                                            val compressedBytes = requireNotNull(compressImage(imageToSave)) { "Avatar cannot be processed" }
-                                            check(supabase.auth.currentUserOrNull()?.id == ownerId) { "Account changed" }
-                                            val fileName = "$ownerId.jpg"
-                                            val bucket = supabase.storage.from("avatars")
-                                            bucket.upload(path = fileName, data = compressedBytes) {
-                                                upsert = true
-                                                contentType = ContentType.Image.JPEG
-                                            }
-                                            val timestamp = Clock.System.now().toEpochMilliseconds()
-                                            avatarUrlToSave = bucket.publicUrl(fileName) + "?cacheNonce=$timestamp"
-                                        }
-                                        check(supabase.auth.currentUserOrNull()?.id == ownerId) { "Account changed" }
-                                        supabase.auth.updateUser {
-                                            data = buildJsonObject {
-                                                put("display_name", nameToSave)
-                                                put("avatar_url", avatarUrlToSave)
-                                            }
-                                        }
-                                        check(supabase.auth.currentUserOrNull()?.id == ownerId) { "Account changed" }
-                                        userRepository.upsertUserProfile(
-                                            com.tan.domain.data.entities.UserProfile(
-                                                id = ownerId,
-                                                displayName = nameToSave,
-                                                avatarUrl = avatarUrlToSave.ifEmpty { null }
-                                            )
-                                        ).first().getOrThrow()
-                                        check(supabase.auth.currentUserOrNull()?.id == ownerId) { "Account changed" }
-                                        dataStoreManager.putString("AppProfileName", nameToSave)
-                                        dataStoreManager.putString("AppProfileImage", avatarUrlToSave)
-                                        userProfileViewModel.loadProfile(ownerId)
-                                        showEditProfile = false
-                                    } catch (e: CancellationException) {
-                                        throw e
-                                    } catch (_: Exception) {
-                                        userProfileViewModel.makeToast("Profil belum tersimpan. Periksa koneksi lalu coba lagi.")
-                                    } finally {
-                                        isSavingProfile = false
-                                    }
-                                }
-                            }
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(32.dp))
-
-                    // Avatar
-                    Box(
-                        modifier = Modifier
-                            .size(140.dp)
-                            .align(Alignment.CenterHorizontally)
-                            .clickable(enabled = !isSavingProfile) { photoPicker.launch() }
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(140.dp)
-                                .clip(CircleShape)
-                                .background(GratifyColors.Outline)
-                        ) {
-                            if (editImage.isNotEmpty()) {
-                                AsyncImage(
-                                    model = ImageRequest.Builder(LocalPlatformContext.current)
-                                        .data(editImage)
-                                        .diskCachePolicy(CachePolicy.ENABLED)
-                                        .crossfade(true)
-                                        .build(),
-                                    placeholder = painterResource(Res.drawable.holder),
-                                    error = painterResource(Res.drawable.holder),
-                                    fallback = painterResource(Res.drawable.holder),
-                                    contentDescription = "Avatar",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Rounded.Person,
-                                    contentDescription = "Default Avatar",
-                                    modifier = Modifier.fillMaxSize().padding(32.dp),
-                                    tint = GratifyColors.TextSecondary
-                                )
-                            }
-                        }
-                        // Edit Icon (Pencil)
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .padding(end = 4.dp, bottom = 4.dp)
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(Color.White),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Edit,
-                                contentDescription = "Edit photo",
-                                modifier = Modifier.size(20.dp),
-                                tint = Color.Black
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(48.dp))
-
-                    // Name Field
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Nama",
-                            style = typo().bodyLarge.copy(color = Color.White, fontWeight = FontWeight.Bold),
-                            modifier = Modifier.width(80.dp)
-                        )
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(40.dp)
-                        ) {
-                            BasicTextField(
-                                enabled = !isSavingProfile,
-                                value = editName,
-                                onValueChange = { editName = it },
-                                textStyle = typo().bodyLarge.copy(color = Color.White),
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                                cursorBrush = SolidColor(Color.White),
-                                modifier = Modifier.fillMaxSize().padding(bottom = 8.dp)
-                            )
-                            // Underline
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.BottomCenter)
-                                    .fillMaxWidth()
-                                    .height(1.dp)
-                                    .background(GratifyColors.Outline)
-                            )
-                        }
-                    }
+        // Editing uses the same guarded submission as profile creation.
+        if (showEditProfile) {
+            com.tan.gratify.ui.component.ProfileEditorContent(
+                editorState, creating = false, onNameChange = profileEditor::updateDisplayName,
+                onChoosePhoto = {
+                    avatarSelectionOwner = editorState.ownerId
+                    photoPicker.launch()
+                }, onRemovePhoto = { profileEditor.updateAvatarPath("") },
+                onSave = profileEditor::saveProfile, onClose = { showEditProfile = false },
+                photoSelectionActive = photoPicker.isActive,
+            )
+        }
+        LaunchedEffect(editorState.saveSuccess, showEditProfile) {
+            if (showEditProfile && editorState.saveSuccess) {
+                editorState.ownerId?.let {
+                    userProfileViewModel.onProfileSaved(it, editorState.displayName, editorState.avatarPath)
                 }
+                showEditProfile = false
             }
         }
 
-        // ── Privacy Bottom Sheet ──────────────────────────────────────
         if (showPrivacySheet) {
-            ModalBottomSheet(
-                onDismissRequest = { showPrivacySheet = false },
-                sheetState = sheetState,
-                containerColor = GratifyColors.SurfaceRaised
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    Text(
-                        text = "Yang bisa dilihat orang lain",
-                        style = typo().titleMedium.copy(fontWeight = FontWeight.Bold, color = Color.White),
-                        modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 24.dp)
-                    )
-                    
-                    // Item 1: Pengikut dan mengikuti
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
-                            Text("Pengikut dan mengikuti", style = typo().bodyLarge.copy(color = Color.White, fontWeight = FontWeight.Bold))
-                            Text("Di profilmu, orang bisa melihat siapa yang mengikutimu dan siapa yang kamu ikuti.", style = typo().bodySmall.copy(color = GratifyColors.TextSecondary))
-                        }
-                        Switch(
-                            checked = showFollowers ?: true,
-                            onCheckedChange = { coroutineScope.launch { userProfileViewModel.setProfilePrivacy("privacy_show_followers", it) } },
-                            colors = SwitchDefaults.colors(checkedThumbColor = Color.Black, checkedTrackColor = GratifyColors.TextPrimary, uncheckedThumbColor = GratifyColors.TextSecondary)
-                        )
-                    }
-                    
-                    // Item 2: Playlist
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
-                            Text("Playlist", style = typo().bodyLarge.copy(color = Color.White, fontWeight = FontWeight.Bold))
-                            Text("Orang bisa melihat playlist yang kamu tambahkan ke profilmu.", style = typo().bodySmall.copy(color = GratifyColors.TextSecondary))
-                        }
-                        Switch(
-                            checked = showPlaylist ?: true,
-                            onCheckedChange = { coroutineScope.launch { userProfileViewModel.setProfilePrivacy("privacy_show_playlist", it) } },
-                            colors = SwitchDefaults.colors(checkedThumbColor = Color.Black, checkedTrackColor = GratifyColors.TextPrimary, uncheckedThumbColor = GratifyColors.TextSecondary)
-                        )
-                    }
-                    
-                    // Item 3: Artis yang baru diputar
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
-                            Text("Artis yang baru diputar", style = typo().bodyLarge.copy(color = Color.White, fontWeight = FontWeight.Bold))
-                            Text("Orang bisa melihat siapa yang baru-baru ini kamu dengarkan di profilmu.", style = typo().bodySmall.copy(color = GratifyColors.TextSecondary))
-                        }
-                        Switch(
-                            checked = showRecentArtists ?: true,
-                            onCheckedChange = { coroutineScope.launch { userProfileViewModel.setProfilePrivacy("privacy_show_recent_artists", it) } },
-                            colors = SwitchDefaults.colors(checkedThumbColor = Color.Black, checkedTrackColor = GratifyColors.TextPrimary, uncheckedThumbColor = GratifyColors.TextSecondary)
-                        )
-                    }
-                    
-                    Spacer(modifier = Modifier.height(24.dp))
-                }
+            ModalBottomSheet(onDismissRequest = { showPrivacySheet = false },
+                sheetState = sheetState, containerColor = GratifyColors.SurfaceRaised) {
+                com.tan.gratify.ui.component.ProfilePrivacyContent(
+                    followers = showFollowers, playlists = showPlaylist, artists = showRecentArtists,
+                    ready = userProfileState.privacyReady, saving = userProfileState.privacySaving,
+                    error = userProfileState.privacyError,
+                    onChange = { key, value -> coroutineScope.launch { userProfileViewModel.setProfilePrivacy(key, value) } },
+                    onRetry = { currentOwner?.let { userProfileViewModel.loadProfile(it) } },
+                )
             }
         }
-
         // ── Share Profile Bottom Sheet ────────────────────────────────
         if (showShareProfileSheet) {
             ModalBottomSheet(
@@ -1242,8 +862,8 @@ fun ProfileScreen(
                         ) {
                             Spacer(modifier = Modifier.height(8.dp))
                             UserAvatar(
-                                imageUrl = appProfileImage,
-                                name = appProfileName,
+                                imageUrl = displayImage,
+                                name = displayName,
                                 modifier = Modifier.size(160.dp),
                                 textStyle = typo().displayMedium
                             )
@@ -1255,7 +875,7 @@ fun ProfileScreen(
                                 horizontalAlignment = Alignment.Start
                             ) {
                                 Text(
-                                    text = if (appProfileName.isNullOrEmpty()) "Pengguna" else appProfileName!!,
+                                    text = displayName,
                                     style = typo().headlineSmall.copy(fontWeight = FontWeight.Bold, color = Color.White)
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
@@ -1386,9 +1006,16 @@ fun ProfileScreen(
                     ) {
                         // Salin Link
                         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable {
-                            val currentId = userProfileState.profile?.id ?: supabase.auth.currentUserOrNull()?.id ?: ""
-                            val url = "https://gratify.org/app/profile/$currentId"
-                            shareUrl("Bagikan Profil", url)
+                            val currentId = parseProfileUserId(supabase.auth.currentUserOrNull()?.id.orEmpty())
+                            if (currentId != null) {
+                                try {
+                                    copyToClipboard("Profil Gratify", profileUrl(currentId))
+                                    userProfileViewModel.makeToast("Tautan profil disalin.")
+                                } catch (_: Exception) {
+                                    userProfileViewModel.makeToast("Tautan belum dapat disalin. Coba lagi.")
+                                    return@clickable
+                                }
+                            } else userProfileViewModel.makeToast("Masuk untuk membagikan profil.")
                             showShareProfileSheet = false
                         }) {
                             Box(modifier = Modifier.size(60.dp).clip(CircleShape).background(GratifyColors.Divider), contentAlignment = Alignment.Center) {
@@ -1406,7 +1033,8 @@ fun ProfileScreen(
                                     shareImage(bitmap, "com.whatsapp")
                                     showShareProfileSheet = false
                                 } catch (e: Exception) {
-                                    e.printStackTrace()
+                                    if (e is CancellationException) throw e
+                                    userProfileViewModel.makeToast("Kartu profil belum dapat dibagikan. Coba lagi atau gunakan Salin link.")
                                 }
                             }
                         }) {
@@ -1425,7 +1053,8 @@ fun ProfileScreen(
                                     shareImage(bitmap, "com.instagram.android")
                                     showShareProfileSheet = false
                                 } catch (e: Exception) {
-                                    e.printStackTrace()
+                                    if (e is CancellationException) throw e
+                                    userProfileViewModel.makeToast("Kartu profil belum dapat dibagikan. Coba lagi atau gunakan Salin link.")
                                 }
                             }
                         }) {
@@ -1444,7 +1073,8 @@ fun ProfileScreen(
                                     shareImage(bitmap, null)
                                     showShareProfileSheet = false
                                 } catch (e: Exception) {
-                                    e.printStackTrace()
+                                    if (e is CancellationException) throw e
+                                    userProfileViewModel.makeToast("Kartu profil belum dapat dibagikan. Coba lagi atau gunakan Salin link.")
                                 }
                             }
                         }) {
@@ -1544,10 +1174,10 @@ fun ProfileScreen(
                                 .clip(CircleShape)
                                 .background(GratifyColors.Outline)
                         ) {
-                            if (appProfileImage?.isNotEmpty() == true) {
+                            if (displayImage?.isNotEmpty() == true) {
                                 AsyncImage(
                                     model = ImageRequest.Builder(LocalPlatformContext.current)
-                                        .data(appProfileImage)
+                                        .data(displayImage)
                                         .diskCachePolicy(CachePolicy.ENABLED)
                                         .crossfade(true)
                                         .build(),
@@ -1562,7 +1192,7 @@ fun ProfileScreen(
                         }
                         Spacer(modifier = Modifier.width(16.dp))
                         Text(
-                            text = if (appProfileName.isNullOrEmpty()) "Pengguna" else appProfileName!!,
+                            text = displayName,
                             style = typo().titleMedium.copy(fontWeight = FontWeight.Bold, color = Color.White)
                         )
                     }
@@ -1725,10 +1355,10 @@ fun ProfileScreen(
                                         .clip(CircleShape)
                                         .background(GratifyColors.TextSecondary)
                                 ) {
-                                    if (appProfileImage?.isNotEmpty() == true) {
+                                    if (displayImage?.isNotEmpty() == true) {
                                         AsyncImage(
                                             model = ImageRequest.Builder(LocalPlatformContext.current)
-                                                .data(appProfileImage)
+                                                .data(displayImage)
                                                 .diskCachePolicy(CachePolicy.ENABLED)
                                                 .crossfade(true)
                                                 .build(),
@@ -1751,7 +1381,7 @@ fun ProfileScreen(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(
-                                        text = if (appProfileName?.isNotEmpty() == true) appProfileName!! else "Pengguna Gratify",
+                                        text = displayName,
                                         style = typo().titleMedium.copy(color = Color.Black, fontWeight = FontWeight.Bold)
                                     )
                                     Text(
@@ -1764,8 +1394,8 @@ fun ProfileScreen(
                             Spacer(modifier = Modifier.height(20.dp))
 
                             // Real QR Code
-                            val currentQrId = userProfileState.profile?.id ?: supabase.auth.currentUserOrNull()?.id ?: ""
-                            val qrContent = "gratify://profile/$currentQrId"
+                            val currentQrId = parseProfileUserId(supabase.auth.currentUserOrNull()?.id.orEmpty())
+                            val qrContent = currentQrId?.let(::profileUrl)
 
                             Box(
                                 modifier = Modifier
@@ -1774,11 +1404,11 @@ fun ProfileScreen(
                                     .padding(12.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                QrCodeView(
+                                if (qrContent != null) QrCodeView(
                                     content = qrContent,
                                     modifier = Modifier.fillMaxSize(),
                                     tint = Color.Black
-                                )
+                                ) else Text("Masuk untuk menampilkan QR profil.", color = Color.Black, textAlign = TextAlign.Center)
                             }
 
                             Spacer(modifier = Modifier.height(16.dp))

@@ -871,6 +871,8 @@ class YouTube {
             ytMusic.checkForGithubReleaseUpdate().body<GithubResponse>()
         }
 
+    suspend fun githubUpdateManifest(url: String) = ytMusic.githubUpdateManifest(url)
+
     suspend fun checkForFdroidUpdate(): Result<FdroidResponse> =
         runCatching {
             ytMusic.checkForFdroidUpdate().body<FdroidResponse>()

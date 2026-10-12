@@ -83,8 +83,8 @@ fun evaluatePasswordStrength(password: String): PasswordStrength {
     if (password.any { it.isDigit() }) score++
     if (password.any { !it.isLetterOrDigit() }) score++
     return when {
-        score >= 3 -> PasswordStrength.STRONG
-        score >= 2 -> PasswordStrength.FAIR
+        password.length >= 16 || password.length >= 12 && score >= 3 -> PasswordStrength.STRONG
+        score >= 2 || password.length >= 12 -> PasswordStrength.FAIR
         else -> PasswordStrength.WEAK
     }
 }
@@ -99,12 +99,14 @@ data class SignUpFormState(
     val password: String = "",
     val isPasswordValid: Boolean = false,
     val passwordStrength: PasswordStrength = PasswordStrength.WEAK,
+    val confirmPassword: String = "",
+    val isConfirmPasswordMatch: Boolean = false,
     val name: String = "",
     val isNameValid: Boolean = false,
     val isTermsAccepted: Boolean = false,
 ) {
     /** Form valid untuk submit Sign Up (email + password). */
-    fun isSignUpReady(): Boolean = isEmailValid && isPasswordValid
+    fun isSignUpReady(): Boolean = isEmailValid && isPasswordValid && isConfirmPasswordMatch && isProfileReady()
 
     /** Form valid untuk complete profile (nama + terms). */
     fun isProfileReady(): Boolean = isNameValid && isTermsAccepted
@@ -129,8 +131,12 @@ data class OtpFormState(
     val code: String = "",
     val isResending: Boolean = false,
     val resendCooldownSeconds: Int = 0,
+    val email: String? = null,
+    val errorMessage: String? = null,
+    val statusMessage: String? = null,
+    val verified: Boolean = false,
 ) {
-    fun isCodeComplete(): Boolean = code.length == 6
+    fun isCodeComplete(): Boolean = code.length == 6 && code.all { it in '0'..'9' }
 }
 
 /**

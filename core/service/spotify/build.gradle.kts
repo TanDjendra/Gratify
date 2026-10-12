@@ -52,6 +52,7 @@ kotlin {
                 implementation(libs.kotlin.stdlib)
                 // Add KMP dependencies here
                 implementation(projects.ktorExt)
+                implementation(projects.common)
                 implementation(libs.ktor.client.encoding)
                 implementation(libs.ktor.serialization.kotlinx.json)
                 implementation(libs.ktor.client.content.negotiation)
@@ -59,11 +60,9 @@ kotlin {
                 implementation(libs.ktor.client.logging)
 
                 implementation(libs.kotlin.reflect)
-                implementation(libs.kotlin.test)
 
                 implementation(libs.common)
 
-                implementation(libs.logging)
             }
         }
 

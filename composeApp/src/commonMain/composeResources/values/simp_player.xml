@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+  <string name="live_badge">LIVE</string>
+  <string name="ai_translated">AI translated</string>
+  <string name="simp_output_unavailable">Pemilihan keluaran audio dan Cast belum tersedia di Gratify. Gunakan pengaturan keluaran audio perangkat.</string>
+  <string name="simp_together_unavailable">Listen Together belum tersedia di Gratify.</string>
+  <string name="lyrics_provider_gratifymusic">Lyrics provided by GratifyMusic Lyrics</string>
+</resources>

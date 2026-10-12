@@ -44,6 +44,14 @@ KEY_PASSWORD=<kata sandi kunci>
 
 Jangan membuat keystore pengganti untuk pembaruan aplikasi yang sudah dibagikan. Jika kata sandi kunci sama dengan kata sandi keystore, kedua nilai tetap diisi. Pelaksana `artifacts/launch-audit/sign-release.py` membaca rahasia tanpa menaruh kata sandi pada argumen proses, menandatangani APK hasil build, lalu memeriksa tanda tangan dan alignment. Hasilnya tersedia hanya setelah `--apply` berhasil. Nilai yang sudah disimpan di `D:\Tan\script\Gratify\local.properties` juga dibaca khusus untuk tiga pengaturan penandatanganan. Keystore asli tidak diubah. Pembaruan di atas aplikasi terpasang perlu diuji dengan kunci yang sama.
 
+### Verifikasi kunci — 11 Oktober 2026
+
+Keystore di `D:/Tan/script/Gratify/gratify.jks` berhasil dibuka dengan kredensial lokal dan digunakan menandatangani kandidat 2.1.1 (kode 62). SHA-256 sertifikatnya `efefe1b8bf7c6502aeeb60db9a45b430dc50040e11c6f76eb22e2308a51c316a`. Salinan `gratify.jks` di root checkout ini merupakan kunci lama; jangan menganggap kedua file sama berdasarkan namanya.
+
+APK publik v2.1.0 yang diperiksa memakai sertifikat `abaa03408221a11ec378893bce65c95af6bc2b5425a6117507590487ecd942c2`. Kandidat dengan kunci baru tidak dapat dipasang sebagai pembaruan langsung atas APK itu. Pemilik perlu memilih jalur migrasi yang menjaga data pengguna; jangan mengatasi perbedaan tanda tangan dengan menghapus aplikasi atau data secara otomatis. Kandidat ini disiapkan untuk pemasangan baru, belum diterbitkan.
+
+`build_and_sign_apk.sh` menerima `KEYSTORE_PATH` dari lingkungan dan membaca password melalui lingkungan proses penandatangan. Untuk hasil audit ini, gunakan `artifacts/release-readiness-fix-20261011/sign_release.py`; skrip membaca kredensial lokal tanpa mencetaknya. Jalur kunci mengikuti `KEYSTORE_PATH` di `local.properties`, atau dapat diganti lewat `GRATIFY_RELEASE_KEYSTORE`. APK `DIAGNOSTIC-NOT-FOR-DISTRIBUTION` hanya untuk pembaruan instalasi diagnostik di perangkat uji; APK `NEW-KEY` adalah kandidat distribusi.
+
 ## 4. Dokumen resmi
 
 Draf Terms/Privacy sudah mencantumkan Tan Heradhe Rat Djendra (TanDjendra), Indonesia, dan `supportgratify@gmail.com`. Tinjau `docs/legal/REVIEW.md`, lengkapi fakta operasional yang masih kosong, Halaman web untuk peninjauan sudah diterbitkan pada https://tandjendra.github.io/Gratify/terms/ dan https://tandjendra.github.io/Gratify/privacy/. Statusnya tetap DRAF sampai isi disetujui. Lokasi komponen signup tidak menggantikan URL kebijakan resmi. Label draf hanya boleh diubah setelah isi disetujui dan resource aplikasi diperbarui sesuai dokumen.

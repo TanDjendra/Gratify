@@ -1,0 +1,27 @@
+import groovy.json.JsonOutput
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+
+// Read-only inventory of the runtime graphs that ship with Android and desktop.
+gradle.projectsEvaluated {
+    rootProject.tasks.register('auditResolvedLibraries') {
+        doLast {
+            def targets = [
+                [project: ':androidApp', configuration: 'releaseRuntimeClasspath'],
+                [project: ':desktopApp', configuration: 'jvmRuntimeClasspath']
+            ]
+            def scopes = targets.collect { target ->
+                def config = rootProject.project(target.project).configurations.getByName(target.configuration)
+                def components = config.incoming.resolutionResult.allComponents
+                    .findAll { it.id instanceof ModuleComponentIdentifier }
+                    .collect { [group: it.id.group, name: it.id.module, version: it.id.version,
+                        requestedBy: it.dependents.collect { it.from.id.displayName }.unique().sort()] }
+                    .sort { a, b -> "${a.group}:${a.name}" <=> "${b.group}:${b.name}" }
+                [project: target.project, configuration: target.configuration, components: components]
+            }
+            def output = rootProject.file(rootProject.findProperty('libraryAuditOutput') ?: 'build/reports/library-audit/resolved.json')
+            output.parentFile.mkdirs()
+            output.text = JsonOutput.prettyPrint(JsonOutput.toJson(scopes))
+            println "Audited ${scopes.collect { it.components.size() }.sum()} module entries across ${scopes.size()} runtime configurations."
+        }
+    }
+}

@@ -12,6 +12,8 @@ import com.tan.domain.data.type.ChartItem
 import com.tan.domain.data.type.PlaylistType
 import com.tan.domain.data.type.RecentlyType
 import com.tan.domain.manager.DataStoreManager
+import com.tan.domain.repository.YouTubeLibraryRepository
+import com.tan.domain.repository.YouTubeConnectionStatus
 import com.tan.domain.repository.AlbumRepository
 import com.tan.domain.repository.ArtistRepository
 import com.tan.domain.repository.CommonRepository
@@ -29,6 +31,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.lastOrNull
@@ -49,6 +52,7 @@ class LibraryViewModel(
     private val albumRepository: AlbumRepository,
     private val podcastRepository: PodcastRepository,
     private val artistRepository: ArtistRepository,
+    val officialYouTube: YouTubeLibraryRepository,
 ) : BaseViewModel() {
     private val _currentScreen: MutableStateFlow<LibraryChipType> = MutableStateFlow(LibraryChipType.YOUR_LIBRARY)
     val currentScreen: StateFlow<LibraryChipType> get() = _currentScreen.asStateFlow()
@@ -96,7 +100,9 @@ class LibraryViewModel(
     val accountThumbnail: StateFlow<String?> get() = _accountThumbnail.asStateFlow()
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val youtubeLoggedIn = dataStoreManager.loggedIn.mapLatest { it == DataStoreManager.TRUE }
+    val youtubeLoggedIn = officialYouTube.connection.mapLatest { it.status == com.tan.domain.repository.YouTubeConnectionStatus.CONNECTED }
+
+    val youtubeCollections = YouTubeCollectionsState(officialYouTube, viewModelScope)
 
     init {
         viewModelScope.launch {
@@ -111,7 +117,7 @@ class LibraryViewModel(
             val cookieJob =
                 launch {
                     dataStoreManager.cookie.distinctUntilChanged().collect {
-                        _accountThumbnail.value = dataStoreManager.getString("AccountThumbUrl").first().takeIf { !it.isNullOrEmpty() }
+                        _accountThumbnail.value = dataStoreManager.getString("AppProfileImage").first().takeIf { !it.isNullOrEmpty() }
                     }
                 }
             currentScreenJob.join()
@@ -138,27 +144,22 @@ class LibraryViewModel(
                         temp.remove(it)
                     }
                 temp.removeIf { it is SongEntity && it.inLibrary == Config.REMOVED_SONG_DATE_TIME }
-                if (dataStoreManager.loggedIn.first() == DataStoreManager.TRUE) {
-                    temp.removeIf { it is PlaylistEntity && it.id == "LM" }
-                    temp.add(
-                        PlaylistEntity(
-                            title = getString(Res.string.youtube_liked_music),
-                            author = "YouTube Music",
-                            id = "LM",
-                            description = "PIN",
-                            thumbnails = "https://www.gstatic.com/youtube/media/ytm/images/pbg/liked-songs-delhi-1200.png",
-                        ),
-                    )
-                }
+                temp.removeIf { it is PlaylistEntity && it.id == "LM" }
                 temp.reverse()
                 _recentlyAdded.value = LocalResource.Success(temp.toImmutableList())
             }
         }
     }
 
+    private var followedArtistsJob: kotlinx.coroutines.Job? = null
+
     fun getFollowedArtists() {
-        viewModelScope.launch {
-            artistRepository.getFollowedArtists().collect { values ->
+        if (followedArtistsJob?.isActive == true) return
+        _followedArtists.value = LocalResource.Loading()
+        followedArtistsJob = viewModelScope.launch {
+            artistRepository.getFollowedArtists().catch {
+                _followedArtists.value = LocalResource.Error(it.message ?: "Could not load followed artists")
+            }.collect { values ->
                 _followedArtists.value = LocalResource.Success(values)
             }
         }
@@ -182,7 +183,7 @@ class LibraryViewModel(
         }
     }
 
-    fun getYouTubeLoggedIn(): Boolean = runBlocking { dataStoreManager.loggedIn.first() } == DataStoreManager.TRUE
+    fun getYouTubeLoggedIn(): Boolean = officialYouTube.connection.value.status == com.tan.domain.repository.YouTubeConnectionStatus.CONNECTED
 
     fun getPlaylistFavorite() {
         viewModelScope.launch {
@@ -248,7 +249,9 @@ class LibraryViewModel(
         if (localPlaylistJob?.isActive == true) return
         _yourLocalPlaylist.value = LocalResource.Loading()
         localPlaylistJob = viewModelScope.launch {
-            localPlaylistRepository.getAllLocalPlaylists().collect { values ->
+            localPlaylistRepository.getAllLocalPlaylists().catch {
+                _yourLocalPlaylist.value = LocalResource.Error(it.message ?: "Could not load playlists")
+            }.collect { values ->
                 _yourLocalPlaylist.value = LocalResource.Success(values.reversed())
             }
         }
@@ -313,7 +316,4 @@ class LibraryViewModel(
         }
     }
 
-    fun togglePinPlaylist(id: Long) {
-        makeToast("Fitur sematkan segera hadir")
-    }
 }

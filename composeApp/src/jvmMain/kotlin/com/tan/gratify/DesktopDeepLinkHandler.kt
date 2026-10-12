@@ -55,9 +55,11 @@ object DesktopDeepLinkHandler {
     internal fun parseToIntent(value: String): GenericIntent {
         require(value.length <= DesktopLinkInbox.MAX_URI_LENGTH)
         val parsed = Uri.parse(value)
+        val profileId = com.tan.domain.utils.parseProfileUserId(value, allowRawId = false)
         val actualUri = when {
             parsed.scheme == "gratify" && parsed.host == "open-app" ->
                 parsed.getQueryParameter("url")?.let(Uri::parse)
+            profileId != null -> Uri.parse(com.tan.domain.utils.profileUrl(profileId))
             DesktopAuthCallback.matches(parsed) -> parsed
             parsed.scheme == "gratify" && parsed.host != null -> {
                 val query = parsed.query?.let { "?$it" }.orEmpty()

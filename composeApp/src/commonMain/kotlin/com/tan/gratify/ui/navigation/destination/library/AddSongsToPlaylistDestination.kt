@@ -3,4 +3,4 @@ package com.tan.gratify.ui.navigation.destination.library
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class AddSongsToPlaylistDestination(val playlistTitle: String)
+data class AddSongsToPlaylistDestination(val playlistTitle: String, val targetPlaylistId: Long? = null)

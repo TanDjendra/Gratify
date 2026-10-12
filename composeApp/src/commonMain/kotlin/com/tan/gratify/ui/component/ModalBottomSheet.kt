@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
@@ -261,6 +262,7 @@ import gratify.composeapp.generated.resources.share_url
 import gratify.composeapp.generated.resources.share_to_public
 import gratify.composeapp.generated.resources.hide_from_public
 import gratify.composeapp.generated.resources.gratify_lyrics
+import gratify.composeapp.generated.resources.simp_music_lyrics
 import gratify.composeapp.generated.resources.sleep_minutes
 import gratify.composeapp.generated.resources.sleep_timer
 import gratify.composeapp.generated.resources.sleep_timer_end_of_song
@@ -439,22 +441,22 @@ fun InfoPlayerBottomSheet(
         onDismissRequest = {
             onDismiss()
         },
-        containerColor = Color.Black,
-        contentColor = Color.Transparent,
+        containerColor = GratifyColors.Surface,
+        contentColor = GratifyColors.TextPrimary,
         dragHandle = {},
         scrimColor = Color.Black.copy(alpha = .5f),
         sheetState = sheetState,
         modifier = Modifier.fillMaxHeight(),
         contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
-        shape = RectangleShape,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
     ) {
         Card(
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .fillMaxHeight(),
-            shape = RectangleShape,
-            colors = CardDefaults.cardColors().copy(containerColor = Color.Black),
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.Surface),
         ) {
             Column(
                 modifier =
@@ -480,7 +482,7 @@ fun InfoPlayerBottomSheet(
                             verticalArrangement = Arrangement.Center,
                         ) {
                             Text(
-                                text = stringResource(Res.string.now_playing_upper),
+                                text = "Informasi lagu",
                                 style = typo().bodyMedium,
                                 color = Color.White,
                             )
@@ -520,288 +522,25 @@ fun InfoPlayerBottomSheet(
                     },
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
-                Text(
-                    text = stringResource(Res.string.title),
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 10.dp),
-                    textAlign = TextAlign.Center,
-                    style = typo().labelMedium,
-                    color = white,
+                Spacer(modifier = Modifier.height(16.dp))
+                PlayerMetadataSummary(
+                    title = screenDataState.nowPlayingTitle, artist = screenDataState.artistName,
+                    artwork = screenDataState.thumbnailURL,
+                    details = listOf(
+                        stringResource(Res.string.album) to (songEntity?.albumName ?: stringResource(Res.string.unknown)),
+                        stringResource(Res.string.bitrate) to (format?.bitrate?.let { "${it / 1000} kbps" } ?: stringResource(Res.string.unknown)),
+                        stringResource(Res.string.codec) to (format?.codecs ?: stringResource(Res.string.unknown)),
+                        stringResource(Res.string.mime_type) to (format?.mimeType ?: stringResource(Res.string.unknown)),
+                        stringResource(Res.string.itag) to (format?.itag?.toString() ?: stringResource(Res.string.unknown)),
+                        stringResource(Res.string.bpm) to (format?.bpm?.toString() ?: stringResource(Res.string.unknown)),
+                        stringResource(Res.string.key) to (format?.musicKey ?: stringResource(Res.string.unknown)),
+                        stringResource(Res.string.scale) to (format?.keyScale ?: stringResource(Res.string.unknown)),
+                        stringResource(Res.string.plays) to (screenDataState.songInfoData?.viewCount?.toString() ?: stringResource(Res.string.unknown)),
+                        stringResource(Res.string.like) to stringResource(Res.string.like_and_dislike,
+                            screenDataState.songInfoData?.like ?: 0, screenDataState.songInfoData?.dislike ?: 0),
+                    ),
                 )
-                Text(
-                    text = screenDataState.nowPlayingTitle,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight(align = Alignment.CenterVertically)
-                            .padding(horizontal = 10.dp)
-                            .focusable()
-                            .padding(horizontal = 10.dp),
-                    style = typo().bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
-                )
-                Text(
-                    text = stringResource(Res.string.artists),
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 10.dp),
-                    textAlign = TextAlign.Center,
-                    style = typo().labelMedium,
-                    color = white,
-                )
-                Text(
-                    text = screenDataState.artistName,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight(align = Alignment.CenterVertically)
-                            .focusable()
-                            .padding(horizontal = 10.dp),
-                    style = typo().bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
-                )
-                Text(
-                    text = stringResource(Res.string.album),
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 10.dp),
-                    textAlign = TextAlign.Center,
-                    style = typo().labelMedium,
-                    color = white,
-                )
-                Text(
-                    text = songEntity?.albumName ?: stringResource(Res.string.unknown),
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight(align = Alignment.CenterVertically)
-                            .focusable()
-                            .padding(horizontal = 10.dp),
-                    style = typo().bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
-                )
-                Text(
-                    text = stringResource(Res.string.itag),
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 10.dp),
-                    textAlign = TextAlign.Center,
-                    style = typo().labelMedium,
-                    color = white,
-                )
-                Text(
-                    text = format?.itag?.toString() ?: stringResource(Res.string.unknown),
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight(align = Alignment.CenterVertically)
-                            .focusable()
-                            .padding(horizontal = 10.dp),
-                    style = typo().bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
-                )
-                Text(
-                    text = stringResource(Res.string.mime_type),
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 10.dp),
-                    textAlign = TextAlign.Center,
-                    style = typo().labelMedium,
-                    color = white,
-                )
-                Text(
-                    text = format?.mimeType ?: stringResource(Res.string.unknown),
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight(align = Alignment.CenterVertically)
-                            .focusable()
-                            .padding(horizontal = 10.dp),
-                    style = typo().bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
-                )
-                Text(
-                    text = stringResource(Res.string.codec),
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 10.dp),
-                    textAlign = TextAlign.Center,
-                    style = typo().labelMedium,
-                    color = white,
-                )
-                Text(
-                    text = format?.codecs ?: stringResource(Res.string.unknown),
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight(align = Alignment.CenterVertically)
-                            .focusable()
-                            .padding(horizontal = 10.dp),
-                    style = typo().bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
-                )
-                Text(
-                    text = stringResource(Res.string.bitrate),
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 10.dp),
-                    textAlign = TextAlign.Center,
-                    style = typo().labelMedium,
-                    color = white,
-                )
-                Text(
-                    text = format?.bitrate?.toString() ?: stringResource(Res.string.unknown),
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight(align = Alignment.CenterVertically)
-                            .focusable()
-                            .padding(horizontal = 10.dp),
-                    style = typo().bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
-                )
-                Text(
-                    text = stringResource(Res.string.bpm),
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 10.dp),
-                    textAlign = TextAlign.Center,
-                    style = typo().labelMedium,
-                    color = white,
-                )
-                Text(
-                    text = format?.bpm?.toString() ?: stringResource(Res.string.unknown),
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight(align = Alignment.CenterVertically)
-                            .focusable()
-                            .padding(horizontal = 10.dp),
-                    style = typo().bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
-                )
-                Text(
-                    text = stringResource(Res.string.key),
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 10.dp),
-                    textAlign = TextAlign.Center,
-                    style = typo().labelMedium,
-                    color = white,
-                )
-                Text(
-                    text = format?.musicKey ?: stringResource(Res.string.unknown),
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight(align = Alignment.CenterVertically)
-                            .focusable()
-                            .padding(horizontal = 10.dp),
-                    style = typo().bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
-                )
-                Text(
-                    text = stringResource(Res.string.scale),
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 10.dp),
-                    textAlign = TextAlign.Center,
-                    style = typo().labelMedium,
-                    color = white,
-                )
-                Text(
-                    text = format?.keyScale ?: stringResource(Res.string.unknown),
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight(align = Alignment.CenterVertically)
-                            .focusable()
-                            .padding(horizontal = 10.dp),
-                    style = typo().bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
-                )
-
-                Text(
-                    text = stringResource(Res.string.plays),
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 10.dp),
-                    textAlign = TextAlign.Center,
-                    style = typo().labelMedium,
-                    color = white,
-                )
-                Text(
-                    text = screenDataState.songInfoData?.viewCount?.toString() ?: stringResource(Res.string.unknown),
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight(align = Alignment.CenterVertically)
-                            .focusable()
-                            .padding(horizontal = 10.dp),
-                    style = typo().bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
-                )
-                Text(
-                    text = stringResource(Res.string.like),
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 10.dp),
-                    textAlign = TextAlign.Center,
-                    style = typo().labelMedium,
-                    color = white,
-                )
-                Text(
-                    text =
-                        stringResource(
-                            Res.string.like_and_dislike,
-                            screenDataState.songInfoData?.like ?: 0,
-                            screenDataState.songInfoData?.dislike ?: 0,
-                        ),
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight(align = Alignment.CenterVertically)
-                            .focusable()
-                            .padding(horizontal = 10.dp),
-                    style = typo().bodyMedium,
-                    textAlign = TextAlign.Center,
-                )
+                Spacer(modifier = Modifier.height(24.dp))
                 Text(
                     text = stringResource(Res.string.description),
                     modifier =
@@ -966,22 +705,22 @@ fun QueueBottomSheet(
         onDismissRequest = {
             onDismiss()
         },
-        containerColor = Color.Black,
-        contentColor = Color.Transparent,
+        containerColor = GratifyColors.Surface,
+        contentColor = GratifyColors.TextPrimary,
         dragHandle = {},
         scrimColor = Color.Black.copy(alpha = .5f),
         sheetState = sheetState,
         modifier = Modifier.fillMaxHeight(),
         contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
-        shape = RectangleShape,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
     ) {
         Card(
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .fillMaxHeight(),
-            shape = RectangleShape,
-            colors = CardDefaults.cardColors().copy(containerColor = Color.Black),
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.Surface),
         ) {
             Column(
                 modifier =
@@ -1221,7 +960,7 @@ fun QueueItemBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = modelBottomSheetState,
         containerColor = Color.Transparent,
-        contentColor = Color.Transparent,
+        contentColor = GratifyColors.TextPrimary,
         dragHandle = null,
         scrimColor = Color.Black.copy(alpha = .5f),
         contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
@@ -1231,8 +970,8 @@ fun QueueItemBottomSheet(
                 Modifier
                     .fillMaxWidth()
                     .wrapContentHeight(),
-            shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
-            colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceRaised),
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.Surface),
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -1498,7 +1237,7 @@ fun NowPlayingBottomSheet(
         var selected by remember {
             mutableIntStateOf(
                 when (uiState.mainLyricsProvider) {
-                    DataStoreManager.GRATIFYMUSIC -> 0
+                    DataStoreManager.SIMPMUSIC, DataStoreManager.GRATIFYMUSIC -> 0
                     DataStoreManager.LRCLIB -> 1
                     DataStoreManager.YOUTUBE -> 2
                     DataStoreManager.BETTER_LYRICS -> 3
@@ -1528,7 +1267,7 @@ fun NowPlayingBottomSheet(
                     ) {
                         RadioButton(selected = selected == 0, onClick = { selected = 0 })
                         Spacer(modifier = Modifier.size(10.dp))
-                        Text(text = stringResource(Res.string.gratify_lyrics), style = typo().labelSmall)
+                        Text(text = stringResource(Res.string.simp_music_lyrics), style = typo().labelSmall)
                     }
                     Row(
                         modifier =
@@ -1574,11 +1313,11 @@ fun NowPlayingBottomSheet(
                         viewModel.onUIEvent(
                             NowPlayingBottomSheetUIEvent.ChangeLyricsProvider(
                                 when (selected) {
-                                    0 -> DataStoreManager.GRATIFYMUSIC
+                                    0 -> DataStoreManager.SIMPMUSIC
                                     1 -> DataStoreManager.LRCLIB
                                     2 -> DataStoreManager.YOUTUBE
                                     3 -> DataStoreManager.BETTER_LYRICS
-                                    else -> DataStoreManager.GRATIFYMUSIC
+                                    else -> DataStoreManager.SIMPMUSIC
                                 },
                             ),
                         )
@@ -1601,7 +1340,7 @@ fun NowPlayingBottomSheet(
             onDismissRequest = onDismiss,
             sheetState = modelBottomSheetState,
             containerColor = Color.Transparent,
-            contentColor = Color.Transparent,
+            contentColor = GratifyColors.TextPrimary,
             dragHandle = null,
             scrimColor = Color.Black.copy(alpha = .5f),
             contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
@@ -1611,8 +1350,8 @@ fun NowPlayingBottomSheet(
                     Modifier
                         .fillMaxWidth()
                         .wrapContentHeight(),
-                shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
-                colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceRaised),
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.Surface),
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -1635,7 +1374,7 @@ fun NowPlayingBottomSheet(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .height(65.dp)
+                                .heightIn(min = 88.dp)
                                 .padding(10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -1661,11 +1400,11 @@ fun NowPlayingBottomSheet(
                                     .size(60.dp),
                         )
                         Spacer(modifier = Modifier.width(20.dp))
-                        Column(verticalArrangement = Arrangement.Center) {
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
                             Text(
                                 text = uiState.songUIState.title,
-                                style = typo().labelMedium,
-                                maxLines = 1,
+                                style = typo().titleMedium,
+                                maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier =
                                     Modifier
@@ -1879,7 +1618,9 @@ fun ActionButton(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .wrapContentHeight(Alignment.CenterVertically)
+                .padding(horizontal = 8.dp, vertical = 2.dp)
+                .clip(GratifyShapes.medium)
+                .heightIn(min = 56.dp)
                 .then(
                     if (enable) Modifier.clickable { onClick.invoke() } else Modifier.greyScale(),
                 ),
@@ -1893,8 +1634,8 @@ fun ActionButton(
                 contentDescription = if (text != null) stringResource(text) else textString ?: "",
                 modifier =
                     Modifier
-                        .wrapContentSize(Alignment.Center)
-                        .padding(12.dp),
+                        .size(44.dp)
+                        .padding(10.dp),
                 colorFilter =
                     if (enable) {
                         ColorFilter.tint(iconColor)
@@ -1904,12 +1645,12 @@ fun ActionButton(
             )
             Text(
                 text = if (text != null) stringResource(text) else textString ?: "",
-                style = typo().labelSmall,
-                color = if (enable) textColor ?: Color.Unspecified else GratifyColors.TextSecondary,
+                style = typo().bodyMedium,
+                color = if (enable) textColor ?: GratifyColors.TextPrimary else GratifyColors.TextSecondary,
                 modifier =
                     Modifier
-                        .padding(start = 10.dp)
-                        .wrapContentHeight(Alignment.CenterVertically),
+                        .weight(1f)
+                        .padding(start = 12.dp, top = 12.dp, bottom = 12.dp),
             )
         }
     }
@@ -1974,33 +1715,11 @@ fun HeartCheckBox(
     checked: Boolean,
     onStateChange: (() -> Unit)? = null,
 ) {
-    Box(
-        modifier =
-            Modifier
-                .size(maxOf(size, 48).dp)
-                .clip(CircleShape)
-                .clickable {
-                    onStateChange?.invoke()
-                },
-    ) {
-        Crossfade(targetState = checked, modifier = Modifier.fillMaxSize()) {
-            if (it) {
-                Image(
-                    painter = painterResource(Res.drawable.baseline_favorite_24),
-                    contentDescription = "Favorite checked",
-                    modifier = Modifier.size(size.dp).align(Alignment.Center).padding(4.dp),
-                    colorFilter = ColorFilter.tint(GratifyColors.Accent),
-                )
-            } else {
-                Image(
-                    painter = painterResource(Res.drawable.baseline_favorite_border_24),
-                    contentDescription = "Favorite unchecked",
-                    modifier = Modifier.size(size.dp).align(Alignment.Center).padding(4.dp),
-                    colorFilter = ColorFilter.tint(Color.White),
-                )
-            }
-        }
-    }
+    com.tan.gratify.ui.screen.player.simp.component.HeartCheckBox(
+        size = size,
+        checked = checked,
+        onStateChange = onStateChange,
+    )
 }
 
 @ExperimentalMaterial3Api
@@ -2017,15 +1736,15 @@ fun PlaybackSpeedPitchBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = modelBottomSheetState,
         containerColor = Color.Transparent,
-        contentColor = Color.Transparent,
+        contentColor = GratifyColors.TextPrimary,
         dragHandle = null,
         scrimColor = Color.Black.copy(alpha = .5f),
         contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
     ) {
         Card(
             modifier = Modifier.fillMaxWidth().wrapContentHeight(),
-            shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
-            colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceRaised),
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.Surface),
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -2188,14 +1907,14 @@ fun SleepTimerBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = modelBottomSheetState,
         containerColor = Color.Transparent,
-        contentColor = Color.Transparent,
+        contentColor = GratifyColors.TextPrimary,
         dragHandle = null,
         scrimColor = Color.Black.copy(alpha = .5f),
         contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
     ) {
         Card(
             modifier = Modifier.fillMaxWidth().wrapContentHeight(),
-            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
             colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.Surface),
         ) {
             Column(
@@ -2462,7 +2181,7 @@ fun AddToPlaylistModalBottomSheet(
             onDismissRequest = onDismiss,
             sheetState = modelBottomSheetState,
             containerColor = Color.Transparent,
-            contentColor = Color.Transparent,
+            contentColor = GratifyColors.TextPrimary,
             dragHandle = null,
             scrimColor = Color.Black.copy(alpha = .5f),
             contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
@@ -2474,7 +2193,7 @@ fun AddToPlaylistModalBottomSheet(
                         .fillMaxWidth()
                         .wrapContentHeight(),
                 shape = BottomSheetDefaults.ExpandedShape,
-                colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceRaised),
+                colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.Surface),
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -2631,15 +2350,15 @@ fun ArtistModalBottomSheet(
             onDismissRequest = onDismiss,
             sheetState = modelBottomSheetState,
             containerColor = Color.Transparent,
-            contentColor = Color.Transparent,
+            contentColor = GratifyColors.TextPrimary,
             dragHandle = null,
             scrimColor = Color.Black.copy(alpha = .5f),
             contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
         ) {
             Card(
                 modifier = Modifier.fillMaxWidth().wrapContentHeight(),
-                shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
-                colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceRaised),
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.Surface),
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Spacer(modifier = Modifier.height(5.dp))
@@ -2723,15 +2442,15 @@ fun PlaylistBottomSheet(
             onDismissRequest = { showEditTitle = false },
             sheetState = showEditTitleSheetState,
             containerColor = Color.Transparent,
-            contentColor = Color.Transparent,
+            contentColor = GratifyColors.TextPrimary,
             dragHandle = null,
             scrimColor = Color.Black.copy(alpha = .5f),
             contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
         ) {
             Card(
                 modifier = Modifier.fillMaxWidth().wrapContentHeight(),
-                shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
-                colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceRaised),
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.Surface),
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Spacer(modifier = Modifier.height(5.dp))
@@ -2779,15 +2498,15 @@ fun PlaylistBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = modelBottomSheetState,
         containerColor = Color.Transparent,
-        contentColor = Color.Transparent,
+        contentColor = GratifyColors.TextPrimary,
         dragHandle = null,
         scrimColor = Color.Black.copy(alpha = .5f),
         contentWindowInsets = { WindowInsets(0) },
     ) {
         Card(
             modifier = Modifier.fillMaxWidth().wrapContentHeight(),
-            shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
-            colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceRaised),
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.Surface),
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Spacer(modifier = Modifier.height(5.dp))
@@ -2888,15 +2607,15 @@ fun LocalPlaylistBottomSheet(
             onDismissRequest = { showEditTitle = false },
             sheetState = showEditTitleSheetState,
             containerColor = Color.Transparent,
-            contentColor = Color.Transparent,
+            contentColor = GratifyColors.TextPrimary,
             dragHandle = null,
             scrimColor = Color.Black.copy(alpha = .5f),
             contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
         ) {
             Card(
                 modifier = Modifier.fillMaxWidth().wrapContentHeight(),
-                shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
-                colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceRaised),
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.Surface),
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Spacer(modifier = Modifier.height(5.dp))
@@ -2938,15 +2657,15 @@ fun LocalPlaylistBottomSheet(
             onDismissRequest = onDismiss,
             sheetState = modelBottomSheetState,
             containerColor = Color.Transparent,
-            contentColor = Color.Transparent,
+            contentColor = GratifyColors.TextPrimary,
             dragHandle = null,
             scrimColor = Color.Black.copy(alpha = .5f),
             contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
         ) {
             Card(
                 modifier = Modifier.fillMaxWidth().wrapContentHeight(),
-                shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
-                colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceRaised),
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.Surface),
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Spacer(modifier = Modifier.height(5.dp))
@@ -3054,15 +2773,15 @@ fun SortPlaylistBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = modelBottomSheetState,
         containerColor = Color.Transparent,
-        contentColor = Color.Transparent,
+        contentColor = GratifyColors.TextPrimary,
         dragHandle = null,
         scrimColor = Color.Black.copy(alpha = .5f),
         contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
     ) {
         Card(
             modifier = Modifier.fillMaxWidth().wrapContentHeight(),
-            shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
-            colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceRaised),
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.Surface),
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Spacer(modifier = Modifier.height(5.dp))
@@ -3135,15 +2854,15 @@ fun DevLogInBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = modelBottomSheetState,
         containerColor = Color.Transparent,
-        contentColor = Color.Transparent,
+        contentColor = GratifyColors.TextPrimary,
         dragHandle = null,
         scrimColor = Color.Black.copy(alpha = .5f),
         contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
     ) {
         Card(
             modifier = Modifier.fillMaxWidth().wrapContentHeight(),
-            shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
-            colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceRaised),
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.Surface),
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Spacer(modifier = Modifier.height(5.dp))
@@ -3199,15 +2918,15 @@ fun DevCookieLogInBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = modelBottomSheetState,
         containerColor = Color.Transparent,
-        contentColor = Color.Transparent,
+        contentColor = GratifyColors.TextPrimary,
         dragHandle = null,
         scrimColor = Color.Black.copy(alpha = .5f),
         contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
     ) {
         Card(
             modifier = Modifier.fillMaxWidth().wrapContentHeight(),
-            shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
-            colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.SurfaceRaised),
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            colors = CardDefaults.cardColors().copy(containerColor = GratifyColors.Surface),
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Spacer(modifier = Modifier.height(5.dp))

@@ -1,32 +1,17 @@
 package com.tan.media3.service
 
 import android.app.Activity
-import android.app.ActivityManager
-import android.app.ActivityManager.RunningAppProcessInfo
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.PendingIntent
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
 import android.os.Binder
-import android.os.Build
 import android.os.IBinder
-import androidx.core.content.getSystemService
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.DefaultMediaNotificationProvider
-import androidx.media3.session.MediaController
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
-import androidx.media3.session.SessionToken
-import androidx.media3.ui.DefaultMediaDescriptionAdapter
-import androidx.media3.ui.PlayerNotificationManager
-import com.google.common.util.concurrent.MoreExecutors
 import com.tan.common.MEDIA_NOTIFICATION
-import com.tan.domain.manager.DataStoreManager
 import com.tan.domain.mediaservice.handler.MediaPlayerHandler
 import com.tan.domain.mediaservice.player.MediaPlayerInterface
 import com.tan.logger.Logger
@@ -35,22 +20,29 @@ import com.tan.media3.R
 import com.tan.media3.extension.toCommandButton
 import com.tan.media3.utils.CoilBitmapLoader
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import org.koin.core.qualifier.named
-import kotlin.system.exitProcess
-import kotlin.time.Duration.Companion.seconds
 
 @UnstableApi
 internal class SimpleMediaService :
     MediaLibraryService(),
     KoinComponent {
-    private val coroutineScope by inject<CoroutineScope>(named(com.tan.common.Config.SERVICE_SCOPE))
+    companion object {
+        // Never retain a Service context after its lifecycle. App exit also needs
+        // to disconnect system controllers, which Context.stopService alone cannot do.
+        private var runningService = java.lang.ref.WeakReference<SimpleMediaService>(null)
+
+        @androidx.annotation.MainThread
+        fun stopRunningPlayback() {
+            runningService.get()?.stopPlaybackAndService()
+        }
+    }
+    // Only service subscriptions belong to this scope. The player/handler scope is
+    // application-scoped in Koin and must survive service and activity recreation.
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val mediaPlayerAdapter: MediaPlayerInterface by inject<MediaPlayerInterface>()
     private val player: Player by lazy {
         (mediaPlayerAdapter as CrossfadeExoPlayerAdapter).forwardingPlayer
@@ -62,11 +54,9 @@ internal class SimpleMediaService :
     private val simpleMediaSessionCallback: MediaLibrarySession.Callback by inject<MediaLibrarySession.Callback>()
 
     private val simpleMediaServiceHandler: MediaPlayerHandler by inject<MediaPlayerHandler>()
-    private val dataStoreManager: DataStoreManager by inject<DataStoreManager>()
 
     private val binder = MusicBinder()
 
-    private lateinit var playerNotificationManager: PlayerNotificationManager
 
     inner class MusicBinder : Binder() {
         val service: SimpleMediaService
@@ -80,8 +70,8 @@ internal class SimpleMediaService :
                 PendingIntent.getActivity(
                     context,
                     0,
-                    Intent(context, activity),
-                    PendingIntent.FLAG_IMMUTABLE,
+                    Intent(context, activity).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                 ),
             )
         }
@@ -95,7 +85,13 @@ internal class SimpleMediaService :
     @UnstableApi
     override fun onCreate() {
         super.onCreate()
+        runningService = java.lang.ref.WeakReference(this)
         Logger.w("Service", "Simple Media Service Created")
+
+        setListener(ForegroundPlaybackFailureListener {
+            Logger.w("Service", "Foreground playback rejected; pausing until a user retries")
+            mediaPlayerAdapter.pause()
+        })
 
         setMediaNotificationProvider(
             DefaultMediaNotificationProvider(
@@ -115,6 +111,10 @@ internal class SimpleMediaService :
                     player,
                     simpleMediaSessionCallback,
                 )
+            // The app UI uses the adapter directly and binds with MusicBinder,
+            // so no external MediaController connection registers this session.
+            // Register explicitly to let Media3 own notifications and foreground state.
+            addSession(checkNotNull(mediaSession))
         }
 
         Logger.d("PLAYER_DEBUG", "Player instance (hashCode): ${player.hashCode()}")
@@ -127,58 +127,6 @@ internal class SimpleMediaService :
             )
         }
 
-        val sessionToken = SessionToken(this, ComponentName(this, SimpleMediaService::class.java))
-        val controllerFuture = MediaController.Builder(this, sessionToken).buildAsync()
-        controllerFuture.addListener({ 
-            val controller = controllerFuture.get()
-            Logger.d("PLAYER_DEBUG", "MediaController recreated: hash=${controller.hashCode()}")
-        }, MoreExecutors.directExecutor())
-
-        if (runBlocking { dataStoreManager.keepServiceAlive.first() == DataStoreManager.TRUE }) {
-            val keepServiceNotificationManager = getSystemService<NotificationManager>()
-            keepServiceNotificationManager?.run {
-                createNotificationChannel(
-                    NotificationChannel(
-                        "media_playback_channel",
-                        "Now playing",
-                        NotificationManager.IMPORTANCE_LOW,
-                    ).apply {
-                        setSound(null, null)
-                        enableLights(false)
-                        enableVibration(false)
-                    },
-                )
-            }
-            playerNotificationManager =
-                PlayerNotificationManager
-                    .Builder(this, MEDIA_NOTIFICATION.NOTIFICATION_ID, "media_playback_channel")
-                    .setNotificationListener(
-                        object : PlayerNotificationManager.NotificationListener {
-                            override fun onNotificationPosted(
-                                notificationId: Int,
-                                notification: Notification,
-                                ongoing: Boolean,
-                            ) {
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                    startForeground(notificationId, notification, FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
-                                } else {
-                                    startForeground(notificationId, notification)
-                                }
-                            }
-                        },
-                    ).setMediaDescriptionAdapter(DefaultMediaDescriptionAdapter(mediaSession?.sessionActivity))
-                    .build()
-            playerNotificationManager.setPlayer(player)
-            playerNotificationManager.setSmallIcon(R.drawable.monochrome)
-            mediaSession?.platformToken?.let { playerNotificationManager.setMediaSessionToken(it) }
-        }
-
-        simpleMediaServiceHandler.onUpdateNotification = { list ->
-            val commandButtonList = list.map { it.toCommandButton(this) }
-            mediaSession?.setMediaButtonPreferences(
-                commandButtonList,
-            )
-        }
     }
 
     @UnstableApi
@@ -194,44 +142,19 @@ internal class SimpleMediaService :
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? = mediaSession
 
     @UnstableApi
-    override fun onUpdateNotification(
-        session: MediaSession,
-        startInForegroundRequired: Boolean,
-    ) {
-        val player = session.player
-        val forceForeground = startInForegroundRequired || player.playWhenReady || player.playbackState == Player.STATE_BUFFERING
-        super.onUpdateNotification(session, forceForeground)
-    }
-
-    @UnstableApi
-    fun release() {
-        Logger.w("Service", "Starting release process")
-        runBlocking {
-            try {
-                // Release MediaSession (don't release player - CrossfadeExoPlayerAdapter manages it)
-                mediaSession?.run {
-                    this.player.pause()
-                    this.player.playWhenReady = false
-                    // Don't call this.player.release() - CrossfadeExoPlayerAdapter manages player lifecycle
-                    this.release()
-                }
-                // Release handler (contains coroutines and jobs, which also releases the adapter)
-                simpleMediaServiceHandler.release()
-                mediaSession = null
-                Logger.w("Service", "Simple Media Service Released")
-            } catch (e: Exception) {
-                Logger.e("Service", "Error during release")
-            }
-        }
-    }
-
-    @UnstableApi
     override fun onDestroy() {
-        super.onDestroy()
+        if (runningService.get() === this) runningService.clear()
         Logger.w("Service", "Simple Media Service Destroyed")
-        if (simpleMediaServiceHandler.shouldReleaseOnTaskRemoved()) {
-            release()
-        }
+        simpleMediaServiceHandler.mayBeSaveRecentSong()
+        simpleMediaServiceHandler.mayBeSavePlaybackState()
+        simpleMediaServiceHandler.onUpdateNotification = {}
+        mediaSession?.release()
+        mediaSession = null
+        // Stop both crossfade players and abandon focus, retaining the reusable
+        // application-owned adapter and handler for the next service instance.
+        simpleMediaServiceHandler.stopPlaybackForAppExit()
+        serviceScope.cancel()
+        super.onDestroy()
     }
 
     override fun onTrimMemory(level: Int) {
@@ -242,11 +165,18 @@ internal class SimpleMediaService :
     @UnstableApi
     override fun onTaskRemoved(rootIntent: Intent?) {
         Logger.w("Service", "Simple Media Service Task Removed")
-        if (simpleMediaServiceHandler.shouldReleaseOnTaskRemoved()) {
-            release()
-            super.onTaskRemoved(rootIntent)
-            exitProcess(0)
-        }
+        stopPlaybackAndService()
+    }
+
+    private fun stopPlaybackAndService() {
+        simpleMediaServiceHandler.mayBeSaveRecentSong()
+        simpleMediaServiceHandler.mayBeSavePlaybackState()
+        pauseAllPlayersAndStopSelf()
+        // Disconnect System UI controllers as well as stopping the foreground service.
+        // Home and screen-off do not remove the task, so their playback continues.
+        mediaSession?.release()
+        mediaSession = null
+        simpleMediaServiceHandler.stopPlaybackForAppExit()
     }
 
     // Can't inject by Koin because it depend on service
@@ -255,19 +185,20 @@ internal class SimpleMediaService :
         service: MediaLibraryService,
         player: Player,
         callback: MediaLibrarySession.Callback,
-    ): MediaLibrarySession =
-        MediaLibrarySession
-            .Builder(
-                service,
-                player,
-                callback,
-            ).setId(this.javaClass.name)
+    ): MediaLibrarySession {
+        val builder = MediaLibrarySession.Builder(service, player, callback)
+            .setId(this.javaClass.name)
             .setBitmapLoader(coilBitmapLoader)
-            .build()
-
-    private fun isAppInForeground(): Boolean {
-        val appProcessInfo = RunningAppProcessInfo()
-        ActivityManager.getMyMemoryState(appProcessInfo)
-        return appProcessInfo.importance == RunningAppProcessInfo.IMPORTANCE_FOREGROUND
+        // Also available when the service is started without an Activity binding.
+        packageManager.getLaunchIntentForPackage(packageName)?.let { launchIntent ->
+            builder.setSessionActivity(
+                PendingIntent.getActivity(
+                    this, 0,
+                    launchIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                ),
+            )
+        }
+        return builder.build()
     }
 }

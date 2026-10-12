@@ -19,12 +19,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import org.jetbrains.compose.resources.painterResource
 import gratify.composeapp.generated.resources.Res
 import gratify.composeapp.generated.resources.monochrome
 
 @Composable
-fun CenterLoadingBox(modifier: Modifier) {
+fun CenterLoadingBox(modifier: Modifier, logoSize: Dp = 48.dp) {
     val infiniteTransition = rememberInfiniteTransition(label = "loading_anim")
     
     val scale by infiniteTransition.animateFloat(
@@ -64,7 +65,7 @@ fun CenterLoadingBox(modifier: Modifier) {
         // Glowing background circle
         Box(
             modifier = Modifier
-                .size(64.dp)
+                .size(logoSize * (4f / 3f))
                 .graphicsLayer {
                     scaleX = glowScale
                     scaleY = glowScale
@@ -87,7 +88,7 @@ fun CenterLoadingBox(modifier: Modifier) {
             contentDescription = "Loading...",
             tint = Color.White,
             modifier = Modifier
-                .size(48.dp)
+                .size(logoSize)
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale

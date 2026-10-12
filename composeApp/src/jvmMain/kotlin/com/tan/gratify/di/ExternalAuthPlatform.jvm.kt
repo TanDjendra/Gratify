@@ -4,6 +4,7 @@ import io.github.jan.supabase.auth.AuthConfig
 import kotlin.time.Duration.Companion.minutes
 
 actual val externalAuthWaitsForCallback: Boolean = true
+actual val externalAuthScheme: String = "com.tan.gratify"
 actual fun AuthConfig.configureExternalAuthPlatform() {
     httpCallbackConfig {
         timeout = 5.minutes

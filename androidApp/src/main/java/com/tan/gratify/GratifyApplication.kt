@@ -28,7 +28,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import multiplatform.network.cmptoast.AppContext
 import okhttp3.OkHttpClient
-import okio.FileSystem
+import io.github.jan.supabase.auth.auth
+import okio.Path.Companion.toOkioPath
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.component.KoinComponent
@@ -47,6 +48,7 @@ class GratifyApplication :
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val dataStoreManager: DataStoreManager by inject()
     private lateinit var autoBackupScheduler: AutoBackupScheduler
+    private lateinit var pushRegistration: com.tan.gratify.service.PushDeviceRegistration
 
     override fun onCreate() {
         super.onCreate()
@@ -68,6 +70,10 @@ class GratifyApplication :
 
         // initialize WorkManager
         WorkManager.initialize(this, workConfig)
+        com.tan.gratify.expect.AndroidAppUpdater.initialize(this)
+        com.tan.gratify.expect.AndroidAppUpdater.enqueueRecovery()
+        com.tan.gratify.service.DeveloperNotificationWorker.createChannel(this)
+        pushRegistration = com.tan.gratify.service.PushDeviceRegistration(this, getKoin().get(), getKoin().get(), applicationScope)
 
         // Initialize and start AutoBackupScheduler
         autoBackupScheduler = AutoBackupScheduler(this, dataStoreManager)
@@ -109,6 +115,15 @@ class GratifyApplication :
         ImageLoader
             .Builder(context)
             .components {
+                add(object : coil3.intercept.Interceptor {
+                    override suspend fun intercept(chain: coil3.intercept.Interceptor.Chain): coil3.request.ImageResult {
+                        val client = org.koin.mp.KoinPlatform.getKoin().get<io.github.jan.supabase.SupabaseClient>()
+                        val key = com.tan.gratify.ui.utils.playlistImageCacheKey(chain.request.data.toString(),
+                            com.tan.gratify.BuildKonfig.SUPABASE_URL, client.auth.currentUserOrNull()?.id)
+                        return chain.withRequest(if (key == null) chain.request else chain.request.newBuilder()
+                            .memoryCacheKey(key).diskCacheKey(key).build()).proceed()
+                    }
+                })
                 add(
                     OkHttpNetworkFetcherFactory(
                         callFactory = {
@@ -129,7 +144,7 @@ class GratifyApplication :
             .diskCache(
                 DiskCache
                     .Builder()
-                    .directory(FileSystem.SYSTEM_TEMPORARY_DIRECTORY / "image_cache")
+                    .directory(context.cacheDir.resolve("image_cache").toOkioPath())
                     .maxSizeBytes(512L * 1024 * 1024)
                     .build(),
             ).crossfade(true)

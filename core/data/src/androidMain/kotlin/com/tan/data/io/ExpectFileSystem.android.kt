@@ -5,6 +5,7 @@ import okio.FileSystem
 import org.koin.mp.KoinPlatform.getKoin
 
 actual fun fileSystem(): FileSystem = FileSystem.SYSTEM
+actual fun cacheDir(): String = getKoin().get<Context>().cacheDir.absolutePath
 actual fun fileDir(): String {
     val context = getKoin().get<Context>()
     return context.filesDir.absolutePath

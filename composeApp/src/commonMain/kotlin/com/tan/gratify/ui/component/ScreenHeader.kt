@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -21,8 +22,17 @@ fun ScreenHeader(
     profileImage: String?,
     onOpenProfile: () -> Unit,
     actions: @Composable RowScope.() -> Unit = {},
+    titleStyle: TextStyle? = null,
 ) {
     val profileDescription = stringResource(Res.string.ui_open_profile)
+    if (com.tan.gratify.getPlatform() == com.tan.gratify.Platform.Desktop) {
+        Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 24.dp),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            Text(title, style = titleStyle ?: MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+            actions()
+        }
+        return
+    }
     TopAppBar(
         navigationIcon = {
             Box(Modifier.padding(start = 12.dp, end = 8.dp).size(48.dp)
@@ -31,7 +41,7 @@ fun ScreenHeader(
                 UserAvatar(imageUrl = profileImage, name = profileName, modifier = Modifier.size(34.dp))
             }
         },
-        title = { Text(title, style = MaterialTheme.typography.titleLarge, maxLines = 1) },
+        title = { Text(title, style = titleStyle ?: MaterialTheme.typography.titleLarge, maxLines = 1) },
         actions = actions,
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.background,

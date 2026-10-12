@@ -36,6 +36,9 @@ interface MediaPlayerHandler {
     // Playback control
     suspend fun onPlayerEvent(playerEvent: PlayerEvent)
 
+    /** Cancel pending playback work while keeping the saved queue available for reopening. */
+    fun stopPlaybackForAppExit() { player.stop() }
+
     fun toggleRadio()
 
     fun toggleLike()

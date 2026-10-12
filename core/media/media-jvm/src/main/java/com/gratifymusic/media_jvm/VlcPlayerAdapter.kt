@@ -1124,16 +1124,7 @@ class VlcPlayerAdapter(
     }
 
     private fun buildVlcOptions(source: PlayableSource): Array<String> {
-        val options = mutableListOf<String>()
-        if (source.audioSlaveUrl != null) {
-            options.add(":input-slave=${source.audioSlaveUrl}")
-        }
-        if (source.isVideo) {
-            // Extra buffering for video streams to prevent stalls near end
-            options.add(":network-caching=15000")
-            options.add(":http-reconnect")
-        }
-        return options.toTypedArray()
+        return vlcPlaybackOptions(source.isVideo, source.audioSlaveUrl)
     }
 
     /**

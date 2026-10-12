@@ -1,6 +1,5 @@
 package com.tan.gratify.ui.screen.home
 
-import androidx.compose.ui.text.style.TextOverflow
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -13,9 +12,6 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.snapping.SnapLayoutInfoProvider
-import androidx.compose.foundation.gestures.snapping.SnapPosition
-import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,10 +27,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -81,12 +73,12 @@ import com.tan.gratify.ui.component.CenterLoadingBox
 import com.tan.gratify.ui.component.Chip
 import com.tan.gratify.ui.component.HomeMoodFilters
 import com.tan.gratify.ui.component.HomeSectionHeading
-import com.tan.gratify.ui.component.DropdownButton
+import com.tan.gratify.ui.component.HomeChartRegionPicker
+import com.tan.gratify.ui.component.HomeChartShelves
+import com.tan.gratify.ui.component.HomeExploreCategories
+import com.tan.gratify.ui.theme.GratifySpacing
 import com.tan.gratify.ui.component.EndOfPage
 import com.tan.gratify.ui.component.HomeItem
-import com.tan.gratify.ui.component.HomeItemContentPlaylist
-import com.tan.gratify.ui.component.ItemArtistChart
-import com.tan.gratify.ui.component.MoodMomentAndGenreHomeItem
 import com.tan.gratify.ui.component.OfflineErrorState
 import com.tan.gratify.ui.component.QuickPicksItem
 import com.tan.gratify.ui.navigation.destination.home.HomeDestination
@@ -97,7 +89,6 @@ import com.tan.gratify.ui.screen.library.LibraryDynamicPlaylistType
 import com.tan.gratify.ui.navigation.destination.list.PlaylistDestination
 import com.tan.gratify.ui.navigation.destination.login.LoginDestination
 import com.tan.gratify.ui.theme.typo
-import com.tan.gratify.ui.theme.white
 import com.tan.gratify.viewModel.HomeViewModel
 import com.tan.gratify.viewModel.HomeViewModel.Companion.HOME_PARAMS_COMMUTE
 import com.tan.gratify.viewModel.HomeViewModel.Companion.HOME_PARAMS_ENERGIZE
@@ -126,22 +117,22 @@ import gratify.composeapp.generated.resources.do_not_show_again
 import gratify.composeapp.generated.resources.energize
 import gratify.composeapp.generated.resources.feel_good
 import gratify.composeapp.generated.resources.focus
-import gratify.composeapp.generated.resources.genre
 import gratify.composeapp.generated.resources.go_to_log_in_page
-import gratify.composeapp.generated.resources.let_s_pick_a_playlist_for_you
 import gratify.composeapp.generated.resources.let_s_start_with_a_radio
 import gratify.composeapp.generated.resources.log_in_warning
-import gratify.composeapp.generated.resources.moods_amp_moment
 import gratify.composeapp.generated.resources.party
 import gratify.composeapp.generated.resources.quick_picks
 import gratify.composeapp.generated.resources.relax
 import gratify.composeapp.generated.resources.romance
 import gratify.composeapp.generated.resources.sad
 import gratify.composeapp.generated.resources.sleep
-import gratify.composeapp.generated.resources.top_artists
 import gratify.composeapp.generated.resources.warning
 import gratify.composeapp.generated.resources.what_is_best_choice_today
 import gratify.composeapp.generated.resources.workout
+import gratify.composeapp.generated.resources.settings
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Settings
+import com.tan.gratify.ui.navigation.destination.home.SettingsDestination
 
 // DataStore key for blog-promo one-shot dialog. Bump the suffix (v2, v3, …) to re-promote.
 private const val BLOG_PROMO_KEY = "blog_promo_v1_seen"
@@ -165,6 +156,7 @@ fun HomeScreen(
     val scrollState = rememberLazyListState()
     val isScrollingUp by scrollState.isScrollingUp()
     val homeData by viewModel.homeItemList.collectAsStateWithLifecycle()
+    val initialHomeCount by viewModel.initialHomeCount.collectAsStateWithLifecycle()
     val newRelease by viewModel.newRelease.collectAsStateWithLifecycle()
     val chart by viewModel.chart.collectAsStateWithLifecycle()
     val moodMomentAndGenre by viewModel.exploreMoodItem.collectAsStateWithLifecycle()
@@ -221,7 +213,7 @@ fun HomeScreen(
     val shouldStartPaginate =
         remember(homeListState, continuation, loading) {
             derivedStateOf {
-                !loading && !continuation.isNullOrBlank() && scrollState.layoutInfo.totalItemsCount > 0 &&
+                !loading && scrollState.layoutInfo.totalItemsCount > 0 &&
                 homeListState != ListState.PAGINATION_EXHAUST &&
                     (
                         scrollState.layoutInfo.visibleItemsInfo
@@ -349,14 +341,14 @@ fun HomeScreen(
                         verticalArrangement = Arrangement.spacedBy(28.dp),
                         contentPadding = PaddingValues(bottom = innerPadding.calculateBottomPadding() + 16.dp),
                     ) {
-                        itemsIndexed(homeData, key = { index, item ->
+                        itemsIndexed(homeData.take(initialHomeCount), key = { index, item ->
                             "$index-${item.title}"
                         }) { index, item ->
                             Box {
                                 Column(
                                     modifier =
                                         Modifier
-                                            .padding(horizontal = 15.dp),
+                                            .padding(horizontal = GratifySpacing.Page),
                                 ) {
                                     if (index == 0) {
                                         Spacer(
@@ -417,21 +409,7 @@ fun HomeScreen(
                                 }
                             }
                         }
-                        item {
-                            AnimatedVisibility(
-                                homeListState == ListState.PAGINATING,
-                                enter = expandVertically() + expandVertically(),
-                                exit = fadeOut() + shrinkVertically(),
-                            ) {
-                                CenterLoadingBox(
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .height(200.dp),
-                                )
-                            }
-                        }
-                        if (homeListState == ListState.PAGINATION_EXHAUST) {
+                        if (!loading) {
                             items(newRelease, key = { it.hashCode() }) {
                                 AnimatedVisibility(
                                     visible = newRelease.isNotEmpty(),
@@ -439,7 +417,7 @@ fun HomeScreen(
                                     Box(
                                         modifier =
                                             Modifier
-                                                .padding(horizontal = 15.dp),
+                                                .padding(horizontal = GratifySpacing.Page),
                                     ) {
                                         HomeItem(
                                             homeViewModel = viewModel,
@@ -456,7 +434,7 @@ fun HomeScreen(
                                     Box(
                                         modifier =
                                             Modifier
-                                                .padding(horizontal = 15.dp),
+                                                .padding(horizontal = GratifySpacing.Page),
                                     ) {
                                         moodMomentAndGenre?.let {
                                             MoodMomentAndGenre(
@@ -470,18 +448,16 @@ fun HomeScreen(
                             item {
                                 Column(
                                     Modifier
-                                        .padding(vertical = 10.dp)
-                                        .padding(horizontal = 15.dp),
-                                    verticalArrangement = Arrangement.SpaceBetween,
+                                        .padding(horizontal = GratifySpacing.Page),
+                                    verticalArrangement = Arrangement.spacedBy(16.dp),
                                 ) {
                                     ChartTitle()
-                                    Spacer(modifier = Modifier.height(5.dp))
                                     Crossfade(targetState = regionChart) {
                                         Logger.w("HomeScreen", "regionChart: $it")
                                         if (it != null) {
-                                            DropdownButton(
-                                                items = CHART_SUPPORTED_COUNTRY.itemsData.toList(),
-                                                defaultSelected =
+                                            HomeChartRegionPicker(
+                                                regions = CHART_SUPPORTED_COUNTRY.itemsData.toList(),
+                                                selected =
                                                     CHART_SUPPORTED_COUNTRY.itemsData.getOrNull(
                                                         CHART_SUPPORTED_COUNTRY.items.indexOf(it),
                                                     )
@@ -497,7 +473,6 @@ fun HomeScreen(
                                             }
                                         }
                                     }
-                                    Spacer(modifier = Modifier.height(5.dp))
                                     Crossfade(
                                         targetState = chartLoading,
                                         label = "Chart",
@@ -521,8 +496,18 @@ fun HomeScreen(
                                 }
                             }
                         }
+                        itemsIndexed(homeData.drop(initialHomeCount), key = { index, item -> "discovery-$index-${item.title}" }) { _, section ->
+                            Box(Modifier.padding(horizontal = 16.dp)) {
+                                HomeItem(homeViewModel = viewModel, navController = navController, data = section)
+                            }
+                        }
                         item {
-                            EndOfPage()
+                            com.tan.gratify.ui.component.DiscoveryFooter(
+                                loading = homeListState == ListState.PAGINATING,
+                                failed = viewModel.canRetryDiscovery,
+                                exhausted = homeListState == ListState.PAGINATION_EXHAUST,
+                                onRetry = viewModel::retryDiscovery,
+                            )
                         }
                     }
                 } else {
@@ -558,9 +543,23 @@ fun HomeTopAppBar(navController: NavController, onOpenDrawer: () -> Unit = {}) {
     val dataStoreManager: DataStoreManager = koinInject()
     val profileImage by dataStoreManager.getString("AppProfileImage").collectAsStateWithLifecycle(initialValue = "")
     val profileName by dataStoreManager.getString("AppProfileName").collectAsStateWithLifecycle(initialValue = "")
+    HomeHeaderContent(profileName, profileImage, onOpenDrawer) {
+        navController.navigate(SettingsDestination) { launchSingleTop = true }
+    }
+}
+
+@Composable
+fun HomeHeaderContent(
+    profileName: String?, profileImage: String?, onOpenProfile: () -> Unit, onOpenSettings: () -> Unit,
+) {
     com.tan.gratify.ui.component.ScreenHeader(
         title = stringResource(Res.string.home), profileName = profileName,
-        profileImage = profileImage, onOpenProfile = onOpenDrawer,
+        profileImage = profileImage, onOpenProfile = onOpenProfile,
+        actions = {
+            androidx.compose.material3.IconButton(onClick = onOpenSettings, modifier = Modifier.size(48.dp)) {
+                androidx.compose.material3.Icon(Icons.Rounded.Settings, contentDescription = stringResource(Res.string.settings))
+            }
+        },
     )
 }
 
@@ -594,39 +593,27 @@ fun QuickPicksContent(
     homeItem: HomeItem,
     onPlay: (com.tan.domain.data.model.home.Content) -> Unit,
 ) {
-    val lazyListState = rememberLazyGridState()
-    val snapperFlingBehavior = rememberSnapFlingBehavior(SnapLayoutInfoProvider(lazyGridState = lazyListState, snapPosition = SnapPosition.Start))
-    val density = LocalDensity.current
-    var widthDp by remember {
-        mutableStateOf(0.dp)
-    }
-    Column(
-        Modifier
-            .padding(vertical = 8.dp)
-            .onGloballyPositioned { coordinates ->
-                with(density) {
-                    widthDp = (coordinates.size.width).toDp()
-                }
-            },
-    ) {
-        HomeSectionHeading(
-            title = stringResource(Res.string.quick_picks),
-            subtitle = stringResource(Res.string.let_s_start_with_a_radio),
-            modifier = Modifier.padding(vertical = 5.dp),
-        )
-        LazyHorizontalGrid(
-            rows = GridCells.Fixed(4),
-            modifier = Modifier.height(256.dp * density.fontScale.coerceAtLeast(1f)),
-            state = lazyListState,
-            flingBehavior = snapperFlingBehavior,
-        ) {
-            items(homeItem.contents, key = { it.hashCode() }) {
-                if (it != null) {
-                    QuickPicksItem(
-                        onClick = { onPlay(it) },
-                        data = it,
-                        widthDp = widthDp.coerceIn(160.dp, 360.dp),
-                    )
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val columns = when {
+            maxWidth >= 760.dp -> 3
+            maxWidth < 400.dp && androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.2f -> 1
+            else -> 2
+        }
+        val cardWidth = (maxWidth - 8.dp * (columns - 1)) / columns
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            HomeSectionHeading(
+                title = stringResource(Res.string.quick_picks),
+                subtitle = stringResource(Res.string.let_s_start_with_a_radio),
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+            homeItem.contents.filterNotNull().take(maxOf(8, columns * 4)).chunked(columns).forEach { row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    row.forEach { content ->
+                        com.tan.gratify.ui.component.QuickDiscoveryCard(
+                            content = content, modifier = Modifier.width(cardWidth),
+                            onPlay = { onPlay(content) },
+                        )
+                    }
                 }
             }
         }
@@ -634,189 +621,25 @@ fun QuickPicksContent(
 }
 
 @Composable
-fun MoodMomentAndGenre(
-    mood: Mood,
-    navController: NavController,
-) {
-    val lazyListState1 = rememberLazyGridState()
-    val snapperFlingBehavior1 = rememberSnapFlingBehavior(SnapLayoutInfoProvider(lazyGridState = lazyListState1))
-
-    val lazyListState2 = rememberLazyGridState()
-    val snapperFlingBehavior2 = rememberSnapFlingBehavior(SnapLayoutInfoProvider(lazyGridState = lazyListState2))
-
-    Column(
-        Modifier
-            .padding(vertical = 8.dp),
-    ) {
-        Text(
-            text = stringResource(Res.string.let_s_pick_a_playlist_for_you),
-            style = typo().bodyMedium,
-        )
-        Text(
-            text = stringResource(Res.string.moods_amp_moment),
-            style = typo().headlineMedium,
-            color = white,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 5.dp),
-        )
-        LazyHorizontalGrid(
-            rows = GridCells.Fixed(3),
-            modifier = Modifier.height(210.dp),
-            state = lazyListState1,
-            flingBehavior = snapperFlingBehavior1,
-        ) {
-            items(mood.moodsMoments, key = { it.title }) {
-                MoodMomentAndGenreHomeItem(title = it.title) {
-                    navController.navigate(
-                        MoodDestination(
-                            it.params,
-                        ),
-                    )
-                }
-            }
-        }
-        Text(
-            text = stringResource(Res.string.genre),
-            style = typo().headlineMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            color = white,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 5.dp),
-        )
-        LazyHorizontalGrid(
-            rows = GridCells.Fixed(3),
-            modifier = Modifier.height(210.dp),
-            state = lazyListState2,
-            flingBehavior = snapperFlingBehavior2,
-        ) {
-            items(mood.genres, key = { it.title }) {
-                MoodMomentAndGenreHomeItem(title = it.title) {
-                    navController.navigate(
-                        MoodDestination(
-                            it.params,
-                        ),
-                    )
-                }
-            }
-        }
-    }
+fun MoodMomentAndGenre(mood: Mood, navController: NavController) {
+    HomeExploreCategories(mood) { params -> navController.navigate(MoodDestination(params)) }
 }
 
 @Composable
 fun ChartTitle() {
-    Column {
-        Text(
-            text = stringResource(Res.string.what_is_best_choice_today),
-            style = typo().bodyMedium,
-        )
-        Text(
-            text = stringResource(Res.string.chart),
-            style = typo().headlineMedium,
-            color = white,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 5.dp),
-        )
-    }
+    HomeSectionHeading(
+        title = stringResource(Res.string.chart),
+        subtitle = stringResource(Res.string.what_is_best_choice_today),
+    )
 }
 
 @Composable
-fun ChartData(
-    chart: Chart,
-    navController: NavController,
-) {
-    var gridWidthDp by remember {
-        mutableStateOf(0.dp)
-    }
-    val density = LocalDensity.current
-
-    val lazyListState2 = rememberLazyGridState()
-    val snapperFlingBehavior2 = rememberSnapFlingBehavior(SnapLayoutInfoProvider(lazyGridState = lazyListState2))
-
-    Column(
-        Modifier.onGloballyPositioned { coordinates ->
-            with(density) {
-                gridWidthDp = (coordinates.size.width).toDp()
-            }
+fun ChartData(chart: Chart, navController: NavController) {
+    HomeChartShelves(
+        chart = chart,
+        onPlaylist = { id ->
+            navController.navigate(PlaylistDestination(playlistId = id, isYourYouTubePlaylist = false))
         },
-    ) {
-        chart.listChartItem.forEach { item ->
-            Text(
-                text = item.title,
-                style = typo().headlineMedium,
-                color = white,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 10.dp),
-            )
-            val lazyListState = rememberLazyListState()
-            val snapperFlingBehavior = rememberSnapFlingBehavior(SnapLayoutInfoProvider(lazyListState = lazyListState))
-            LazyRow(flingBehavior = snapperFlingBehavior) {
-                items(item.playlists.size, key = { index ->
-                    val data = item.playlists[index]
-                    data.id + data.title + index
-                }) {
-                    HomeItemContentPlaylist(
-                        onClick = {
-                            navController.navigate(
-                                PlaylistDestination(
-                                    playlistId = item.playlists[it].id,
-                                    isYourYouTubePlaylist = false,
-                                ),
-                            )
-                        },
-                        data = item.playlists[it],
-                    )
-                }
-            }
-        }
-        Text(
-            text = stringResource(Res.string.top_artists),
-            style = typo().headlineMedium,
-            color = white,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 10.dp),
-        )
-        LazyHorizontalGrid(
-            rows = GridCells.Fixed(3),
-            modifier = Modifier.height(240.dp),
-            state = lazyListState2,
-            flingBehavior = snapperFlingBehavior2,
-        ) {
-            items(chart.artists.itemArtists.size, key = { index ->
-                val item = chart.artists.itemArtists[index]
-                item.title + item.browseId + index
-            }) {
-                val data = chart.artists.itemArtists[it]
-                ItemArtistChart(
-                    onClick = {
-                        navController.navigate(
-                            ArtistDestination(
-                                channelId = data.browseId,
-                            ),
-                        )
-                    },
-                    data = data,
-                    widthDp = gridWidthDp,
-                )
-            }
-        }
-    }
+        onArtist = { id -> navController.navigate(ArtistDestination(channelId = id)) },
+    )
 }

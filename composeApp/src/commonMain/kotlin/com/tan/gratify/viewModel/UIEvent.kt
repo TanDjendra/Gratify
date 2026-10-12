@@ -38,5 +38,11 @@ sealed class UIEvent {
 data class SnackbarEvent(
     val message: String,
     val actionLabel: String? = null,
-    val actionId: String? = null
+    val actionId: String? = null,
+    val title: String? = null,
+    val kind: InAppNotificationKind = InAppNotificationKind.INFO,
+    val avatarUrl: String? = null,
+    val avatarName: String? = null,
 )
+
+enum class InAppNotificationKind { INFO, FOLLOWER, MUSIC, SUCCESS, ERROR }

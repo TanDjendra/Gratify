@@ -1,6 +1,5 @@
 @file:Suppress("UnstableApiUsage")
 
-import org.apache.commons.io.FileUtils
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.compose.desktop.application.tasks.AbstractJPackageTask
 import java.net.URI
@@ -99,8 +98,6 @@ kotlin {
                 // Media player JVM UI primitives consumed by jvmMain expect/actuals.
                 implementation(projects.mediaJvmUi)
 
-                // Commons-IO drives the custom AppImage packaging task below.
-                implementation(libs.commons.io)
                 // org.json is bundled in the Android SDK but missing on JVM desktop; PipePipeExtractor
                 // references org.json.* so it must be provided explicitly here.
                 implementation(libs.org.json)
@@ -388,17 +385,21 @@ tasks.register("packageConveyorAppImage") {
         // Stage scaffold (icon source) + Conveyor binary tree.
         val appDirSrc = rootDir.resolve("composeApp/appimage")
         if (appDirSrc.exists()) {
-            FileUtils.copyDirectory(appDirSrc, appDir)
+            check(appDirSrc.copyRecursively(appDir, overwrite = true)) {
+                "Could not copy AppImage scaffold to $appDir"
+            }
         } else {
             appDir.mkdirs()
         }
-        FileUtils.copyDirectory(conveyorOutput, appDir)
+        check(conveyorOutput.copyRecursively(appDir, overwrite = true)) {
+            "Could not copy Conveyor output to $appDir"
+        }
 
         // Ensure top-level PNG icon expected by appimagetool exists.
         val iconSrc = rootDir.resolve("composeApp/icon/circle_app_icon.png")
         val iconDst = appDir.resolve("gratify.png")
         if (!iconDst.exists() && iconSrc.exists()) {
-            FileUtils.copyFile(iconSrc, iconDst)
+            iconSrc.copyTo(iconDst)
         }
 
         val versionName = libs.versions.version.name.get()

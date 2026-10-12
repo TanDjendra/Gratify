@@ -44,11 +44,9 @@ kotlin {
                 implementation(libs.ktor.client.logging)
 
                 implementation(libs.kotlin.reflect)
-                implementation(libs.kotlin.test)
 
                 implementation(libs.common)
 
-                implementation(libs.logging)
                 implementation(libs.okio)
             }
         }

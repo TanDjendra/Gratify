@@ -9,7 +9,11 @@ interface SocialRepository {
     /**
      * Mengunggah (Push) playlist lokal ke Supabase agar bisa diakses di cloud atau dibagikan ke publik.
      */
-    suspend fun syncUpPlaylist(localPlaylistId: Long, userId: String, isPublic: Boolean? = null): Flow<Result<String>>
+    suspend fun syncUpPlaylist(localPlaylistId: Long, userId: String, isPublic: Boolean? = null, isProfilePinned: Boolean? = null): Flow<Result<String>>
+
+    suspend fun setPlaylistProfilePinned(localPlaylistId: Long, userId: String, pinned: Boolean): Flow<Result<Unit>>
+
+    suspend fun getUserProfilePlaylists(userId: String): Flow<Result<List<CloudPlaylistDto>>>
 
     /**
      * Menyembunyikan atau menghapus playlist dari publik di cloud_playlists.

@@ -5,10 +5,14 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import com.tan.gratify.ui.component.TrackApplicationOpenings
+import com.tan.gratify.viewModel.SharedViewModel
+import org.koin.compose.koinInject
 import com.tan.gratify.viewModel.auth.PasswordRecoveryCoordinator
 import com.tan.gratify.ui.navigation.destination.login.ForgotPasswordDestination
 import androidx.navigation.compose.NavHost
@@ -28,6 +32,12 @@ import com.tan.gratify.ui.theme.AppTheme
  */
 @Composable
 fun App() {
+    val sharedViewModel: SharedViewModel = koinInject()
+    LifecycleStartEffect(sharedViewModel) {
+        sharedViewModel.startForegroundNotificationSync()
+        onStopOrDispose { sharedViewModel.stopForegroundNotificationSync() }
+    }
+    TrackApplicationOpenings(sharedViewModel.developerSupportPrompt)
     val navController = rememberNavController()
     val recoveryPending by PasswordRecoveryCoordinator.pending.collectAsState()
     LaunchedEffect(recoveryPending) {
@@ -48,10 +58,10 @@ fun App() {
                 fadeOut() + slideOutHorizontally { it }
             },
             popEnterTransition = {
-                fadeIn() + slideInHorizontally { -it }
+                fadeIn() + slideInHorizontally { it }
             },
             popExitTransition = {
-                fadeOut() + slideOutHorizontally { it }
+                fadeOut() + slideOutHorizontally { -it }
             },
         ) {
             // ── Auth Flow (Tanpa Bottom Bar) ──────────────────────────────────

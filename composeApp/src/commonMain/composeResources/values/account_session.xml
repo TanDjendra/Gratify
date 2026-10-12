@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="account_library_recovery_message">Your library could not be opened. Your local data is still saved. Please try again.</string>
+    <string name="account_library_retry">Try again</string>
+</resources>

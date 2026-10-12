@@ -18,6 +18,8 @@ import com.tan.gratify.ui.screen.library.LocalPlaylistScreen
 import com.tan.gratify.ui.screen.album.AlbumScreen
 import com.tan.gratify.ui.screen.artist.ArtistScreen
 import com.tan.gratify.ui.screen.album.MoreAlbumsScreen
+import com.tan.gratify.ui.navigation.destination.list.YouTubePlaylistDestination
+import com.tan.gratify.ui.screen.playlist.YouTubePlaylistScreen
 import com.tan.gratify.ui.screen.playlist.PlaylistScreen
 import com.tan.gratify.ui.screen.podcast.PodcastScreen
 import com.tan.gratify.ui.screen.playlist.SharedPlaylistScreen
@@ -31,7 +33,11 @@ import com.tan.gratify.ui.navigation.destination.social.FollowListDestination
 fun NavGraphBuilder.listScreenGraph(
     innerPadding: PaddingValues,
     navController: NavController,
+    onLoginRequired: () -> Unit = {},
 ) {
+    composable<YouTubePlaylistDestination> { entry ->
+        YouTubePlaylistScreen(entry.toRoute<YouTubePlaylistDestination>(), navController)
+    }
     composable<AlbumDestination> { entry ->
         val data = entry.toRoute<AlbumDestination>()
         AlbumScreen(
@@ -48,10 +54,7 @@ fun NavGraphBuilder.listScreenGraph(
     }
     composable<LocalPlaylistDestination> { entry ->
         val data = entry.toRoute<LocalPlaylistDestination>()
-        LocalPlaylistScreen(
-            id = data.id,
-            navController = navController,
-        )
+        com.tan.gratify.ui.screen.library.UnifiedPlaylistScreen(data.id,navController)
     }
     composable<MoreAlbumsDestination> { entry ->
         val data = entry.toRoute<MoreAlbumsDestination>()
@@ -79,21 +82,23 @@ fun NavGraphBuilder.listScreenGraph(
     }
     composable<SharedPlaylistDestination> { entry ->
         val data = entry.toRoute<SharedPlaylistDestination>()
-        SharedPlaylistScreen(
-            playlistId = data.playlistId,
-            navController = navController,
-        )
+        if (data.playlistId.startsWith("workspace:")) com.tan.gratify.ui.screen.library.PlaylistWorkspaceScreen(
+            com.tan.gratify.ui.navigation.destination.library.PlaylistWorkspaceDestination("detail", data.playlistId.removePrefix("workspace:")), navController)
+        else com.tan.gratify.ui.screen.library.CanonicalSharedPlaylistScreen(data.playlistId,navController)
     }
     composable<UserProfileDestination>(
         deepLinks = listOf(
+            androidx.navigation.navDeepLink<UserProfileDestination>(basePath = "https://gratify.web.id/app/profile"),
             androidx.navigation.navDeepLink<UserProfileDestination>(basePath = "https://gratify.org/app/profile"),
-            androidx.navigation.navDeepLink<UserProfileDestination>(basePath = "gratify://app/profile")
+            androidx.navigation.navDeepLink<UserProfileDestination>(basePath = "gratify://app/profile"),
+            androidx.navigation.navDeepLink<UserProfileDestination>(basePath = "gratify://profile")
         )
     ) { entry ->
         val data = entry.toRoute<UserProfileDestination>()
         UserProfileScreen(
             userId = data.userId,
             navController = navController,
+            onLoginRequired = onLoginRequired,
         )
     }
     composable<FollowListDestination> { entry ->

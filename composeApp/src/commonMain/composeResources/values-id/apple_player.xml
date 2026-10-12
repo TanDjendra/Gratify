@@ -1,0 +1,12 @@
+<resources>
+    <string name="apple_player_close">Tutup pemutar</string>
+    <string name="apple_player_more">Pilihan lagu</string>
+    <string name="apple_player_info">Informasi lagu</string>
+    <string name="apple_player_fullscreen">Buka layar penuh</string>
+    <string name="apple_player_favorite">Ubah favorit</string>
+    <string name="apple_player_progress">Posisi pemutaran</string>
+    <string name="apple_lyrics_loading">Memuat lirik…</string>
+    <string name="apple_lyrics_unavailable">Lirik belum tersedia untuk lagu ini.</string>
+    <string name="apple_queue_empty">Antrean Anda masih kosong.</string>
+    <string name="apple_queue_manage">Kelola antrean</string>
+</resources>

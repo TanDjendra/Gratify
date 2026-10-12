@@ -1,5 +1,11 @@
 package com.tan.data.mapping
 
+import com.tan.domain.utils.hasDisplayableLyrics
+import com.tan.domain.utils.reconcileWordBoundaries
+import com.tan.domain.utils.assessTextQuality
+import com.tan.domain.utils.lyricDisplayText
+import com.tan.domain.utils.hasConfirmedLyricText
+
 import com.tan.data.parser.toListThumbnail
 import com.tan.domain.data.model.browse.album.Track
 import com.tan.domain.data.model.canvas.CanvasResult
@@ -116,6 +122,10 @@ internal fun com.tan.gratify.lyrics.domain.Lyrics.toLyrics(): Lyrics {
                     startTimeMs = it.startTimeMs,
                     syllables = it.syllables ?: listOf(),
                     words = it.words,
+                    richSyncTextVersion = if (this.lyrics?.syncType == "RICH_SYNCED" && it.wordBoundariesVerified)
+                        com.tan.domain.utils.RICH_SYNC_TEXT_VERSION else 0,
+                    textQualityVersion = if (it.wordBoundariesVerified)
+                        com.tan.domain.utils.LYRICS_TEXT_QUALITY_VERSION else 0,
                 ),
             )
         }
@@ -279,20 +289,50 @@ internal fun AlbumItem.toAlbumsResult(): AlbumsResult =
     )
 
 // Gratify Lyrics Extension
-internal fun LyricsResponse.toLyrics(): Lyrics? =
-    (
-        richSyncLyrics?.takeIf { it.isNotEmpty() }?.let {
-            parseRichSyncLyrics(it)
+internal fun LyricsResponse.toLyrics(preferWordTiming: Boolean = true): Lyrics? {
+    // Some upstream synced fields are rich data with timestamps removed, retaining
+    // syllable spaces. A format label alone must never certify the text.
+    val plain = plainLyric.takeIf { it.isNotBlank() &&
+        !Regex("""[<\[]\d{1,6}:\d{2}(?:\.\d{1,3})?[>\]]""").containsMatchIn(it)
+    }?.let { parseUnsyncedLyrics(it).toLyrics() }
+    val synced = syncedLyrics?.takeIf(String::isNotBlank)
+        ?.let { parseSyncedLyrics(it).withReadableLines()?.toLyrics() }
+    val rich = richSyncLyrics?.takeIf(String::isNotBlank)?.let {
+        parseRichSyncLyrics(it, syncedReference = syncedLyrics, plainReference = plainLyric)
+    }?.withReadableLines()?.toLyrics()
+    val lineCandidate = synced?.assessTextQuality()?.reconcileWordBoundaries(plain)
+    // Correlated fields are not independent evidence: upstream sometimes fills
+    // synced by deleting rich timestamps, and even calls rich markup "plain".
+    // Require an external transcript even for short fragments a heuristic cannot identify.
+    val derivedWithoutReference = lineCandidate != null && rich != null &&
+        lineCandidate.lines.orEmpty().any { lyricDisplayText(it.words).any(Char::isLetter) && !it.hasConfirmedLyricText() } &&
+        lineCandidate.lines?.size == rich.lines?.size &&
+        lineCandidate.lines.orEmpty().zip(rich.lines.orEmpty()).all { (line, timed) ->
+            line.startTimeMs == timed.startTimeMs && lyricDisplayText(line.words) == lyricDisplayText(timed.words)
         }
-            ?: syncedLyrics?.let { if (it.isNotEmpty() && it.isNotBlank()) parseSyncedLyrics(it) else null }
-            ?: (
-                if (plainLyric.isNotEmpty() && plainLyric.isNotBlank()) {
-                    parseUnsyncedLyrics(plainLyric)
-                } else {
-                    null
-                }
-            )
-    )?.toLyrics()
+    fun Lyrics.checkedTranscript(): Lyrics = if (!derivedWithoutReference) assessTextQuality() else copy(
+        lines = lines?.map { line ->
+            if (!lyricDisplayText(line.words).any(Char::isLetter)) line
+            else line.copy(textQualityVersion = -1, richSyncTextVersion = 0)
+        },
+    )
+    if (!preferWordTiming && lineCandidate != null) {
+        val checked = lineCandidate.checkedTranscript()
+        return if (!checked.hasDisplayableLyrics() && plain?.hasDisplayableLyrics() == true) plain else checked
+    }
+    if (!preferWordTiming && rich != null && !rich.hasDisplayableLyrics()) {
+        // Without a matching reference we cannot infer where a syllable becomes a
+        // word. A readable plain transcript is preferable to fragmented karaoke.
+        plain?.takeIf { it.hasDisplayableLyrics() }?.let { return it }
+    }
+    return (rich ?: lineCandidate ?: plain)?.checkedTranscript()
+}
+
+private fun com.tan.gratify.lyrics.domain.Lyrics.withReadableLines(): com.tan.gratify.lyrics.domain.Lyrics? =
+    takeIf { parsed -> parsed.lyrics?.lines.orEmpty().any { line ->
+        if (parsed.lyrics?.syncType == "RICH_SYNCED") com.tan.domain.utils.richSyncTextSignature(line.words).isNotBlank()
+        else line.words.isNotBlank()
+    } }
 
 internal fun TranslatedLyricsResponse.toLyrics(): Lyrics = parseSyncedLyrics(this.translatedLyric).toLyrics()
 

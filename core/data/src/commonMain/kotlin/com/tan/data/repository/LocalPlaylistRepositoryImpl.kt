@@ -42,6 +42,8 @@ import com.tan.logger.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
@@ -56,14 +58,90 @@ internal class LocalPlaylistRepositoryImpl(
     private val localDataSource: LocalDataSource,
     private val youTube: YouTube,
     private val socialRepository: com.tan.domain.repository.SocialRepository,
+    private val sharedPlaylistRepository: com.tan.domain.repository.SharedPlaylistRepository,
+    private val supabase: io.github.jan.supabase.SupabaseClient,
+    private val mutationScope: kotlinx.coroutines.CoroutineScope,
 ) : LocalPlaylistRepository {
+    private val covers = PlaylistCoverStorage(supabase)
+    private val mutationSyncMutex = kotlinx.coroutines.sync.Mutex()
+    private val canonical = CanonicalPlaylistOperations(supabase,localDataSource)
+
+    override suspend fun ensureOwnedPlaylistSyncId(id: Long, owner: String) = localDataSource.ensurePlaylistSyncId(id,owner)
+    override suspend fun cacheCanonicalPlaylist(owner: String, canonicalId: String, syncId: String?, title: String,
+        thumbnail: String?, songs: List<SongEntity>,sharedId:String?) = localDataSource.cacheCanonicalPlaylist(owner,
+        LocalPlaylistEntity(title=title,thumbnail=thumbnail,syncId=syncId?:canonicalId,canonicalPlaylistId=canonicalId,sourceSharedPlaylistId=sharedId),songs)
+    override suspend fun reconcileCanonicalPlaylists(owner: String, memberIds: List<String>) = localDataSource.reconcileCanonicalPlaylists(owner,memberIds)
+
+    override suspend fun updatePlaylistDetailsForOwner(id: Long, title: String, thumbnail: String?, owner: String?): Unit = withContext(Dispatchers.IO) {
+        val previous = localDataSource.getLocalPlaylist(id)
+        localDataSource.updatePlaylistDetails(owner, id, title, thumbnail)
+        syncPlaylistChanges(owner)
+        previous?.youtubePlaylistId?.takeIf { previous.title != title }?.let { ytId ->
+            mutationScope.launch {
+                if (localDataSource.getLibraryOwner() == owner) {
+                    try { kotlinx.coroutines.withTimeout(20_000) { youTube.editPlaylist(ytId, title) } }
+                    catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                    catch (_: Exception) { Logger.w(TAG, "YouTube title could not update") }
+                }
+            }
+        }
+        Unit
+    }
+
+    private fun syncPlaylistChanges(owner: String?) {
+        if (owner.isNullOrBlank()) return
+        mutationScope.launch {
+            try {
+                mutationSyncMutex.withLock {
+                    kotlinx.coroutines.withTimeout(30_000) { socialRepository.flushPlaylistRemovals(owner) }
+                }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) { Logger.w(TAG, "Playlist changes remain queued for cloud sync") }
+        }
+    }
+
+    override suspend fun addTracksToLocalPlaylistForOwner(id: Long, songs: List<SongEntity>, owner: String?): Int =
+        withContext(Dispatchers.IO) {
+            localDataSource.getLocalPlaylist(id)?.canonicalPlaylistId?.let {
+                return@withContext canonical.add(requireNotNull(owner),it,songs)
+            }
+            val added = localDataSource.appendOwnedPlaylistSongs(owner, id, songs)
+            if (added.isNotEmpty()) syncPlaylistChanges(owner)
+            val ytId = if (localDataSource.getLibraryOwner() == owner) localDataSource.getLocalPlaylist(id)?.youtubePlaylistId else null
+            if (ytId != null && added.isNotEmpty()) {
+                mutationScope.launch {
+                    try {
+                        kotlinx.coroutines.withTimeout(30_000) {
+                            for (song in added) {
+                                if (localDataSource.getLibraryOwner() != owner) break
+                                youTube.addPlaylistItem(ytId, song.videoId).onSuccess { response ->
+                                    if (localDataSource.getLibraryOwner() != owner) return@onSuccess
+                                    response.playlistEditResults.forEach { edit ->
+                                        val item = edit.playlistEditVideoAddedResultData
+                                        localDataSource.insertSetVideoId(SetVideoIdEntity(item.videoId, item.setVideoId))
+                                    }
+                                }
+                            }
+                        }
+                    } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                    catch (_: Exception) { Logger.w(TAG, "YouTube playlist update failed; local songs retained") }
+                }
+            }
+            added.size
+        }
     override fun getLocalPlaylist(id: Long) =
         wrapDataResource {
             localDataSource.getLocalPlaylist(id)
+        }.map { result ->
+            if (result is LocalResource.Success) LocalResource.Success(result.data?.let { it.copy(thumbnail = covers.displayUrl(it.thumbnail)) })
+            else result
         }
 
     override fun getAllLocalPlaylists(): Flow<List<LocalPlaylistEntity>> =
-        localDataSource.getAllLocalPlaylistsFlow().flowOn(Dispatchers.IO)
+        localDataSource.getAllLocalPlaylistsFlow()
+            .withPlaylistArtwork(covers::cachedDisplayUrl) { rows ->
+                covers.map(rows, { it.thumbnail }) { row, url -> row.copy(thumbnail = url) }
+            }.flowOn(Dispatchers.IO)
 
     override suspend fun updateLocalPlaylistTracks(
         tracks: List<String>,
@@ -184,15 +262,26 @@ internal class LocalPlaylistRepositoryImpl(
     override suspend fun createLocalPlaylistWithSongs(localPlaylist: LocalPlaylistEntity, songs: List<SongEntity>): Long =
         localDataSource.createLocalPlaylistWithSongs(localPlaylist, songs)
 
+    override suspend fun createLocalPlaylistWithSongsForOwner(localPlaylist: LocalPlaylistEntity, songs: List<SongEntity>, ownerId: String?): Long =
+        localDataSource.createLocalPlaylistWithSongs(localPlaylist, songs, ownerId)
+
     override fun deleteLocalPlaylist(id: Long, successMessage: String): Flow<LocalResource<String>> = flow {
         emit(LocalResource.Loading())
         val result = try {
+            localDataSource.getLocalPlaylist(id)?.canonicalPlaylistId?.let {
+                val owner=requireNotNull(localDataSource.getLibraryOwner())
+                val action=canonical.deleteOrLeave(owner,it)
+                localDataSource.removeCanonicalCache(owner,id)
+                emit(LocalResource.Success(if(action=="leave")"Keluar dari playlist." else successMessage))
+                return@flow
+            }
             localDataSource.deleteLocalPlaylist(id)
             val owner = localDataSource.getLibraryOwner()
             val cleaned = if (owner.isNullOrBlank()) true else try {
                 kotlinx.coroutines.withTimeoutOrNull(3_000) {
                     socialRepository.flushPlaylistRemovals(owner)
-                    localDataSource.getLibraryRemovals(owner, "cloud_playlists").isEmpty()
+                    localDataSource.getLibraryRemovals(owner, "cloud_playlists").isEmpty() &&
+                        localDataSource.getLibraryRemovals(owner, "shared_playlist_saves").isEmpty()
                 } ?: false
             } catch (e: kotlinx.coroutines.CancellationException) { throw e }
             catch (_: Exception) { false }
@@ -508,28 +597,20 @@ internal class LocalPlaylistRepositoryImpl(
     ): Flow<LocalResource<String>> =
         flow {
             emit(LocalResource.Loading())
-            val checkSong = localDataSource.getSong(song.videoId)
-            if (checkSong == null) {
-                localDataSource.insertSong(song)
+            val owner = localDataSource.getLibraryOwner()
+            localDataSource.getLocalPlaylist(id)?.canonicalPlaylistId?.let {
+                try { canonical.add(requireNotNull(owner),it,listOf(song));emit(LocalResource.Success(successMessage)) }
+                catch(e:kotlinx.coroutines.CancellationException){throw e}
+                catch(_:Exception){emit(LocalResource.Error<String>(errorMessage))}
+                return@flow
             }
-            val localPlaylist = localDataSource.getLocalPlaylist(id) ?: return@flow
-            val nextPosition = localPlaylist.tracks?.size ?: 0
-            val nextPair =
-                PairSongLocalPlaylist(
-                    playlistId = id,
-                    songId = song.videoId,
-                    position = nextPosition,
-                    inPlaylist = now(),
-                )
-            localDataSource.insertPairSongLocalPlaylist(nextPair)
-            localDataSource.updateLocalPlaylistTracks(
-                localPlaylist.tracks?.plus(song.videoId) ?: mutableListOf(song.videoId),
-                id,
-            )
+            val added = localDataSource.appendOwnedPlaylistSongs(owner, id, listOf(song))
+            if (added.isNotEmpty()) syncPlaylistChanges(owner)
+            val localPlaylist = requireNotNull(localDataSource.getLocalPlaylist(id))
             emit(LocalResource.Success(successMessage))
 
             val ytId = localPlaylist.youtubePlaylistId
-            if (ytId != null) {
+            if (ytId != null && added.isNotEmpty() && localDataSource.getLibraryOwner() == owner) {
                 youTube
                     .addPlaylistItem(ytId, song.videoId)
                     .onSuccess {
@@ -557,30 +638,18 @@ internal class LocalPlaylistRepositoryImpl(
         id: Long,
         songs: List<SongEntity>,
     ) {
-        val localPlaylist = localDataSource.getLocalPlaylist(id) ?: return
-        val currentTracks = localPlaylist.tracks?.toMutableList() ?: mutableListOf()
-        var position = currentTracks.size
-
-        for (song in songs) {
-            val checkSong = localDataSource.getSong(song.videoId)
-            if (checkSong == null) {
-                localDataSource.insertSong(song)
-            }
-            val pair = PairSongLocalPlaylist(
-                playlistId = id,
-                songId = song.videoId,
-                position = position,
-                inPlaylist = now(),
-            )
-            localDataSource.insertPairSongLocalPlaylist(pair)
-            currentTracks.add(song.videoId)
-            position++
+        val owner = localDataSource.getLibraryOwner()
+        localDataSource.getLocalPlaylist(id)?.canonicalPlaylistId?.let {
+            canonical.add(requireNotNull(owner),it,songs);return
         }
-        localDataSource.updateLocalPlaylistTracks(currentTracks, id)
+        val added = localDataSource.appendOwnedPlaylistSongs(owner, id, songs)
+        if (added.isNotEmpty()) syncPlaylistChanges(owner)
+        val localPlaylist = requireNotNull(localDataSource.getLocalPlaylist(id))
 
         val ytId = localPlaylist.youtubePlaylistId
         if (ytId != null) {
-            for (song in songs) {
+            for (song in added) {
+                if (localDataSource.getLibraryOwner() != owner) break
                 youTube
                     .addPlaylistItem(ytId, song.videoId)
                     .onSuccess {
@@ -598,6 +667,30 @@ internal class LocalPlaylistRepositoryImpl(
         }
     }
 
+    override suspend fun removeTrackFromLocalPlaylistForOwner(id: Long, song: SongEntity, owner: String?): Boolean =
+        withContext(Dispatchers.IO) {
+            localDataSource.getLocalPlaylist(id)?.canonicalPlaylistId?.let {
+                return@withContext canonical.remove(requireNotNull(owner),it,song.videoId)
+            }
+            val removed = localDataSource.removeOwnedPlaylistSong(owner, id, song.videoId)
+            if (removed) {
+                syncPlaylistChanges(owner)
+                val ytId = if (localDataSource.getLibraryOwner() == owner) localDataSource.getLocalPlaylist(id)?.youtubePlaylistId else null
+                if (ytId != null) mutationScope.launch {
+                    try {
+                        kotlinx.coroutines.withTimeout(30_000) {
+                            if (localDataSource.getLibraryOwner() != owner) return@withTimeout
+                            val setId = localDataSource.getSetVideoId(song.videoId, ytId)?.setVideoId ?: return@withTimeout
+                            if (localDataSource.getLibraryOwner() != owner) return@withTimeout
+                            youTube.removeItemYouTubePlaylist(ytId, song.videoId, setId).getOrThrow()
+                        }
+                    } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                    catch (_: Exception) { Logger.w(TAG, "YouTube playlist removal failed; local removal retained") }
+                }
+            }
+            removed
+        }
+
     override fun removeTrackFromLocalPlaylist(
         id: Long,
         song: SongEntity,
@@ -607,14 +700,24 @@ internal class LocalPlaylistRepositoryImpl(
     ): Flow<LocalResource<String>> =
         flow {
             emit(LocalResource.Loading())
-            val localPlaylist = localDataSource.getLocalPlaylist(id) ?: return@flow
-            val nextTracks = localPlaylist.tracks?.toMutableList() ?: mutableListOf()
-            nextTracks.remove(song.videoId)
-            localDataSource.updateLocalPlaylistTracks(nextTracks, id)
-            localDataSource.deletePairSongLocalPlaylist(id, song.videoId)
+            val owner = localDataSource.getLibraryOwner()
+            val localPlaylist = localDataSource.getLocalPlaylist(id) ?: run {
+                emit(LocalResource.Error("Playlist not found")); return@flow
+            }
+            localPlaylist.canonicalPlaylistId?.let {
+                try { canonical.remove(requireNotNull(owner),it,song.videoId);emit(LocalResource.Success(successMessage)) }
+                catch(e:kotlinx.coroutines.CancellationException){throw e}
+                catch(_:Exception){emit(LocalResource.Error<String>(errorMessage))}
+                return@flow
+            }
+            try {
+                val removed = localDataSource.removeOwnedPlaylistSong(owner, id, song.videoId)
+                if (removed) syncPlaylistChanges(owner)
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) { emit(LocalResource.Error(errorMessage)); return@flow }
             emit(LocalResource.Success(successMessage))
             val ytPlaylistId = localPlaylist.youtubePlaylistId
-            if (ytPlaylistId != null) {
+            if (ytPlaylistId != null && localDataSource.getLibraryOwner() == owner) {
                 val setVideoId = localDataSource.getSetVideoId(song.videoId, ytPlaylistId)?.setVideoId
                 if (setVideoId != null) {
                     youTube
@@ -874,6 +977,10 @@ internal class LocalPlaylistRepositoryImpl(
         newPosition: Int,
     ): Flow<String> =
         flow {
+            localDataSource.getLocalPlaylist(playlistId)?.canonicalPlaylistId?.let {
+                canonical.move(requireNotNull(localDataSource.getLibraryOwner()),it,videoId,newPosition)
+                emit("Position updated");return@flow
+            }
             localDataSource.movePlaylistSong(
                 playlistId,
                 videoId,
@@ -970,17 +1077,20 @@ internal class LocalPlaylistRepositoryImpl(
         tracks: List<Track>,
         creatorName: String?,
     ): Long {
+        val owner = requireNotNull(localDataSource.getLibraryOwner()) { "Login required" }
+        sharedPlaylistRepository.recordPlaylistSave(sharedPlaylistId, owner).getOrThrow()
+        check(localDataSource.getLibraryOwner() == owner) { "Account ownership changed" }
         val localPlaylistEntity =
             LocalPlaylistEntity(
                 title = title,
-                thumbnail = thumbnail,
+                thumbnail = storedPlaylistCoverUrl(thumbnail),
                 tracks = tracks.toListVideoId(),
                 downloadState = DownloadState.STATE_NOT_DOWNLOADED,
                 syncState = LocalPlaylistEntity.YouTubeSyncState.NotSynced,
                 sourceSharedPlaylistId = sharedPlaylistId,
                 creatorName = creatorName,
             )
-        return localDataSource.createLocalPlaylistWithSongs(localPlaylistEntity, tracks.map { it.toSongEntity() })
+        return localDataSource.createLocalPlaylistWithSongs(localPlaylistEntity, tracks.map { it.toSongEntity() }, owner)
     }
 
     override suspend fun updateSourceAvailability(sharedPlaylistId: String, availability: Int) {

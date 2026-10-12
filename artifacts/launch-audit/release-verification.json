@@ -1,0 +1,33 @@
+{
+  "date": "2026-10-01",
+  "command": ".\\gradlew.bat :androidApp:assembleRelease :androidApp:lintRelease --no-daemon --console=plain --max-workers=1",
+  "exit_code": 0,
+  "build_duration": "5m 52s",
+  "lint_severity_counts": {
+    "Warning": 121
+  },
+  "apk": {
+    "path": "D:/Tan/Gratify/androidApp/build/outputs/apk/release/androidApp-universal-release-unsigned.apk",
+    "bytes": 51796332,
+    "MiB": 49.4,
+    "sha256": "294acf2222bcf0c0effdd6977fb0a8855278b3b83be0a4497e3305fb4684e3b1",
+    "applicationId": "com.tan.gratify",
+    "versionName": "2.1.0",
+    "versionCode": 61,
+    "minSdk": 26,
+    "targetSdk": 36,
+    "signed": false,
+    "signature_verification_exit": 1,
+    "signature_verification_output": "DOES NOT VERIFY; ERROR: Missing META-INF/MANIFEST.MF",
+    "debuggable_attribute_present": false,
+    "preview_activity_present": false
+  },
+  "source_hash_check": {
+    "compared_to": "artifacts/function-audit/files.csv",
+    "files_checked": 757,
+    "changed": []
+  },
+  "production_install_tested": false,
+  "production_update_tested": false,
+  "live_backend_tested": false
+}

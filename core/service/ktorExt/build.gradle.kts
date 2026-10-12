@@ -53,7 +53,6 @@ kotlin {
                 implementation(libs.kotlin.stdlib)
                 // Add KMP dependencies here
                 api(libs.ktor.client.core)
-                api(libs.ktor.client.cio)
                 implementation(libs.ktor.client.encoding)
             }
         }
@@ -76,6 +75,7 @@ kotlin {
 
         jvmMain {
             dependencies {
+                api(libs.ktor.client.cio)
                 implementation(libs.ktor.client.okhttp)
                 implementation(libs.brotli.dec)
             }

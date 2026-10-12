@@ -106,6 +106,40 @@ class LocalPlaylistViewModel(
     private val converter = Converters()
     private val downloadUtils: DownloadHandler by inject<DownloadHandler>()
     private var playlistStateJob: Job? = null
+    private var visibilityGeneration = 0L
+    private val deletingPlaylistIds = mutableSetOf<Long>()
+    private val deletingSongIds = mutableSetOf<String>()
+    private val _editStatus = MutableStateFlow(PlaylistEditStatus())
+    val editStatus: StateFlow<PlaylistEditStatus> = _editStatus
+    fun clearEditError() { if (!_editStatus.value.saving) _editStatus.value = PlaylistEditStatus() }
+
+    fun savePlaylistDetails(title: String, coverUri: String?, id: Long, onSaved: () -> Unit) {
+        if (_editStatus.value.saving || uiState.value.id != id || uiState.value.isReadOnly || uiState.value.isUnavailable) return
+        if (!validPlaylistName(title)) { _editStatus.value = PlaylistEditStatus(failed = true); return }
+        val owner = supabase.auth.currentUserOrNull()?.id
+        _editStatus.value = PlaylistEditStatus(saving = true)
+        viewModelScope.launch {
+            var saved = false
+            try {
+                kotlinx.coroutines.withTimeout(30_000) {
+                    val cover = coverUri?.let {
+                        val bytes = requireNotNull(com.tan.gratify.utils.compressImage(it))
+                        sharedPlaylistRepository.uploadPlaylistThumbnail(id, bytes).getOrThrow()
+                    }
+                    check(supabase.auth.currentUserOrNull()?.id == owner && uiState.value.id == id) { "Account changed" }
+                    localPlaylistRepository.updatePlaylistDetailsForOwner(id, title.trim(), cover, owner)
+                    saved = true
+                }
+                if (supabase.auth.currentUserOrNull()?.id == owner && uiState.value.id == id) {
+                    updatePlaylistState(id)
+                    onSaved()
+                }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                if (cancelled !is kotlinx.coroutines.TimeoutCancellationException) throw cancelled
+            } catch (_: Exception) { }
+            finally { _editStatus.value = PlaylistEditStatus(failed = !saved) }
+        }
+    }
 
     private var _offset: MutableStateFlow<Int> = MutableStateFlow(0)
     val offset: StateFlow<Int> = _offset
@@ -430,50 +464,56 @@ class LocalPlaylistViewModel(
 //        }
 //    }
 
-    fun updatePlaylistTitle(
-        title: String,
-        id: Long,
-    ) {
+    fun updatePlaylistTitle(title: String, id: Long, onSaved: () -> Unit = {}) {
+        if (_editStatus.value.saving || uiState.value.id != id || uiState.value.isReadOnly || uiState.value.isUnavailable) return
+        if (!validPlaylistName(title)) { _editStatus.value = PlaylistEditStatus(failed = true); return }
+        val owner = supabase.auth.currentUserOrNull()?.id
+        _editStatus.value = PlaylistEditStatus(saving = true)
         viewModelScope.launch {
-            showLoadingDialog(message = getString(Res.string.updating))
-            localPlaylistRepository
-                .updateTitleLocalPlaylist(
-                    id,
-                    title,
-                    getString(Res.string.updated),
-                    getString(Res.string.updated_to_youtube_playlist),
-                    getString(Res.string.error),
-                ).collectResource(
-                    onSuccess = {
-                        makeToast(it)
-                        updatePlaylistState(id)
-                        hideLoadingDialog()
-                    },
-                    onError = {
-                        makeToast(it)
-                        hideLoadingDialog()
-                    },
-                )
+            var localSaved = false
+            try {
+                kotlinx.coroutines.withTimeout(20_000) {
+                    localPlaylistRepository.updateTitleLocalPlaylist(id, title.trim(), getString(Res.string.updated),
+                        getString(Res.string.updated_to_youtube_playlist), getString(Res.string.error)).collect { result ->
+                        if (result is LocalResource.Success && !localSaved) {
+                            localSaved = true
+                            syncToCloudIfNeeded(id)
+                        } else if (result is LocalResource.Error) makeToast(result.message)
+                    }
+                }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                if (cancelled !is kotlinx.coroutines.TimeoutCancellationException) throw cancelled
+            } catch (_: Exception) { }
+            finally {
+                _editStatus.value = PlaylistEditStatus(failed = !localSaved)
+            }
+            if (uiState.value.id == id && supabase.auth.currentUserOrNull()?.id == owner && localSaved) {
+                updatePlaylistState(id)
+                onSaved()
+            }
         }
     }
 
     fun deletePlaylist(id: Long, onDeleted: () -> Unit = {}) {
-        viewModelScope.launch(Dispatchers.IO) {
-            localPlaylistRepository
-                .deleteLocalPlaylist(id, getString(Res.string.delete))
-                .collectLatestResource(
-                    onSuccess = {
-                        viewModelScope.launch(Dispatchers.Main) {
-                            makeToast(it)
-                            onDeleted()
-                        }
-                    },
-                    onError = {
-                        viewModelScope.launch(Dispatchers.Main) {
-                            makeToast(it)
-                        }
-                    },
-                )
+        if (!deletingPlaylistIds.add(id)) return
+        viewModelScope.launch {
+            var confirmed = false
+            try {
+                kotlinx.coroutines.withTimeout(20_000) {
+                    localPlaylistRepository.deleteLocalPlaylist(id, getString(Res.string.delete)).collectLatestResource(
+                        onSuccess = {
+                            if (!confirmed) {
+                                confirmed = true
+                                makeToast(it)
+                                onDeleted()
+                            }
+                        }, onError = { makeToast(it) })
+                }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                if (cancelled !is kotlinx.coroutines.TimeoutCancellationException) throw cancelled
+                makeToast(getString(Res.string.error))
+            } catch (_: Exception) { makeToast(getString(Res.string.error)) }
+            finally { deletingPlaylistIds.remove(id) }
         }
     }
 
@@ -483,8 +523,19 @@ class LocalPlaylistViewModel(
     ) {
         showLoadingDialog(message = getString(Res.string.updating))
         viewModelScope.launch {
+            val storedUri = try {
+                if (uri.startsWith("https://")) uri else {
+                    val image = requireNotNull(com.tan.gratify.utils.compressImage(uri)) { "Gambar tidak dapat dibaca" }
+                    sharedPlaylistRepository.uploadPlaylistThumbnail(id, image).getOrThrow()
+                }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { hideLoadingDialog(); throw cancelled }
+            catch (_: Exception) {
+                hideLoadingDialog()
+                makeToast("Sampul belum dapat diunggah. Periksa koneksi dan coba lagi.")
+                return@launch
+            }
             localPlaylistRepository
-                .updateThumbnailLocalPlaylist(id, uri, getString(Res.string.updated))
+                .updateThumbnailLocalPlaylist(id, storedUri, getString(Res.string.updated))
                 .collectResource(
                     onSuccess = {
                         makeToast(it)
@@ -495,7 +546,8 @@ class LocalPlaylistViewModel(
                                 val user = supabase.auth.currentUserOrNull()
                                 val userId = user?.id?.toString()
                                 if (userId != null) {
-                                    socialRepository.syncUpPlaylist(id, userId, isPublic = null).collect {}
+                                    val result = socialRepository.syncUpPlaylist(id, userId, isPublic = null).first()
+                                    if (result.isFailure) makeToast("Sampul tersimpan di perangkat. Pembaruan online akan dicoba lagi saat koneksi pulih.")
                                 }
                             } catch (e: Exception) {
                                 e.printStackTrace()
@@ -514,26 +566,22 @@ class LocalPlaylistViewModel(
         id: Long,
         song: SongEntity,
     ) {
+        if (uiState.value.id != id || uiState.value.isReadOnly || uiState.value.isUnavailable || !deletingSongIds.add(song.videoId)) return
+        val owner = supabase.auth.currentUserOrNull()?.id
         viewModelScope.launch {
-            val pair = localPlaylistRepository.getPlaylistPairOfSong(id, song.videoId).lastOrNull() ?: return@launch
-            localPlaylistRepository
-                .removeTrackFromLocalPlaylist(
-                    id,
-                    song,
-                    getString(Res.string.delete_song_from_playlist),
-                    getString(Res.string.removed_from_YouTube_playlist),
-                    getString(Res.string.can_t_delete_from_youtube_playlist),
-                ).collectLatestResource(
-                    onSuccess = {
-                        makeToast(it)
-                        onApplyActions(PagingActions.Remove(song to pair))
-                        updatePlaylistState(id)
-                        syncToCloudIfNeeded(id)
-                    },
-                    onError = {
-                        makeToast(it)
-                    },
-                )
+            try {
+                val pair = localPlaylistRepository.getPlaylistPairOfSong(id, song.videoId).lastOrNull() ?: return@launch
+                val removed = kotlinx.coroutines.withTimeout(20_000) { localPlaylistRepository.removeTrackFromLocalPlaylistForOwner(id, song, owner) }
+                if (removed && supabase.auth.currentUserOrNull()?.id == owner && uiState.value.id == id) {
+                    makeToast(getString(Res.string.delete_song_from_playlist))
+                    onApplyActions(PagingActions.Remove(song to pair))
+                    updatePlaylistState(id)
+                }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                if (cancelled !is kotlinx.coroutines.TimeoutCancellationException) throw cancelled
+                makeToast(getString(Res.string.error))
+            } catch (_: Exception) { makeToast(getString(Res.string.error)) }
+            finally { deletingSongIds.remove(song.videoId) }
         }
     }
 
@@ -640,58 +688,46 @@ class LocalPlaylistViewModel(
         }
     }
     
-    fun sharePlaylistToPublic() {
-        showLoadingDialog(message = "Membagikan Playlist...") // Assuming Indonesian string, can be Res.string
+    fun sharePlaylistToPublic() = changeVisibility(true)
+    fun unsharePlaylistFromPublic() = changeVisibility(false)
+
+    private fun changeVisibility(makePublic: Boolean) {
+        val snapshot = uiState.value
+        if (snapshot.visibilityBusy || snapshot.isReadOnly || snapshot.isUnavailable || snapshot.id <= 0) return
+        val owner = supabase.auth.currentUserOrNull()?.id
+        if (owner == null) { makeToast("Masuk untuk mengatur visibilitas playlist."); return }
+        val generation = ++visibilityGeneration
+        _uiState.update { it.copy(visibilityBusy = true, visibilityFailed = false) }
         viewModelScope.launch {
             try {
-                // Get current user id
-                val user = supabase.auth.currentUserOrNull()
-                val userId = user?.id?.toString()
-                if (userId == null) {
-                    makeToast("Anda harus login untuk membagikan playlist.")
-                    hideLoadingDialog()
-                    return@launch
+                kotlinx.coroutines.withTimeout(20_000) {
+                    check(supabase.auth.currentUserOrNull()?.id == owner) { "Account changed" }
+                    if (makePublic) {
+                        val local = localPlaylistRepository.getLocalPlaylist(snapshot.id).first { it !is LocalResource.Loading }.data
+                        check(local != null && local.sourceSharedPlaylistId == null) { "Playlist unavailable" }
+                        val thumbnail = local.thumbnail
+                        if (!thumbnail.isNullOrBlank() && !thumbnail.startsWith("https://") && !thumbnail.startsWith("http://")) {
+                            val image = requireNotNull(com.tan.gratify.utils.compressImage(thumbnail))
+                            val uploaded = sharedPlaylistRepository.uploadPlaylistThumbnail(snapshot.id, image).getOrThrow()
+                            check(supabase.auth.currentUserOrNull()?.id == owner) { "Account changed" }
+                            check(localPlaylistRepository.updateThumbnailLocalPlaylist(snapshot.id, uploaded, "Sampul diperbarui")
+                                .first { it !is LocalResource.Loading } is LocalResource.Success)
+                        }
+                        socialRepository.syncUpPlaylist(snapshot.id, owner, isPublic = true).first().getOrThrow()
+                    } else socialRepository.unshareOrHideCloudPlaylist(snapshot.id, owner).first().getOrThrow()
                 }
-                
-                // One server transaction publishes shared tracks and the cloud backup together.
-                val result = socialRepository.syncUpPlaylist(uiState.value.id, userId, isPublic = true).first()
-
-                if (result.isSuccess) {
-                    _uiState.update { it.copy(isPublic = true) }
-                    makeToast("Berhasil dibagikan ke Publik!")
-                } else {
-                    makeToast("Gagal membagikan playlist: ${result.exceptionOrNull()?.message}")
+                if (uiState.value.id == snapshot.id && supabase.auth.currentUserOrNull()?.id == owner && generation == visibilityGeneration) {
+                    _uiState.update { it.copy(isPublic = makePublic, visibilityKnown = true, visibilityBusy = false,
+                        visibilityFailed = false, sharedPlaylistId = if (makePublic) it.sharedPlaylistId else null) }
+                    updatePlaylistState(snapshot.id)
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                makeToast("Terjadi kesalahan")
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                if (cancelled !is kotlinx.coroutines.TimeoutCancellationException) throw cancelled
+                if (uiState.value.id == snapshot.id) _uiState.update { it.copy(visibilityFailed = true) }
+            } catch (_: Exception) {
+                if (uiState.value.id == snapshot.id) _uiState.update { it.copy(visibilityFailed = true) }
             } finally {
-                hideLoadingDialog()
-            }
-        }
-    }
-
-    fun unsharePlaylistFromPublic() {
-        showLoadingDialog(message = "Menyembunyikan dari Publik...")
-        viewModelScope.launch {
-            try {
-                val user = supabase.auth.currentUserOrNull()
-                val userId = user?.id?.toString()
-                if (userId == null) {
-                    makeToast("Anda harus login.")
-                    hideLoadingDialog()
-                    return@launch
-                }
-
-                socialRepository.unshareOrHideCloudPlaylist(uiState.value.id, userId).first().getOrThrow()
-
-                _uiState.update { it.copy(isPublic = false) }
-                makeToast("Playlist berhasil disembunyikan dari publik.")
-            } catch (e: Exception) {
-                e.printStackTrace()
-                makeToast("Terjadi kesalahan")
-            } finally {
-                hideLoadingDialog()
+                if (uiState.value.id == snapshot.id && generation == visibilityGeneration) _uiState.update { it.copy(visibilityBusy = false) }
             }
         }
     }
@@ -857,7 +893,6 @@ class LocalPlaylistViewModel(
                                     onApplyActions(PagingActions.Insert(track.toSongEntity() to pair))
                                 }
                             }
-                            syncToCloudIfNeeded(id)
                         },
                         onError = {
                             makeToast(it)
@@ -1048,6 +1083,10 @@ class LocalPlaylistViewModel(
         id: Long,
         refresh: Boolean = false,
     ) {
+        if (refresh) {
+            modifications.value = emptyList()
+            lazyTrackPagingItems.value?.refresh()
+        }
         playlistStateJob?.cancel()
         if (_uiState.value.id != id || _uiState.value.loadState == LocalPlaylistState.PlaylistLoadState.Error) {
             _uiState.value = LocalPlaylistState.initial().copy(id = id)
@@ -1076,8 +1115,8 @@ class LocalPlaylistViewModel(
                         val isUnavailable = pl.sourceAvailability == com.tan.domain.data.entities.LocalPlaylistEntity.SourceAvailability.UNAVAILABLE
                         _uiState.update { it.copy(isReadOnly = readOnly, isUnavailable = isUnavailable) }
 
-                        if (readOnly && !isUnavailable && pl.sourceSharedPlaylistId != null) {
-                            viewModelScope.launch(Dispatchers.IO) {
+                        if (readOnly && pl.sourceSharedPlaylistId != null) {
+                            launch(Dispatchers.IO) {
                                 try {
                                     val result = supabase.postgrest["shared_playlists"]
                                         .select { filter { eq("id", pl.sourceSharedPlaylistId!!) } }
@@ -1089,11 +1128,13 @@ class LocalPlaylistViewModel(
                                         )
                                         _uiState.update { it.copy(isUnavailable = true) }
                                     } else {
+                                        localPlaylistRepository.updateSourceAvailability(pl.sourceSharedPlaylistId!!, LocalPlaylistEntity.SourceAvailability.AVAILABLE)
                                         // Perbarui hitungan "ditambahkan X kali" dari playlist sumber.
                                         val source = result.first()
                                         _uiState.update {
                                             it.copy(
                                                 addCount = source.addCount,
+                                                isUnavailable = false,
                                                 creatorName = it.creatorName ?: source.creatorName,
                                             )
                                         }
@@ -1105,8 +1146,12 @@ class LocalPlaylistViewModel(
                             getTracksPagingState(id, _uiState.value.filterState)
                         }
                         val currentUserId = supabase.auth.currentUserOrNull()?.id
+                        val visibilityEpoch = visibilityGeneration
+                        if (!readOnly && (currentUserId == null || pl.syncId == null)) {
+                            _uiState.update { it.copy(isPublic = false, visibilityKnown = true, sharedPlaylistId = null) }
+                        }
                         if (currentUserId != null && pl.id > 0) {
-                            viewModelScope.launch(Dispatchers.IO) {
+                            launch(Dispatchers.IO) {
                                 try {
                                     val cloudLists = supabase.postgrest["cloud_playlists"]
                                         .select {
@@ -1116,9 +1161,20 @@ class LocalPlaylistViewModel(
                                             }
                                         }.decodeList<CloudPlaylistDto>()
                                     val isPub = if (cloudLists.isEmpty()) false else cloudLists.any { it.isPublic }
-                                    _uiState.update { it.copy(isPublic = isPub) }
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
+                                    if (uiState.value.id != pl.id || supabase.auth.currentUserOrNull()?.id != currentUserId || visibilityGeneration != visibilityEpoch) return@launch
+                                    _uiState.update { it.copy(isPublic = isPub, visibilityKnown = true,
+                                        sharedPlaylistId = if (isPub) it.sharedPlaylistId else null) }
+                                    if (!readOnly && isPub) {
+                                        val sources = supabase.postgrest["shared_playlists"].select {
+                                            filter { eq("user_id", currentUserId); eq("client_sync_id", requireNotNull(pl.syncId)) }
+                                        }.decodeList<com.tan.domain.data.entities.SharedPlaylist>()
+                                        if (uiState.value.id != pl.id || supabase.auth.currentUserOrNull()?.id != currentUserId || visibilityGeneration != visibilityEpoch) return@launch
+                                        _uiState.update { it.copy(addCount = sources.firstOrNull()?.addCount ?: 0, sharedPlaylistId = sources.firstOrNull()?.id) }
+                                    }
+                                } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                                catch (_: Exception) {
+                                    if (uiState.value.id == pl.id && visibilityGeneration == visibilityEpoch)
+                                        _uiState.update { it.copy(visibilityKnown = false) }
                                 }
                             }
                         }
@@ -1256,6 +1312,10 @@ data class LocalPlaylistState(
     val filterState: FilterState = FilterState.OlderFirst,
     val suggestions: SuggestionSongs? = null,
     val isPublic: Boolean = false,
+    val visibilityKnown: Boolean = false,
+    val visibilityBusy: Boolean = false,
+    val visibilityFailed: Boolean = false,
+    val sharedPlaylistId: String? = null,
     val isReadOnly: Boolean = false,
     val isUnavailable: Boolean = false,
     // Watermark: nama pembuat asli bila playlist ini ditambahkan dari playlist publik orang lain.

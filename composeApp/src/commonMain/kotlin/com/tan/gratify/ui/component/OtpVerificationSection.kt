@@ -1,273 +1,47 @@
 package com.tan.gratify.ui.component
 
-import com.tan.gratify.ui.theme.GratifyColors
-import com.tan.gratify.ui.theme.GratifyShapes
-
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.tan.gratify.ui.theme.typo
+import com.tan.gratify.ui.screen.login.AuthError
+import com.tan.gratify.ui.screen.login.AuthHeading
+import com.tan.gratify.ui.screen.login.AuthSubmit
+import com.tan.gratify.ui.theme.*
+import com.tan.gratify.viewModel.auth.normalizeOtpCode
+import gratify.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
-private val AntigravityGreen = GratifyColors.Accent
-private val BackgroundBlack = GratifyColors.Background
-private val DarkGray = GratifyColors.SurfaceRaised
-private val LightGray = GratifyColors.TextPrimary
-private val ErrorRed = GratifyColors.Error
-
-/**
- * Komponen OTP verification yang dapat digunakan ulang
- * di SignUpScreen maupun EmailLoginScreen.
- *
- * Menampilkan:
- * - Header teks dengan email tujuan
- * - 6-digit OTP input boxes
- * - Tombol "Verifikasi" (enabled saat 6 digit diisi)
- * - Tombol "Kirim Ulang Kode" dengan cooldown timer
- * - Loading indicator saat verifikasi
- */
 @Composable
-fun OtpVerificationSection(
-    email: String,
-    otpCode: String,
-    onOtpCodeChanged: (String) -> Unit,
-    onVerifyClick: () -> Unit,
-    onResendClick: () -> Unit,
-    isLoading: Boolean = false,
-    isResending: Boolean = false,
-    resendCooldownSeconds: Int = 0,
-    errorMessage: String? = null,
-    modifier: Modifier = Modifier,
-) {
-    val focusRequester = remember { FocusRequester() }
-
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
-
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
-            .padding(top = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        // ── Header ───────────────────────────────────────────────────────────
-        Text(
-            text = "Verifikasi Email",
-            style = typo().titleLarge.copy(
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-            ),
-            textAlign = TextAlign.Center,
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        Text(
-            text = "Masukkan kode 6 digit yang telah dikirim ke",
-            style = typo().bodyMedium.copy(color = GratifyColors.TextSecondary),
-            textAlign = TextAlign.Center,
-        )
-
-        Spacer(Modifier.height(4.dp))
-
-        Text(
-            text = email,
-            style = typo().bodyMedium.copy(
-                color = AntigravityGreen,
-                fontWeight = FontWeight.SemiBold,
-            ),
-            textAlign = TextAlign.Center,
-        )
-
-        Spacer(Modifier.height(32.dp))
-
-        // ── OTP Input Boxes ──────────────────────────────────────────────────
-        BasicTextField(
-            value = otpCode,
-            onValueChange = onOtpCodeChanged,
-            modifier = Modifier.focusRequester(focusRequester),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
-            cursorBrush = SolidColor(Color.Transparent),
-            textStyle = TextStyle(color = Color.Transparent),
-            decorationBox = {
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    repeat(6) { index ->
-                        val char = otpCode.getOrNull(index)?.toString() ?: ""
-                        val isFocused = otpCode.length == index
-
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(GratifyShapes.medium)
-                                .background(DarkGray)
-                                .border(
-                                    width = 2.dp,
-                                    color = when {
-                                        isFocused -> AntigravityGreen
-                                        char.isNotEmpty() -> LightGray.copy(alpha = 0.5f)
-                                        else -> Color.Transparent
-                                    },
-                                    shape = GratifyShapes.medium,
-                                ),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = char,
-                                style = typo().titleLarge.copy(
-                                    fontSize = 24.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White,
-                                    textAlign = TextAlign.Center,
-                                ),
-                            )
-                        }
-
-                        if (index < 5) {
-                            Spacer(Modifier.width(8.dp))
-                        }
-                    }
-                }
-            },
-        )
-
-        // ── Error Message ────────────────────────────────────────────────────
-        AnimatedVisibility(
-            visible = errorMessage != null,
-            enter = fadeIn(),
-            exit = fadeOut(),
-        ) {
-            if (errorMessage != null) {
-                Spacer(Modifier.height(16.dp))
-                Text(
-                    text = errorMessage,
-                    style = typo().bodySmall.copy(
-                        color = ErrorRed,
-                        fontWeight = FontWeight.Medium,
-                    ),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
-            }
+fun OtpVerificationSection(email: String, otpCode: String, onOtpCodeChanged: (String) -> Unit, onVerifyClick: () -> Unit,
+    onResendClick: () -> Unit, isLoading: Boolean = false, isResending: Boolean = false, resendCooldownSeconds: Int = 0,
+    errorMessage: String? = null, modifier: Modifier = Modifier, statusMessage: String? = null, onChangeEmail: (() -> Unit)? = null,
+    showExistingAccountHint: Boolean = false, verified: Boolean = false) {
+    val busy = isLoading || isResending
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+        AuthHeading(stringResource(Res.string.auth_verify_title), stringResource(Res.string.auth_verify_hint))
+        Text(email, color = GratifyColors.Accent, style = typo().titleSmall)
+        if (!verified) OutlinedTextField(otpCode, { onOtpCodeChanged(normalizeOtpCode(it)) }, Modifier.fillMaxWidth(), enabled = !busy, singleLine = true,
+            label = { Text(stringResource(Res.string.auth_otp_label)) }, isError = errorMessage != null,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { if (otpCode.length == 6 && !busy) onVerifyClick() }))
+        AuthError(errorMessage)
+        if (statusMessage != null) Text(statusMessage, color = GratifyColors.TextSecondary, style = typo().bodySmall)
+        AuthSubmit(stringResource(if (isLoading) Res.string.auth_verifying else if (verified) Res.string.auth_finish_account else Res.string.auth_verify), isLoading,
+            (verified || otpCode.length == 6 && otpCode.all { it in '0'..'9' }) && !isResending, onVerifyClick)
+        if (!verified) TextButton(onClick = onResendClick, enabled = !busy && resendCooldownSeconds == 0,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+            Text(if (resendCooldownSeconds > 0) stringResource(Res.string.auth_resend_countdown, resendCooldownSeconds) else stringResource(Res.string.auth_resend))
         }
-
-        Spacer(Modifier.height(32.dp))
-
-        // ── Verify Button ────────────────────────────────────────────────────
-        Button(
-            onClick = onVerifyClick,
-            enabled = otpCode.length == 6 && !isLoading,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
-            shape = RoundedCornerShape(50),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = AntigravityGreen,
-                disabledContainerColor = DarkGray,
-                contentColor = Color.Black,
-                disabledContentColor = GratifyColors.TextSecondary,
-            ),
-        ) {
-            if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    color = Color.Black,
-                    strokeWidth = 2.dp,
-                )
-            } else {
-                Text(
-                    text = "Verifikasi",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                )
-            }
+        if (showExistingAccountHint) Text(stringResource(Res.string.auth_inbox_hint), style = typo().bodySmall, color = GratifyColors.TextSecondary)
+        if (!verified) Text(stringResource(Res.string.auth_confirmation_link_hint), style = typo().bodySmall, color = GratifyColors.TextSecondary)
+        if (onChangeEmail != null) TextButton(onClick = onChangeEmail, enabled = !busy, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+            Text(stringResource(Res.string.auth_change_email))
         }
-
-        Spacer(Modifier.height(16.dp))
-
-        // ── Resend Button ────────────────────────────────────────────────────
-        if (resendCooldownSeconds > 0) {
-            Text(
-                text = "Kirim ulang kode dalam ${resendCooldownSeconds}s",
-                style = typo().bodySmall.copy(color = GratifyColors.TextSecondary),
-                textAlign = TextAlign.Center,
-            )
-        } else {
-            TextButton(
-                onClick = onResendClick,
-                enabled = !isResending,
-            ) {
-                if (isResending) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        color = AntigravityGreen,
-                        strokeWidth = 2.dp,
-                    )
-                    Spacer(Modifier.width(8.dp))
-                }
-                Text(
-                    text = "Kirim Ulang Kode",
-                    style = typo().bodyMedium.copy(
-                        color = AntigravityGreen,
-                        fontWeight = FontWeight.SemiBold,
-                    ),
-                )
-            }
-        }
-
-        Spacer(Modifier.height(12.dp))
-
-        // ── Hint ─────────────────────────────────────────────────────────────
-        Text(
-            text = "Cek folder spam jika tidak menemukan email verifikasi.",
-            style = typo().bodySmall.copy(
-                color = GratifyColors.TextSecondary.copy(alpha = 0.7f),
-            ),
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 24.dp),
-        )
     }
 }

@@ -4,6 +4,7 @@ import com.tan.domain.data.model.browse.album.Track
 import com.tan.domain.data.model.searchResult.songs.Thumbnail
 import com.tan.domain.data.model.streams.YouTubeWatchEndpoint
 
+@kotlinx.serialization.Serializable
 data class PlaylistBrowse(
     val author: Author,
     val description: String?,

@@ -78,9 +78,9 @@ kotlin {
             val koinBom = project.dependencies.platform(libs.koin.bom)
             implementation(composeBom)
             implementation(koinBom)
-            implementation(libs.commons.io)
         }
         androidMain.dependencies {
+            implementation(libs.media3.exoplayer)
             api(project.dependencies.platform(libs.koin.bom))
             api(libs.koin.android)
             implementation(libs.koin.androidx.compose)
@@ -104,6 +104,7 @@ kotlin {
             implementation(libs.foundation)
             implementation(libs.compose.material3)
             implementation(libs.compose.ui)
+            implementation(libs.compose.ui.backhandler)
             implementation(libs.components.resources)
             implementation(libs.jetbrains.ui.tooling.preview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
@@ -121,6 +122,7 @@ kotlin {
             api(projects.common)
             api(projects.domain)
             implementation(projects.data)
+            implementation(projects.ktorExt)
 
             // Navigation Compose
             implementation(libs.navigation.compose)
@@ -133,16 +135,12 @@ kotlin {
             api(libs.coil.network.okhttp)
             api(libs.kmpalette.core)
             api(libs.kmpalette.network)
-            implementation(libs.ktor.client.cio)
 
             // DataStore
             implementation(libs.datastore.preferences)
 
             // Lottie
             implementation(libs.compottie)
-            implementation(libs.compottie.dot)
-            implementation(libs.compottie.network)
-            implementation(libs.compottie.resources)
 
             // Paging 3
             implementation(libs.androidx.paging.common)
@@ -183,7 +181,13 @@ kotlin {
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
+        jvmTest.dependencies {
+            // Explicit test API for dispatching/cancelling Back events to real UI handlers.
+            implementation("androidx.navigationevent:navigationevent-compose:1.1.1")
+        }
         jvmMain.dependencies {
+            implementation(libs.ktor.client.cio)
+            implementation(libs.vlcj)
             implementation(libs.androidx.sqlite.bundled)
             // Desktop app entry (main.kt), VLC setup, jpackage/Conveyor
             // packaging, and tray icon live in :desktopApp per the
@@ -556,6 +560,7 @@ buildkonfig {
                 .toInt()
         buildConfigField(STRING, "versionName", versionName)
         buildConfigField(INT, "versionCode", "$versionCode")
+        buildConfigField(STRING, "apkUpdateChannel", if (isFullBuild) "full" else "foss")
 
 
         val localProps = Properties().apply {

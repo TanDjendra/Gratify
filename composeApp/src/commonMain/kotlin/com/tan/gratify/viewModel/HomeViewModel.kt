@@ -46,10 +46,15 @@ class HomeViewModel(
     private val dataStoreManager: DataStoreManager,
     private val homeRepository: HomeRepository,
     private val artistRepository: ArtistRepository,
+    private val songRepository: com.tan.domain.repository.SongRepository,
+    private val playlistRepository: com.tan.domain.repository.PlaylistRepository,
+    private val albumRepository: com.tan.domain.repository.AlbumRepository,
 ) : BaseViewModel() {
     private val _homeItemList: MutableStateFlow<List<HomeItem>> =
         MutableStateFlow(arrayListOf())
     val homeItemList: StateFlow<List<HomeItem>> = _homeItemList
+    private val _initialHomeCount = MutableStateFlow(0)
+    val initialHomeCount: StateFlow<Int> = _initialHomeCount
 
     private var _homeListState = MutableStateFlow<ListState>(ListState.IDLE)
     val homeListState: StateFlow<ListState> = _homeListState
@@ -67,6 +72,9 @@ class HomeViewModel(
     private var chartJob: Job? = null
     private var homeRequest = 0
     private var chartRequest = 0
+    private val exploredSeeds = mutableSetOf<String>()
+    private var discoveryPage = 0
+    private var paginationFailed = false
 
     val showSnackBarErrorState = MutableSharedFlow<String>()
 
@@ -100,11 +108,8 @@ class HomeViewModel(
     val mainHomeThumbnail: StateFlow<String?> = _mainHomeThumbnail
 
     init {
-        viewModelScope.launch {
-            if (dataStoreManager.cookie.first().isEmpty() &&
-                dataStoreManager.shouldShowLogInRequiredAlert.first() == TRUE
-            ) _showLogInAlert.value = true
-        }
+        // Discovery is public. Personal YouTube collections are connected during onboarding;
+        // an empty YouTube Music cookie must never trigger a second login prompt here.
         viewModelScope.launch {
             // One combined preference stream avoids five competing startup refreshes.
             combine(dataStoreManager.location, dataStoreManager.language,
@@ -141,6 +146,9 @@ class HomeViewModel(
         homeJob?.cancel()
         paginationJob?.cancel()
         _continuation.value = null
+        exploredSeeds.clear()
+        discoveryPage = 0
+        paginationFailed = false
         if (chartJob?.isActive != true) regionCodeChart.value?.let(::loadChart)
         loading.value = true
         _homeListState.value = ListState.LOADING
@@ -174,6 +182,7 @@ class HomeViewModel(
                     if (request != homeRequest) return@supervisorScope
                     when (result) {
                         is Resource.Success -> {
+                            _initialHomeCount.value = result.data?.second.orEmpty().size
                             _homeItemList.value = result.data?.second.orEmpty()
                             _continuation.value = result.data?.first
                             // Publish core content before loading personalized recommendations.
@@ -190,8 +199,7 @@ class HomeViewModel(
                 } finally {
                     if (request == homeRequest) {
                         loading.value = false
-                        _homeListState.value = if (_continuation.value.isNullOrEmpty())
-                            ListState.PAGINATION_EXHAUST else ListState.IDLE
+                        _homeListState.value = ListState.IDLE
                     }
                 }
             }
@@ -226,16 +234,20 @@ class HomeViewModel(
                 }
             } }.awaitAll().filterNotNull()
         }
-        if (request == homeRequest) _homeItemList.update { it + items }
+        if (request == homeRequest) _homeItemList.update { com.tan.gratify.ui.utils.appendDiscovery(it, items) }
     }
 
     fun getContinueHomeItem(continuation: String?) {
-        if (loading.value || paginationJob?.isActive == true || continuation.isNullOrEmpty() ||
+        if (loading.value || paginationJob?.isActive == true || paginationFailed ||
             continuation != _continuation.value) return
         val request = homeRequest
         _homeListState.value = ListState.PAGINATING
         paginationJob = viewModelScope.launch {
             try {
+                if (continuation.isNullOrBlank()) {
+                    loadDiscoveryPage(request)
+                    return@launch
+                }
                 val result = withTimeout(20_000) {
                     homeRepository.getHomeDataContinue(
                         continuation,
@@ -246,28 +258,98 @@ class HomeViewModel(
                 if (request != homeRequest) return@launch
                 when (result) {
                     is Resource.Success -> {
-                        _continuation.value = result.data?.first
-                        _homeItemList.update { it + result.data?.second.orEmpty() }
+                        _continuation.value = result.data?.first?.takeUnless { it == continuation }
+                        _homeItemList.update { com.tan.gratify.ui.utils.appendDiscovery(it, result.data?.second.orEmpty()) }
                     }
                     is Resource.Error -> {
-                        _continuation.value = null
+                        paginationFailed = true
                         showSnackBarErrorState.emit(result.message ?: "Unable to load more music")
                     }
                 }
             } catch (error: TimeoutCancellationException) {
-                _continuation.value = null
+                paginationFailed = true
                 showSnackBarErrorState.emit("Koneksi terlalu lama. Tarik untuk memuat ulang.")
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
-                _continuation.value = null
+                paginationFailed = true
                 showSnackBarErrorState.emit(error.message ?: "Unable to load more music")
             } finally {
-                if (request == homeRequest) _homeListState.value = if (_continuation.value.isNullOrEmpty())
-                    ListState.PAGINATION_EXHAUST else ListState.IDLE
+                if (request == homeRequest && _homeListState.value != ListState.PAGINATION_EXHAUST)
+                    _homeListState.value = ListState.IDLE
             }
         }
     }
+
+    /** Continue discovery using real browse feeds and related songs after the home cursor ends. */
+    private suspend fun loadDiscoveryPage(request: Int) {
+        val filters = listOf(HOME_PARAMS_FEEL_GOOD, HOME_PARAMS_FOCUS, HOME_PARAMS_ENERGIZE,
+            HOME_PARAMS_RELAX, HOME_PARAMS_ROMANCE, HOME_PARAMS_COMMUTE, HOME_PARAMS_PARTY,
+            HOME_PARAMS_WORKOUT, HOME_PARAMS_SLEEP, HOME_PARAMS_SAD)
+        val before = _homeItemList.value
+        val page = discoveryPage
+        val incoming = withTimeout(20_000) {
+            if (page < filters.size) {
+                val result = homeRepository.getHomeData(filters[page],
+                    org.jetbrains.compose.resources.getString(Res.string.view_count),
+                    org.jetbrains.compose.resources.getString(Res.string.song)).first()
+                when (result) {
+                    is Resource.Success -> result.data?.second.orEmpty()
+                    is Resource.Error -> error(result.message ?: "Rekomendasi belum dapat dimuat")
+                }
+            } else {
+                val seed = com.tan.gratify.ui.utils.nextDiscoverySeed(before, exploredSeeds)
+                    ?: return@withTimeout emptyList()
+                val result: Resource<Pair<List<com.tan.domain.data.model.browse.album.Track>, String?>> = when (seed.kind) {
+                    com.tan.gratify.ui.utils.DiscoverySeedKind.SONG -> songRepository.getRelatedData(seed.id).first()
+                    com.tan.gratify.ui.utils.DiscoverySeedKind.PLAYLIST -> {
+                        when (val playlist = playlistRepository.getPlaylistData(seed.id,
+                            org.jetbrains.compose.resources.getString(Res.string.view_count)).first()) {
+                            is Resource.Success -> Resource.Success(playlist.data?.first?.tracks.orEmpty() to null)
+                            is Resource.Error -> Resource.Error(playlist.message ?: "Playlist belum dapat dimuat")
+                        }
+                    }
+                    com.tan.gratify.ui.utils.DiscoverySeedKind.ALBUM -> {
+                        when (val album = albumRepository.getAlbumData(seed.id).first()) {
+                            is Resource.Success -> Resource.Success(album.data?.tracks.orEmpty() to null)
+                            is Resource.Error -> Resource.Error(album.message ?: "Album belum dapat dimuat")
+                        }
+                    }
+                }
+                when (result) {
+                    is Resource.Success -> {
+                        if (request != homeRequest) return@withTimeout emptyList()
+                        exploredSeeds.add(seed.key)
+                        val contents = result.data?.first.orEmpty().map { track ->
+                            com.tan.domain.data.model.home.Content(album = track.album, artists = track.artists,
+                                description = null, isExplicit = track.isExplicit, playlistId = null, browseId = null,
+                                thumbnails = track.thumbnails.orEmpty(), title = track.title, videoId = track.videoId,
+                                views = null, durationSeconds = track.durationSeconds)
+                        }
+                        listOf(HomeItem(contents, "Lanjut dari ${seed.content.title}", "Temukan musik yang senada"))
+                    }
+                    is Resource.Error -> error(result.message ?: "Rekomendasi belum dapat dimuat")
+                }
+            }
+        }
+        if (request != homeRequest) return
+        discoveryPage++
+        val merged = com.tan.gratify.ui.utils.appendDiscovery(_homeItemList.value, incoming)
+        _homeItemList.value = merged
+        // Move on to the next seed after a duplicate-only batch. Stop only when all sources are spent.
+        if (merged.size == before.size && discoveryPage > filters.size &&
+            com.tan.gratify.ui.utils.nextDiscoverySeed(merged, exploredSeeds) == null) {
+            _homeListState.value = ListState.PAGINATION_EXHAUST
+        }
+    }
+
+    fun retryDiscovery() {
+        paginationFailed = false
+        _homeListState.value = ListState.IDLE
+        getContinueHomeItem(_continuation.value)
+    }
+
+    val canRetryDiscovery: Boolean get() = paginationFailed
 
     fun exploreChart(region: String) {
         viewModelScope.launch { dataStoreManager.setChartKey(region) }
@@ -299,7 +381,7 @@ class HomeViewModel(
     private suspend fun emitAccountInfo() {
         val appName = dataStoreManager.getString("AppProfileName").first()
             ?: dataStoreManager.getString("AccountName").first()
-        val thumbUrl = dataStoreManager.getString("AccountThumbUrl").first()
+        val thumbUrl = dataStoreManager.getString("AppProfileImage").first()
         if (!appName.isNullOrEmpty()) {
             _accountInfo.emit(Pair(appName, thumbUrl))
         } else {

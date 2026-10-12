@@ -3,6 +3,7 @@ from pathlib import Path
 from html import escape
 import hashlib
 import json
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "docs/legal"
@@ -16,7 +17,9 @@ def render_markdown(source):
     paragraph = []
     def flush():
         if paragraph:
-            blocks.append("<p>" + "<br>".join(escape(line) for line in paragraph) + "</p>")
+            def linkify(line):
+                return re.sub(r"https://[^\s<>]+", lambda match: '<a href="' + match.group(0).rstrip(".") + '">' + match.group(0).rstrip(".") + '</a>' + ("." if match.group(0).endswith(".") else ""), escape(line))
+            blocks.append("<p>" + "<br>".join(linkify(line) for line in paragraph) + "</p>")
             paragraph.clear()
     for line in source.splitlines():
         if line.startswith("# "):
@@ -33,11 +36,14 @@ def render_markdown(source):
     return "\n".join(blocks)
 
 
-def page(title, body, prefix):
+def page(title, body, prefix, draft=True):
+    notice = '<aside><strong>Draf untuk peninjauan.</strong> Dokumen ini belum disetujui sebagai kebijakan resmi atau ketentuan yang berlaku. Publikasi halaman ini tidak mengubah status draf.</aside>' if draft else ''
+    description = 'Dokumen Gratify: penggunaan aplikasi dan pengelolaan data.'
+    robots = 'noindex,nofollow' if draft else 'index,follow'
     return f"""<!doctype html>
-<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta name="description" content="Draf Terms of Use dan Privacy Policy Gratify untuk peninjauan."><title>{escape(title)} · Gratify</title><style>{CSS}</style></head>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="{robots}"><meta name="description" content="{description}"><title>{escape(title)} · Gratify</title><style>{CSS}</style></head>
 <body><a class="skip" href="#main">Langsung ke dokumen</a><header><a class="brand" href="{prefix}">Gratify<span aria-hidden="true" style="color:#5ee58e">.</span></a><nav aria-label="Dokumen"><a href="{prefix}terms/">Terms</a><a href="{prefix}privacy/">Privacy</a><a href="mailto:supportgratify@gmail.com">Dukungan</a></nav></header>
-<main id="main"><aside><strong>Draf untuk peninjauan.</strong> Dokumen ini belum disetujui sebagai kebijakan resmi atau ketentuan yang berlaku. Publikasi halaman ini tidak mengubah status draf.</aside>{body}</main>
+<main id="main">{notice}{body}</main>
 <footer>Tan Heradhe Rat Djendra (TanDjendra) · Indonesia<br>Kontak: <a href="mailto:supportgratify@gmail.com">supportgratify@gmail.com</a><br>Halaman ini tidak memakai analytics, cookie aplikasi, formulir, atau layanan font eksternal.</footer></body></html>
 """
 
@@ -45,17 +51,21 @@ def page(title, body, prefix):
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     hashes = {}
+    statuses = {}
     for route, filename, title in (("terms", "terms-of-use.md", "Terms of Use"), ("privacy", "privacy-policy.md", "Privacy Policy")):
         source = (SOURCE / filename).read_bytes()
         target = OUT / route
         target.mkdir(exist_ok=True)
-        (target / "index.html").write_text(page(title, render_markdown(source.decode("utf-8")), "../"), encoding="utf-8")
+        markdown = source.decode("utf-8")
+        draft = 'Status: DRAF' in markdown
+        (target / "index.html").write_text(page(title, render_markdown(markdown), "../", draft=draft), encoding="utf-8")
         hashes[filename] = hashlib.sha256(source).hexdigest()
-    body = """<h1>Dokumen Gratify</h1><p>Baca penjelasan penggunaan aplikasi dan pengelolaan data. Kedua dokumen masih dalam tahap peninjauan pemilik.</p><div class="choices"><a href="terms/">Terms of Use<span>Aturan penggunaan, akun, konten, dan dukungan.</span></a><a href="privacy/">Privacy Policy<span>Data akun, fitur cloud, integrasi, dan penghapusan.</span></a></div>"""
-    (OUT / "index.html").write_text(page("Dokumen", body, "./"), encoding="utf-8")
+        statuses[filename] = 'DRAFT' if draft else 'APPROVED'
+    body = """<h1>Dokumen Gratify</h1><p>Baca penjelasan penggunaan aplikasi dan pengelolaan data. Status persetujuan dan tanggal berlaku tercantum pada masing-masing dokumen.</p><div class="choices"><a href="terms/">Terms of Use<span>Aturan penggunaan, akun, konten, dan dukungan.</span></a><a href="privacy/">Privacy Policy<span>Data akun, fitur cloud, integrasi, dan penghapusan.</span></a></div>"""
+    (OUT / "index.html").write_text(page("Dokumen", body, "./", draft=False), encoding="utf-8")
     (OUT / ".nojekyll").write_text("")
-    (OUT / "source-manifest.json").write_text(json.dumps({"status": "DRAFT", "source_sha256": hashes}, indent=2) + "\n")
-    print("Built static Terms/Privacy review pages from current legal drafts.")
+    (OUT / "source-manifest.json").write_text(json.dumps({"document_status": statuses, "source_sha256": hashes}, indent=2) + "\n")
+    print("Built Terms/Privacy pages with each document's approval status.")
 
 
 if __name__ == "__main__":

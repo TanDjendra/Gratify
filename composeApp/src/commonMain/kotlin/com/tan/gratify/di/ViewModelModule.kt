@@ -6,6 +6,7 @@ import com.tan.gratify.viewModel.AnalyticsViewModel
 import com.tan.gratify.viewModel.ArtistViewModel
 import com.tan.gratify.viewModel.HomeViewModel
 import com.tan.gratify.viewModel.LibraryDynamicPlaylistViewModel
+import com.tan.gratify.viewModel.YouTubeConnectionViewModel
 import com.tan.gratify.viewModel.LibraryViewModel
 import com.tan.gratify.viewModel.LocalPlaylistViewModel
 import com.tan.gratify.viewModel.LogInViewModel
@@ -28,9 +29,26 @@ import com.tan.gratify.viewModel.FollowListViewModel
 import com.tan.gratify.viewModel.FriendsActivityViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
+import kotlinx.coroutines.flow.map
 
 val viewModelModule =
     module {
+        single<com.tan.gratify.viewModel.PlaylistWorkspaceGateway> { com.tan.gratify.viewModel.SupabasePlaylistWorkspaceGateway(get()) }
+        viewModel { com.tan.gratify.viewModel.PlaylistWorkspaceViewModel(get(),get<com.tan.data.sync.AccountSessionCoordinator>().access,get(),get(),get(),get(),get()) }
+        single<com.tan.gratify.viewModel.ProfileEditorGateway> {
+            com.tan.gratify.viewModel.SupabaseProfileEditorGateway(get(), get(), get())
+        }
+        viewModel { com.tan.gratify.viewModel.FriendsSocialViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
+        viewModel { com.tan.gratify.viewModel.WrappedViewModel(get(), get(), get(), get(),
+            get<com.tan.domain.manager.DataStoreManager>().localTrackingEnabled.map { it == com.tan.domain.manager.DataStoreManager.TRUE },
+            get<com.tan.data.sync.AccountSessionCoordinator>().access.map { access ->
+                when (access) {
+                    is com.tan.data.sync.AccountAccess.Ready -> com.tan.gratify.viewModel.WrappedAccess(access.owner)
+                    com.tan.data.sync.AccountAccess.Loading -> com.tan.gratify.viewModel.WrappedAccess(ready = false, loading = true)
+                    else -> com.tan.gratify.viewModel.WrappedAccess(ready = false)
+                }
+            }) }
+        viewModel { YouTubeConnectionViewModel(get()) }
         single {
             SharedViewModel(
                 get(),
@@ -51,7 +69,19 @@ val viewModelModule =
                 get(),
                 get(),
                 get(),
+                getOrNull(),
+                getOrNull<com.tan.data.sync.AccountSessionCoordinator>()?.access?.map { access ->
+                    com.tan.gratify.viewModel.SearchAccess((access as? com.tan.data.sync.AccountAccess.Ready)?.owner,
+                        access is com.tan.data.sync.AccountAccess.Ready)
+                } ?: kotlinx.coroutines.flow.flowOf(com.tan.gratify.viewModel.SearchAccess()),
             )
+        }
+        viewModel(org.koin.core.qualifier.named("artist-picker")) {
+            SearchViewModel(get(), get(), get(), get(), getOrNull(),
+                getOrNull<com.tan.data.sync.AccountSessionCoordinator>()?.access?.map { access ->
+                    com.tan.gratify.viewModel.SearchAccess((access as? com.tan.data.sync.AccountAccess.Ready)?.owner,
+                        access is com.tan.data.sync.AccountAccess.Ready)
+                } ?: kotlinx.coroutines.flow.flowOf(com.tan.gratify.viewModel.SearchAccess()))
         }
         viewModel {
             NowPlayingBottomSheetViewModel(
@@ -63,6 +93,7 @@ val viewModelModule =
         }
         viewModel {
             LibraryViewModel(
+                get(),
                 get(),
                 get(),
                 get(),
@@ -84,6 +115,8 @@ val viewModelModule =
                 get(),
                 get(),
                 get(),
+                get(),
+                get<com.tan.data.sync.AccountSessionCoordinator>().access,
             )
         }
         viewModel {
@@ -94,6 +127,9 @@ val viewModelModule =
         }
         viewModel {
             HomeViewModel(
+                get(),
+                get(),
+                get(),
                 get(),
                 get(),
                 get(),
@@ -128,6 +164,7 @@ val viewModelModule =
         }
         viewModel {
             SignUpViewModel(
+                get(),
                 get(),
                 get(),
                 get(),

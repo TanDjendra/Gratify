@@ -17,11 +17,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import com.tan.domain.manager.DataStoreManager
 import com.tan.gratify.ui.navigation.destination.MainDestination
 import com.tan.gratify.ui.navigation.destination.login.LoginLandingDestination
 import com.tan.gratify.ui.navigation.destination.login.CreateProfileDestination
@@ -33,9 +31,6 @@ import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.compose.koinInject
-import kotlinx.coroutines.flow.first
-import io.github.jan.supabase.auth.auth
-import com.tan.data.sync.UserDataSyncManager
 
 /**
  * Splash screen: solid black background + centred Gratify logo.
@@ -50,7 +45,8 @@ fun SplashScreen(
     settingsViewModel: SettingsViewModel = koinViewModel()
 ) {
     var logoVisible by remember { mutableStateOf(false) }
-    val loggedInState by settingsViewModel.loggedIn.collectAsStateWithLifecycle(null)
+    val sessions: com.tan.data.sync.AccountSessionCoordinator = koinInject()
+    val access by sessions.access.collectAsStateWithLifecycle()
 
     val scale by animateFloatAsState(
         targetValue = if (logoVisible) 1f else 0.75f,
@@ -69,44 +65,21 @@ fun SplashScreen(
         logoVisible = true
     }
 
-    // Route only after the SDK has restored the saved session.
-    val dataStoreManager: DataStoreManager = koinInject()
-    val supabase: io.github.jan.supabase.SupabaseClient = koinInject()
-    val userDataSyncManager: UserDataSyncManager = koinInject()
-
-    LaunchedEffect(loggedInState) {
-        if (loggedInState != null) {
-            supabase.auth.awaitInitialization()
-            delay(300L)
-            if (com.tan.gratify.viewModel.auth.PasswordRecoveryCoordinator.pending.value) return@LaunchedEffect
-
-            // IRON-CLAD GUARD: Selalu periksa session dari Supabase untuk mencegah routing leak
-            // karena external browser OAuth mungkin gagal tapi local DataStore belum tersinkronisasi.
-            val currentSession = supabase.auth.currentSessionOrNull()
-
-            val accountReady = if (currentSession != null && loggedInState == DataStoreManager.TRUE) {
-                try { userDataSyncManager.performLoginSync(waitForCloud = false); true } catch (_: Exception) { false }
-            } else false
-            val destination = if (accountReady) {
-                val appProfileName = dataStoreManager.getString("AppProfileName").first()
-                if (appProfileName.isNullOrEmpty()) {
-                    CreateProfileDestination
-                } else {
-                    MainDestination
-                }
-            } else {
-                // Jika session Supabase null (misal Google Auth gagal/dibatalkan), paksa kembali ke Landing
-                if (loggedInState == DataStoreManager.TRUE) {
-                    dataStoreManager.setLoggedIn(false) // Bersihkan leak state
-                }
-                LoginLandingDestination
-            }
-            
-            if (com.tan.gratify.viewModel.auth.PasswordRecoveryCoordinator.pending.value) return@LaunchedEffect
-            navController.navigate(destination) {
-                popUpTo(0) { inclusive = true } // Hapus seluruh stack
-            }
+    LaunchedEffect(access) {
+        delay(300L)
+        if (com.tan.gratify.viewModel.auth.PasswordRecoveryCoordinator.pending.value) return@LaunchedEffect
+        val destination = when (val current = access) {
+            is com.tan.data.sync.AccountAccess.Ready -> if (current.needsProfile && !current.offline)
+                CreateProfileDestination() else MainDestination
+            com.tan.data.sync.AccountAccess.SignedOut -> LoginLandingDestination
+            else -> return@LaunchedEffect
         }
+        navController.navigate(destination) { popUpTo(0) { inclusive = true } }
+    }
+
+    if (access == com.tan.data.sync.AccountAccess.RecoveryRequired) {
+        com.tan.gratify.ui.component.AccountRecoveryScreen(false, sessions::retry)
+        return
     }
 
     Box(

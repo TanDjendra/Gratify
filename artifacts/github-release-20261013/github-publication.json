@@ -1,0 +1,39 @@
+{
+  "id": 410983211,
+  "url": "https://github.com/TanDjendra/Gratify/releases/tag/untagged-e7f5ea971a64626f0af5",
+  "tag": "v2.1.5",
+  "published": true,
+  "published_at": "2026-10-12T20:44:48Z",
+  "assets": [
+    {
+      "name": "Gratify-2.1.5-release-arm64-v8a.apk",
+      "url": "https://github.com/TanDjendra/Gratify/releases/download/v2.1.5/Gratify-2.1.5-release-arm64-v8a.apk",
+      "size": 28066702,
+      "sha256": "sha256:2d8dc4e95a0e3b5e0d6ded32e0b94a5d352dfc5c46e74aa581ced73970811aef"
+    },
+    {
+      "name": "Gratify-2.1.5-source.zip",
+      "url": "https://github.com/TanDjendra/Gratify/releases/download/v2.1.5/Gratify-2.1.5-source.zip",
+      "size": 6330182,
+      "sha256": "sha256:e6cdd879f3b4ce2dfb5a6285c60ac6d6b2474c4137e0a01bee8bdb4aa691035d"
+    },
+    {
+      "name": "gratify-update.json",
+      "url": "https://github.com/TanDjendra/Gratify/releases/download/v2.1.5/gratify-update.json",
+      "size": 254,
+      "sha256": "sha256:e836d8a2b34ed12c1b42fa2bc770a71ee46c615ac8f12aa36e9b067ea3fdb772"
+    },
+    {
+      "name": "Gratify.apk",
+      "url": "https://github.com/TanDjendra/Gratify/releases/download/v2.1.5/Gratify.apk",
+      "size": 55098552,
+      "sha256": "sha256:8f907eb872b3b71107a11977e85aef0104fdfc73af66d4ef86c6d9862d439846"
+    },
+    {
+      "name": "SHA256SUMS.txt",
+      "url": "https://github.com/TanDjendra/Gratify/releases/download/v2.1.5/SHA256SUMS.txt",
+      "size": 361,
+      "sha256": "sha256:8450862b431eae68e382c6a7e2c031846dd3f593af286ec82864d34fd66c4773"
+    }
+  ]
+}

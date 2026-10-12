@@ -5,6 +5,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Asset(
+    @SerialName("digest")
+    val digest: String? = null,
     @SerialName("browser_download_url")
     val browserDownloadUrl: String?,
     @SerialName("content_type")

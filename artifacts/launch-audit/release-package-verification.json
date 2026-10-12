@@ -1,7 +1,7 @@
 {
   "status": "PASS",
   "signed_apk": "D:\\Tan\\Gratify\\androidApp\\build\\outputs\\apk\\release\\Gratify-release-signed.apk",
-  "sha256": "959a1dc90b56ac6e9a0a26e805ae75c1ba79586b15dbe8912c882ab1dae109f4",
+  "sha256": "bccc1576d15a2e4ab45e15c43a9c84e7e1fa43caefc28546f64b9eeb2d848557",
   "release_package_correct": true,
   "debuggable": false,
   "abis": [
@@ -267,7 +267,7 @@
     }
   ],
   "r8_removed_unused_insecure_pipepipe_initializers": true,
-  "r8_usage_sha256": "f73025c41b64fb50278a761d0f807050cc9d4d52f9ca58b3321a1dc2eeddda2f",
+  "r8_usage_sha256": "23e9920a979497ea693912c9bdae764938974fde91b516c3cd7feed7d3574d52",
   "lint_errors": 0,
   "lint_issues_by_id": {
     "OldTargetApi": 1,

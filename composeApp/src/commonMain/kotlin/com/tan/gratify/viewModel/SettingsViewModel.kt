@@ -12,6 +12,8 @@ import com.tan.common.VIDEO_QUALITY
 import com.tan.domain.data.entities.DownloadState
 import com.tan.domain.data.entities.GoogleAccountEntity
 import com.tan.domain.extension.toNetScapeString
+import com.tan.domain.manager.lyricsAnimationsEnabled
+import com.tan.domain.manager.setLyricsAnimationsEnabled
 import com.tan.domain.manager.DataStoreManager
 import com.tan.domain.mediaservice.handler.DownloadHandler
 import com.tan.domain.repository.AccountRepository
@@ -38,6 +40,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.lastOrNull
 import kotlinx.coroutines.flow.singleOrNull
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -64,6 +69,31 @@ class SettingsViewModel(
     private val accountRepository: AccountRepository,
     private val cacheRepository: CacheRepository,
 ) : BaseViewModel() {
+    private val _settingsWriteFailed = MutableStateFlow(false)
+    val settingsWriteFailed: StateFlow<Boolean> = _settingsWriteFailed
+    private fun changePreference(block: suspend kotlinx.coroutines.CoroutineScope.() -> Unit) {
+        viewModelScope.launch {
+            _settingsWriteFailed.value = false
+            try { block() }
+            catch (error: CancellationException) { throw error }
+            catch (_: Exception) { _settingsWriteFailed.value = true }
+        }
+    }
+    private val _settingsReadFailed = MutableStateFlow(false)
+    val settingsReadFailed: StateFlow<Boolean> = _settingsReadFailed
+    private val preferenceObservers = SettingsPreferenceObservers(viewModelScope) { _settingsReadFailed.value = true }
+    private fun observePreference(key: String, block: suspend kotlinx.coroutines.CoroutineScope.() -> Unit) {
+        viewModelScope.launch { preferenceObservers.observe(key, block) }
+    }
+    val lyricsAnimationsEnabled = dataStoreManager.lyricsAnimationsEnabled
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    fun setLyricsAnimationsEnabled(enabled: Boolean) {
+        changePreference {
+            dataStoreManager.setLyricsAnimationsEnabled(enabled)
+        }
+    }
+
     private val databasePath: String? = commonRepository.getDatabasePath()
     private val downloadUtils: DownloadHandler by inject()
     private val supabase: SupabaseClient by inject()
@@ -234,6 +264,7 @@ class SettingsViewModel(
     fun getAudioSessionId() = mediaPlayerHandler.player.audioSessionId
 
     fun getData() {
+        _settingsReadFailed.value = false
         getLocation()
         getLanguage()
         getQuality()
@@ -291,17 +322,10 @@ class SettingsViewModel(
         getAutoBackupFrequency()
         getAutoBackupMaxFiles()
         getAutoBackupLastTime()
-        viewModelScope.launch {
-            calculateDataFraction(
-                cacheRepository,
-            )?.let {
-                _fraction.value = it
-            }
-        }
     }
 
     private fun getLocalTrackingEnabled() {
-        viewModelScope.launch {
+        observePreference("getLocalTrackingEnabled") {
             dataStoreManager.localTrackingEnabled.collect { enabled ->
                 _localTrackingEnabled.value = enabled == DataStoreManager.TRUE
             }
@@ -309,14 +333,14 @@ class SettingsViewModel(
     }
 
     fun setLocalTrackingEnabled(enabled: Boolean) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setLocalTrackingEnabled(enabled)
             getLocalTrackingEnabled()
         }
     }
 
     private fun getDownloadQuality() {
-        viewModelScope.launch {
+        observePreference("getDownloadQuality") {
             dataStoreManager.downloadQuality.collect { quality ->
                 if (QUALITY.items.any { it.toString() == quality }) {
                     _downloadQuality.emit(quality)
@@ -328,14 +352,14 @@ class SettingsViewModel(
     }
 
     fun setDownloadQuality(quality: String) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setDownloadQuality(quality)
             getDownloadQuality()
         }
     }
 
     private fun getVideoDownloadQuality() {
-        viewModelScope.launch {
+        observePreference("getVideoDownloadQuality") {
             dataStoreManager.videoDownloadQuality.collect { videoQuality ->
                 when (videoQuality) {
                     VIDEO_QUALITY.items[0].toString() -> _videoDownloadQuality.emit(VIDEO_QUALITY.items[0].toString())
@@ -347,7 +371,7 @@ class SettingsViewModel(
     }
 
     fun setVideoDownloadQuality(quality: String) {
-        viewModelScope.launch {
+        changePreference {
             if (VIDEO_QUALITY.items.contains(quality)) {
                 dataStoreManager.setVideoDownloadQuality(quality)
             }
@@ -356,7 +380,7 @@ class SettingsViewModel(
     }
 
     private fun getKeepYouTubePlaylistOffline() {
-        viewModelScope.launch {
+        observePreference("getKeepYouTubePlaylistOffline") {
             dataStoreManager.keepYouTubePlaylistOffline.collect { keep ->
                 _keepYouTubePlaylistOffline.value = keep == DataStoreManager.TRUE
             }
@@ -364,14 +388,14 @@ class SettingsViewModel(
     }
 
     fun setKeepYouTubePlaylistOffline(keep: Boolean) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setKeepYouTubePlaylistOffline(keep)
             getKeepYouTubePlaylistOffline()
         }
     }
 
     private fun getCombineLocalAndYouTubeLiked() {
-        viewModelScope.launch {
+        observePreference("getCombineLocalAndYouTubeLiked") {
             dataStoreManager.combineLocalAndYouTubeLiked.collect { combine ->
                 _combineLocalAndYouTubeLiked.value = combine == DataStoreManager.TRUE
             }
@@ -379,14 +403,14 @@ class SettingsViewModel(
     }
 
     fun setCombineLocalAndYouTubeLiked(combine: Boolean) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setCombineLocalAndYouTubeLiked(combine)
             getCombineLocalAndYouTubeLiked()
         }
     }
 
     private fun getKeepServiceAlive() {
-        viewModelScope.launch {
+        observePreference("getKeepServiceAlive") {
             dataStoreManager.keepServiceAlive.collect { keepServiceAlive ->
                 _keepServiceAlive.value = keepServiceAlive == DataStoreManager.TRUE
             }
@@ -394,14 +418,15 @@ class SettingsViewModel(
     }
 
     fun setKeepServiceAlive(keepServiceAlive: Boolean) {
-        viewModelScope.launch {
+        changePreference {
+            if (keepServiceAlive) dataStoreManager.setKillServiceOnExit(false)
             dataStoreManager.setKeepServiceAlive(keepServiceAlive)
             getKeepServiceAlive()
         }
     }
 
     private fun getCrossfadeEnabled() {
-        viewModelScope.launch {
+        observePreference("getCrossfadeEnabled") {
             dataStoreManager.crossfadeEnabled.collect { enabled ->
                 _crossfadeEnabled.value = enabled == DataStoreManager.TRUE
             }
@@ -409,14 +434,14 @@ class SettingsViewModel(
     }
 
     fun setCrossfadeEnabled(enabled: Boolean) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setCrossfadeEnabled(enabled)
             getCrossfadeEnabled()
         }
     }
 
     private fun getCrossfadeDuration() {
-        viewModelScope.launch {
+        observePreference("getCrossfadeDuration") {
             dataStoreManager.crossfadeDuration.collect { duration ->
                 _crossfadeDuration.value = duration
             }
@@ -424,14 +449,14 @@ class SettingsViewModel(
     }
 
     fun setCrossfadeDuration(duration: Int) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setCrossfadeDuration(duration)
             getCrossfadeDuration()
         }
     }
 
     private fun getCrossfadeDjMode() {
-        viewModelScope.launch {
+        observePreference("getCrossfadeDjMode") {
             dataStoreManager.crossfadeDjMode.collect { enabled ->
                 _crossfadeDjMode.value = enabled == DataStoreManager.TRUE
             }
@@ -439,14 +464,14 @@ class SettingsViewModel(
     }
 
     fun setCrossfadeDjMode(enabled: Boolean) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setCrossfadeDjMode(enabled)
             getCrossfadeDjMode()
         }
     }
 
     private fun getDiscordLoggedIn() {
-        viewModelScope.launch {
+        observePreference("getDiscordLoggedIn") {
             dataStoreManager.discordToken.collect { loggedIn ->
                 _discordLoggedIn.value = loggedIn.isNotEmpty()
             }
@@ -474,7 +499,7 @@ class SettingsViewModel(
     }
 
     private fun getDiscordRichPresenceEnabled() {
-        viewModelScope.launch {
+        observePreference("getDiscordRichPresenceEnabled") {
             dataStoreManager.richPresenceEnabled.collect { enabled ->
                 _richPresenceEnabled.value = enabled == DataStoreManager.TRUE
             }
@@ -482,7 +507,7 @@ class SettingsViewModel(
     }
 
     fun setDiscordRichPresenceEnabled(enabled: Boolean) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setRichPresenceEnabled(enabled)
             delay(100)
             getDiscordRichPresenceEnabled()
@@ -490,7 +515,7 @@ class SettingsViewModel(
     }
 
     private fun getExplicitContentEnabled() {
-        viewModelScope.launch {
+        observePreference("getExplicitContentEnabled") {
             dataStoreManager.explicitContentEnabled.collect { enabled ->
                 _explicitContentEnabled.value = enabled == DataStoreManager.TRUE
             }
@@ -498,14 +523,14 @@ class SettingsViewModel(
     }
 
     fun setExplicitContentEnabled(enabled: Boolean) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setExplicitContentEnabled(enabled)
             getExplicitContentEnabled()
         }
     }
 
     private fun getEnableLiquidGlass() {
-        viewModelScope.launch {
+        observePreference("getEnableLiquidGlass") {
             dataStoreManager.enableLiquidGlass.collect { enableLiquidGlass ->
                 _enableLiquidGlass.value = enableLiquidGlass == DataStoreManager.TRUE
             }
@@ -513,14 +538,14 @@ class SettingsViewModel(
     }
 
     fun setEnableLiquidGlass(enableLiquidGlass: Boolean) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setEnableLiquidGlass(enableLiquidGlass)
             getEnableLiquidGlass()
         }
     }
 
     private fun getUpdateChannel() {
-        viewModelScope.launch {
+        observePreference("getUpdateChannel") {
             dataStoreManager.updateChannel.collect { channel ->
                 _updateChannel.value = channel
             }
@@ -528,14 +553,14 @@ class SettingsViewModel(
     }
 
     fun setUpdateChannel(channel: String) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setUpdateChannel(channel)
             getUpdateChannel()
         }
     }
 
     private fun getBackupDownloaded() {
-        viewModelScope.launch {
+        observePreference("getBackupDownloaded") {
             dataStoreManager.backupDownloaded.collect { backupDownloaded ->
                 _backupDownloaded.value = backupDownloaded == DataStoreManager.TRUE
             }
@@ -543,7 +568,7 @@ class SettingsViewModel(
     }
 
     fun setBackupDownloaded(backupDownloaded: Boolean) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setBackupDownloaded(backupDownloaded)
             getBackupDownloaded()
         }
@@ -551,7 +576,7 @@ class SettingsViewModel(
 
     // Auto Backup functions
     private fun getAutoBackupEnabled() {
-        viewModelScope.launch {
+        observePreference("getAutoBackupEnabled") {
             dataStoreManager.autoBackupEnabled.collect { enabled ->
                 _autoBackupEnabled.value = enabled == DataStoreManager.TRUE
             }
@@ -559,14 +584,14 @@ class SettingsViewModel(
     }
 
     fun setAutoBackupEnabled(enabled: Boolean) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setAutoBackupEnabled(enabled)
             getAutoBackupEnabled()
         }
     }
 
     private fun getAutoBackupFrequency() {
-        viewModelScope.launch {
+        observePreference("getAutoBackupFrequency") {
             dataStoreManager.autoBackupFrequency.collect { frequency ->
                 _autoBackupFrequency.value = frequency
             }
@@ -574,14 +599,14 @@ class SettingsViewModel(
     }
 
     fun setAutoBackupFrequency(frequency: String) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setAutoBackupFrequency(frequency)
             getAutoBackupFrequency()
         }
     }
 
     private fun getAutoBackupMaxFiles() {
-        viewModelScope.launch {
+        observePreference("getAutoBackupMaxFiles") {
             dataStoreManager.autoBackupMaxFiles.collect { max ->
                 _autoBackupMaxFiles.value = max
             }
@@ -589,14 +614,14 @@ class SettingsViewModel(
     }
 
     fun setAutoBackupMaxFiles(max: Int) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setAutoBackupMaxFiles(max)
             getAutoBackupMaxFiles()
         }
     }
 
     private fun getAutoBackupLastTime() {
-        viewModelScope.launch {
+        observePreference("getAutoBackupLastTime") {
             dataStoreManager.autoBackupLastTime.collect { time ->
                 _autoBackupLastTime.value = time
             }
@@ -604,7 +629,7 @@ class SettingsViewModel(
     }
 
     private fun getContributorNameAndEmail() {
-        viewModelScope.launch {
+        observePreference("getContributorNameAndEmail") {
             combine(dataStoreManager.contributorName, dataStoreManager.contributorEmail) { name, email ->
                 name to email
             }.collect { contributor ->
@@ -614,21 +639,21 @@ class SettingsViewModel(
     }
 
     fun setContributorName(name: String) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setContributorLyricsDatabase(name to contributor.value.second)
             getContributorNameAndEmail()
         }
     }
 
     fun setContributorEmail(email: String) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setContributorLyricsDatabase(contributor.value.first to email)
             getContributorNameAndEmail()
         }
     }
 
     private fun getCustomModelId() {
-        viewModelScope.launch {
+        observePreference("getCustomModelId") {
             dataStoreManager.customModelId.collect { customModelId ->
                 _customModelId.value = customModelId
             }
@@ -636,14 +661,14 @@ class SettingsViewModel(
     }
 
     fun setCustomModelId(modelId: String) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setCustomModelId(modelId)
             getCustomModelId()
         }
     }
 
     private fun getCustomOpenAIBaseUrl() {
-        viewModelScope.launch {
+        observePreference("getCustomOpenAIBaseUrl") {
             dataStoreManager.customOpenAIBaseUrl.collect { baseUrl ->
                 _customOpenAIBaseUrl.value = baseUrl
             }
@@ -651,14 +676,14 @@ class SettingsViewModel(
     }
 
     fun setCustomOpenAIBaseUrl(baseUrl: String) {
-        viewModelScope.launch {
-            dataStoreManager.setCustomOpenAIBaseUrl(baseUrl)
+        changePreference {
+            dataStoreManager.setCustomOpenAIBaseUrl(baseUrl.trim())
             getCustomOpenAIBaseUrl()
         }
     }
 
     private fun getCustomOpenAIHeaders() {
-        viewModelScope.launch {
+        observePreference("getCustomOpenAIHeaders") {
             dataStoreManager.customOpenAIHeaders.collect { headers ->
                 _customOpenAIHeaders.value = headers
             }
@@ -666,14 +691,14 @@ class SettingsViewModel(
     }
 
     fun setCustomOpenAIHeaders(headers: String) {
-        viewModelScope.launch {
-            dataStoreManager.setCustomOpenAIHeaders(headers)
+        changePreference {
+            dataStoreManager.setCustomOpenAIHeaders(headers.trim())
             getCustomOpenAIHeaders()
         }
     }
 
     private fun getAIProvider() {
-        viewModelScope.launch {
+        observePreference("getAIProvider") {
             dataStoreManager.aiProvider.collect { aiProvider ->
                 _aiProvider.value = aiProvider
             }
@@ -681,33 +706,36 @@ class SettingsViewModel(
     }
 
     fun setAIProvider(provider: String) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setAIProvider(provider)
             getAIProvider()
         }
     }
 
     private fun getAITranslation() {
-        viewModelScope.launch {
-            dataStoreManager.useAITranslation.collect { useAITranslation ->
-                _useAITranslation.value = useAITranslation == DataStoreManager.TRUE
+        observePreference("getAITranslation") {
+            combine(dataStoreManager.useAITranslation, dataStoreManager.aiApiKey) { enabled, key ->
+                enabled == DataStoreManager.TRUE && key.isNotBlank()
+            }.collect { enabled ->
+                _useAITranslation.value = enabled
             }
         }
     }
 
     fun setAITranslation(useAITranslation: Boolean) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setUseAITranslation(useAITranslation)
+            if (useAITranslation) dataStoreManager.setEnableTranslateLyric(true)
             getAITranslation()
         }
     }
 
     private fun getAIApiKey() {
-        viewModelScope.launch {
+        observePreference("getAIApiKey") {
             dataStoreManager.aiApiKey.collect { aiApiKey ->
                 if (aiApiKey.isNotEmpty()) {
                     _isHasApiKey.value = true
-                    log("getAIApiKey: $aiApiKey")
+
                 } else {
                     _isHasApiKey.value = false
                 }
@@ -716,14 +744,15 @@ class SettingsViewModel(
     }
 
     fun setAIApiKey(apiKey: String) {
-        viewModelScope.launch {
-            dataStoreManager.setAIApiKey(apiKey)
+        changePreference {
+            dataStoreManager.setAIApiKey(apiKey.trim())
+            if (apiKey.isBlank()) dataStoreManager.setUseAITranslation(false)
             getAIApiKey()
         }
     }
 
     private fun getBlurFullscreenLyrics() {
-        viewModelScope.launch {
+        observePreference("getBlurFullscreenLyrics") {
             dataStoreManager.blurFullscreenLyrics.collect { blurFullscreenLyrics ->
                 _blurFullscreenLyrics.value = blurFullscreenLyrics == DataStoreManager.TRUE
             }
@@ -731,14 +760,14 @@ class SettingsViewModel(
     }
 
     fun setBlurFullscreenLyrics(blurFullscreenLyrics: Boolean) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setBlurFullscreenLyrics(blurFullscreenLyrics)
             getBlurFullscreenLyrics()
         }
     }
 
     private fun getBlurPlayerBackground() {
-        viewModelScope.launch {
+        observePreference("getBlurPlayerBackground") {
             dataStoreManager.blurPlayerBackground.collect { blurPlayerBackground ->
                 _blurPlayerBackground.value = blurPlayerBackground == DataStoreManager.TRUE
             }
@@ -746,14 +775,14 @@ class SettingsViewModel(
     }
 
     fun setBlurPlayerBackground(blurPlayerBackground: Boolean) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setBlurPlayerBackground(blurPlayerBackground)
             getBlurPlayerBackground()
         }
     }
 
     private fun getAutoCheckUpdate() {
-        viewModelScope.launch {
+        observePreference("getAutoCheckUpdate") {
             dataStoreManager.autoCheckForUpdates.collect { autoCheckUpdate ->
                 _autoCheckUpdate.value = autoCheckUpdate == DataStoreManager.TRUE
             }
@@ -761,14 +790,14 @@ class SettingsViewModel(
     }
 
     fun setAutoCheckUpdate(autoCheckUpdate: Boolean) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setAutoCheckForUpdates(autoCheckUpdate)
             getAutoCheckUpdate()
         }
     }
 
     private fun getCanvasCache() {
-        viewModelScope.launch {
+        observePreference("getCanvasCache") {
             _canvasCacheSize.value = cacheRepository.getCacheSize(Config.CANVAS_CACHE)
         }
     }
@@ -782,7 +811,7 @@ class SettingsViewModel(
     }
 
     private fun getUsingProxy() {
-        viewModelScope.launch {
+        observePreference("getUsingProxy") {
             dataStoreManager.usingProxy.collectLatest { usingProxy ->
                 if (usingProxy == DataStoreManager.TRUE) {
                     getProxy()
@@ -793,7 +822,7 @@ class SettingsViewModel(
     }
 
     fun setUsingProxy(usingProxy: Boolean) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setUsingProxy(usingProxy)
             getUsingProxy()
             getProxy()
@@ -801,7 +830,7 @@ class SettingsViewModel(
     }
 
     private fun getProxy() {
-        viewModelScope.launch {
+        observePreference("getProxy") {
             val host =
                 launch {
                     dataStoreManager.proxyHost.collect {
@@ -858,7 +887,7 @@ class SettingsViewModel(
         username: String,
         password: String,
     ) {
-        log("setProxyCredentials: username=$username")
+
         viewModelScope.launch {
             dataStoreManager.setProxyUsername(username)
             dataStoreManager.setProxyPassword(password)
@@ -866,7 +895,7 @@ class SettingsViewModel(
     }
 
     fun getTranslucentBottomBar() {
-        viewModelScope.launch {
+        observePreference("getTranslucentBottomBar") {
             dataStoreManager.translucentBottomBar.collect { translucentBottomBar ->
                 _translucentBottomBar.emit(translucentBottomBar)
             }
@@ -874,21 +903,21 @@ class SettingsViewModel(
     }
 
     fun setTranslucentBottomBar(translucentBottomBar: Boolean) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setTranslucentBottomBar(translucentBottomBar)
             getTranslucentBottomBar()
         }
     }
 
     fun getThumbCacheSize(context: PlatformContext) {
-        viewModelScope.launch {
+        observePreference("getThumbCacheSize") {
             val diskCache = SingletonImageLoader.get(context).diskCache
             _thumbCacheSize.emit(diskCache?.size)
         }
     }
 
     fun getVideoQuality() {
-        viewModelScope.launch {
+        observePreference("getVideoQuality") {
             dataStoreManager.videoQuality.collect { videoQuality ->
                 when (videoQuality) {
                     VIDEO_QUALITY.items[0].toString() -> _videoQuality.emit(VIDEO_QUALITY.items[0].toString())
@@ -900,7 +929,7 @@ class SettingsViewModel(
     }
 
     fun getTranslationLanguage() {
-        viewModelScope.launch {
+        observePreference("getTranslationLanguage") {
             dataStoreManager.translationLanguage.collect { translationLanguage ->
                 _translationLanguage.emit(translationLanguage)
             }
@@ -908,14 +937,14 @@ class SettingsViewModel(
     }
 
     fun setTranslationLanguage(language: String) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setTranslationLanguage(language)
             getTranslationLanguage()
         }
     }
 
     fun getUseTranslation() {
-        viewModelScope.launch {
+        observePreference("getUseTranslation") {
             dataStoreManager.enableTranslateLyric.collect { useTranslation ->
                 _useTranslation.emit(useTranslation)
             }
@@ -923,14 +952,18 @@ class SettingsViewModel(
     }
 
     fun setUseTranslation(useTranslation: Boolean) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setEnableTranslateLyric(useTranslation)
+            if (!useTranslation) {
+                dataStoreManager.setUseAITranslation(false)
+                getAITranslation()
+            }
             getUseTranslation()
         }
     }
 
     fun getLyricsProvider() {
-        viewModelScope.launch {
+        observePreference("getLyricsProvider") {
             dataStoreManager.lyricsProvider.collect { mainLyricsProvider ->
                 _mainLyricsProvider.emit(mainLyricsProvider)
             }
@@ -938,14 +971,14 @@ class SettingsViewModel(
     }
 
     fun setLyricsProvider(provider: String) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setLyricsProvider(provider)
             getLyricsProvider()
         }
     }
 
     fun getLocation() {
-        viewModelScope.launch {
+        observePreference("getLocation") {
             dataStoreManager.location.collect { location ->
                 _location.emit(location)
             }
@@ -953,7 +986,7 @@ class SettingsViewModel(
     }
 
     fun getLoggedIn() {
-        viewModelScope.launch {
+        observePreference("getLoggedIn") {
             dataStoreManager.loggedIn.collect { loggedIn ->
                 _loggedIn.emit(loggedIn)
             }
@@ -961,14 +994,14 @@ class SettingsViewModel(
     }
 
     fun changeLocation(location: String) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setLocation(location)
             getLocation()
         }
     }
 
     fun getSaveRecentSongAndQueue() {
-        viewModelScope.launch {
+        observePreference("getSaveRecentSongAndQueue") {
             dataStoreManager.saveRecentSongAndQueue.collect { saved ->
                 _saveRecentSongAndQueue.emit(saved)
             }
@@ -976,15 +1009,15 @@ class SettingsViewModel(
     }
 
     fun getLastCheckForUpdate() {
-        viewModelScope.launch {
-            dataStoreManager.getString("CheckForUpdateAt").first().let { lastCheckForUpdate ->
+        observePreference("getLastCheckForUpdate") {
+            dataStoreManager.getString("CheckForUpdateAt").collect { lastCheckForUpdate ->
                 _lastCheckForUpdate.emit(lastCheckForUpdate)
             }
         }
     }
 
     fun getSponsorBlockEnabled() {
-        viewModelScope.launch {
+        observePreference("getSponsorBlockEnabled") {
             dataStoreManager.sponsorBlockEnabled.first().let { enabled ->
                 _sponsorBlockEnabled.emit(enabled)
             }
@@ -992,14 +1025,14 @@ class SettingsViewModel(
     }
 
     fun setSponsorBlockEnabled(enabled: Boolean) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setSponsorBlockEnabled(enabled)
             getSponsorBlockEnabled()
         }
     }
 
     fun getPlayVideoInsteadOfAudio() {
-        viewModelScope.launch {
+        observePreference("getPlayVideoInsteadOfAudio") {
             dataStoreManager.watchVideoInsteadOfPlayingAudio.collect { playVideoInsteadOfAudio ->
                 _playVideoInsteadOfAudio.emit(playVideoInsteadOfAudio)
             }
@@ -1007,14 +1040,14 @@ class SettingsViewModel(
     }
 
     fun setPlayVideoInsteadOfAudio(playVideoInsteadOfAudio: Boolean) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setWatchVideoInsteadOfPlayingAudio(playVideoInsteadOfAudio)
             getPlayVideoInsteadOfAudio()
         }
     }
 
     fun getSponsorBlockCategories() {
-        viewModelScope.launch {
+        observePreference("getSponsorBlockCategories") {
             dataStoreManager.getSponsorBlockCategories().let {
                 log("getSponsorBlockCategories: $it", LogLevel.WARN)
                 _sponsorBlockCategories.emit(it)
@@ -1024,7 +1057,7 @@ class SettingsViewModel(
 
     fun setSponsorBlockCategories(list: ArrayList<String>) {
         log("setSponsorBlockCategories: $list", LogLevel.WARN)
-        viewModelScope.launch {
+        changePreference {
             runBlocking(Dispatchers.IO) {
                 dataStoreManager.setSponsorBlockCategories(list)
             }
@@ -1036,7 +1069,7 @@ class SettingsViewModel(
     val quality: StateFlow<String?> = _quality
 
     fun getQuality() {
-        viewModelScope.launch {
+        observePreference("getQuality") {
             dataStoreManager.quality.collect { quality ->
                 if (QUALITY.items.any { it.toString() == quality }) {
                     _quality.emit(quality)
@@ -1048,7 +1081,7 @@ class SettingsViewModel(
     }
 
     fun changeVideoQuality(item: String) {
-        viewModelScope.launch {
+        changePreference {
             if (VIDEO_QUALITY.items.contains(item)) {
                 dataStoreManager.setVideoQuality(item)
             }
@@ -1057,7 +1090,7 @@ class SettingsViewModel(
     }
 
     fun changeQuality(qualityItem: String?) {
-        viewModelScope.launch {
+        changePreference {
             log("changeQuality: $qualityItem")
             dataStoreManager.setQuality(qualityItem ?: QUALITY.items.first().toString())
             getQuality()
@@ -1068,14 +1101,14 @@ class SettingsViewModel(
     var cacheSize: StateFlow<Long?> = _cacheSize
 
     fun getPlayerCacheSize() {
-        viewModelScope.launch {
+        observePreference("getPlayerCacheSize") {
             _cacheSize.value = cacheRepository.getCacheSize(Config.PLAYER_CACHE)
         }
     }
 
     fun clearPlayerCache() {
         viewModelScope.launch {
-            cacheRepository.clearCache(Config.PLAYER_CACHE)
+            withContext(Dispatchers.IO) { cacheRepository.clearCache(Config.PLAYER_CACHE) }
             makeToast(getString(Res.string.clear_player_cache))
             getPlayerCacheSize()
         }
@@ -1085,15 +1118,15 @@ class SettingsViewModel(
     var downloadedCacheSize: StateFlow<Long?> = _downloadedCacheSize
 
     fun getDownloadedCacheSize() {
-        viewModelScope.launch {
+        observePreference("getDownloadedCacheSize") {
             _downloadedCacheSize.value = cacheRepository.getCacheSize(Config.DOWNLOAD_CACHE)
         }
     }
 
     fun clearDownloadedCache() {
         viewModelScope.launch {
-            cacheRepository.clearCache(Config.DOWNLOAD_CACHE)
-            songRepository.getDownloadedSongs().singleOrNull()?.let { songs ->
+            withContext(Dispatchers.IO) { cacheRepository.clearCache(Config.DOWNLOAD_CACHE) }
+            songRepository.getDownloadedSongs().firstOrNull()?.let { songs ->
                 songs.forEach { song ->
                     songRepository.updateDownloadState(song.videoId, DownloadState.STATE_NOT_DOWNLOADED)
                 }
@@ -1106,7 +1139,7 @@ class SettingsViewModel(
 
     fun clearCanvasCache() {
         viewModelScope.launch {
-            cacheRepository.clearCache(Config.CANVAS_CACHE)
+            withContext(Dispatchers.IO) { cacheRepository.clearCache(Config.CANVAS_CACHE) }
             makeToast(getString(Res.string.clear_canvas_cache))
             getCanvasCache()
         }
@@ -1151,7 +1184,7 @@ class SettingsViewModel(
     }
 
     fun getLanguage() {
-        viewModelScope.launch {
+        observePreference("getLanguage") {
             dataStoreManager.getString(SELECTED_LANGUAGE).collect { language ->
                 _language.emit(language)
             }
@@ -1159,7 +1192,7 @@ class SettingsViewModel(
     }
 
     fun changeLanguage(code: String) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.putString(SELECTED_LANGUAGE, code)
             Logger.w("SettingsViewModel", "changeLanguage: $code")
             getLanguage()
@@ -1168,7 +1201,7 @@ class SettingsViewModel(
     }
 
     fun getNormalizeVolume() {
-        viewModelScope.launch {
+        observePreference("getNormalizeVolume") {
             dataStoreManager.normalizeVolume.collect { normalizeVolume ->
                 _normalizeVolume.emit(normalizeVolume)
             }
@@ -1176,14 +1209,14 @@ class SettingsViewModel(
     }
 
     fun setNormalizeVolume(normalizeVolume: Boolean) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setNormalizeVolume(normalizeVolume)
             getNormalizeVolume()
         }
     }
 
     fun getSendBackToGoogle() {
-        viewModelScope.launch {
+        observePreference("getSendBackToGoogle") {
             dataStoreManager.sendBackToGoogle.collect { sendBackToGoogle ->
                 _sendBackToGoogle.emit(sendBackToGoogle)
             }
@@ -1191,14 +1224,14 @@ class SettingsViewModel(
     }
 
     fun setSendBackToGoogle(sendBackToGoogle: Boolean) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setSendBackToGoogle(sendBackToGoogle)
             getSendBackToGoogle()
         }
     }
 
     fun getSkipSilent() {
-        viewModelScope.launch {
+        observePreference("getSkipSilent") {
             dataStoreManager.skipSilent.collect { skipSilent ->
                 _skipSilent.emit(skipSilent)
             }
@@ -1206,14 +1239,14 @@ class SettingsViewModel(
     }
 
     fun setSkipSilent(skip: Boolean) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setSkipSilent(skip)
             getSkipSilent()
         }
     }
 
     fun getSavedPlaybackState() {
-        viewModelScope.launch {
+        observePreference("getSavedPlaybackState") {
             dataStoreManager.saveStateOfPlayback.collect { savedPlaybackState ->
                 _savedPlaybackState.emit(savedPlaybackState)
             }
@@ -1221,21 +1254,21 @@ class SettingsViewModel(
     }
 
     fun setSavedPlaybackState(savedPlaybackState: Boolean) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setSaveStateOfPlayback(savedPlaybackState)
             getSavedPlaybackState()
         }
     }
 
     fun setSaveLastPlayed(b: Boolean) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setSaveRecentSongAndQueue(b)
             getSaveRecentSongAndQueue()
         }
     }
 
     fun getPlayerCacheLimit() {
-        viewModelScope.launch {
+        observePreference("getPlayerCacheLimit") {
             dataStoreManager.maxSongCacheSize.collect {
                 _playerCacheLimit.emit(it)
             }
@@ -1243,7 +1276,7 @@ class SettingsViewModel(
     }
 
     fun setPlayerCacheLimit(size: Int) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setMaxSongCacheSize(size)
             getPlayerCacheLimit()
         }
@@ -1255,23 +1288,23 @@ class SettingsViewModel(
 
     fun getAllGoogleAccount() {
         Logger.w("getAllGoogleAccount", "getAllGoogleAccount: Go to function")
-        viewModelScope.launch {
+        observePreference("getAllGoogleAccount") {
             _googleAccounts.emit(LocalResource.Loading())
             accountRepository.getGoogleAccounts().collectLatest { accounts ->
                 Logger.w("getAllGoogleAccount", "getAllGoogleAccount: $accounts")
                 if (!accounts.isNullOrEmpty()) {
                     _googleAccounts.emit(LocalResource.Success(accounts))
                 } else {
-                    if (loggedIn.value == DataStoreManager.TRUE) {
+                    if (dataStoreManager.cookie.first().isNotBlank()) {
                         accountRepository
                             .getAccountInfo(
                                 dataStoreManager.cookie.first(),
                             ).collect {
                                 Logger.w("getAllGoogleAccount", "getAllGoogleAccount: $it")
                                 if (it.isNotEmpty()) {
-                                    dataStoreManager.putString("AccountName", it.first().name)
+                                    dataStoreManager.putString("YouTubeAccountName", it.first().name)
                                     dataStoreManager.putString(
-                                        "AccountThumbUrl",
+                                        "YouTubeAccountThumbUrl",
                                         it
                                             .first()
                                             .thumbnails
@@ -1316,11 +1349,9 @@ class SettingsViewModel(
     ): Boolean {
         val currentCookie = dataStoreManager.cookie.first()
         val currentPageId = dataStoreManager.pageId.first()
-        val currentLoggedIn = dataStoreManager.loggedIn.first() == DataStoreManager.TRUE
         try {
             runBlocking {
                 dataStoreManager.setCookie(cookie, "")
-                dataStoreManager.setLoggedIn(true)
             }
             return accountRepository
                 .getAccountInfo(
@@ -1339,9 +1370,9 @@ class SettingsViewModel(
                                 Logger.w("getAllGoogleAccount", "set used: $it")
                             }
                     }
-                    dataStoreManager.putString("AccountName", accountInfoList.first().name)
+                    dataStoreManager.putString("YouTubeAccountName", accountInfoList.first().name)
                     dataStoreManager.putString(
-                        "AccountThumbUrl",
+                        "YouTubeAccountThumbUrl",
                         accountInfoList
                             .first()
                             .thumbnails
@@ -1376,7 +1407,6 @@ class SettingsViewModel(
                                 log("addAccount: $it", LogLevel.WARN)
                             }
                     }
-                    dataStoreManager.setLoggedIn(true)
                     dataStoreManager.setCookie(cookie, accountInfoList.first().pageId)
                     getAllGoogleAccount()
                     getLoggedIn()
@@ -1385,7 +1415,6 @@ class SettingsViewModel(
                 Logger.w("getAllGoogleAccount", "addAccount: Account info is null")
                 runBlocking {
                     dataStoreManager.setCookie(currentCookie, currentPageId)
-                    dataStoreManager.setLoggedIn(currentLoggedIn)
                 }
                 false
             }
@@ -1394,7 +1423,6 @@ class SettingsViewModel(
             Logger.e("getAllGoogleAccount", "addAccount: ${e.message}")
             runBlocking {
                 dataStoreManager.setCookie(currentCookie, currentPageId)
-                dataStoreManager.setLoggedIn(currentLoggedIn)
             }
             return false
         }
@@ -1411,9 +1439,8 @@ class SettingsViewModel(
                             Logger.w("getAllGoogleAccount", "set used: $it")
                         }
                 }
-                dataStoreManager.clearPerUserData()
-                dataStoreManager.putString("AccountName", acc.name)
-                dataStoreManager.putString("AccountThumbUrl", acc.thumbnailUrl)
+                dataStoreManager.putString("YouTubeAccountName", acc.name)
+                dataStoreManager.putString("YouTubeAccountThumbUrl", acc.thumbnailUrl)
                 accountRepository
                     .updateGoogleAccountUsed(acc.email, true)
                     .singleOrNull()
@@ -1424,7 +1451,6 @@ class SettingsViewModel(
                     Logger.d("getAllGoogleAccount", "addAccount: write cookie file: $it")
                 }
                 dataStoreManager.setCookie(acc.cache ?: "", acc.pageId)
-                dataStoreManager.setLoggedIn(true)
                 delay(500)
                 getAllGoogleAccount()
                 getLoggedIn()
@@ -1437,8 +1463,8 @@ class SettingsViewModel(
                             Logger.w("getAllGoogleAccount", "set used: $it")
                         }
                 }
-                dataStoreManager.clearPerUserData()
-                dataStoreManager.setLoggedIn(false)
+                dataStoreManager.putString("YouTubeAccountName", "")
+                dataStoreManager.putString("YouTubeAccountThumbUrl", "")
                 dataStoreManager.setCookie("", null)
                 delay(500)
                 getAllGoogleAccount()
@@ -1463,7 +1489,9 @@ class SettingsViewModel(
         }
     }
 
-    fun logOutAllYouTube() {
+    fun logOutAllYouTube() = setUsedAccount(null)
+
+    fun logOutGratify() {
         viewModelScope.launch {
             // Cloud backup is best effort: the private local archive is the durable fallback.
             try {
@@ -1496,7 +1524,7 @@ class SettingsViewModel(
     val spotifyLogIn: StateFlow<Boolean> = _spotifyLogIn
 
     fun getSpotifyLogIn() {
-        viewModelScope.launch {
+        observePreference("getSpotifyLogIn") {
             dataStoreManager.spdc.collect { loggedIn ->
                 if (loggedIn.isNotEmpty()) {
                     _spotifyLogIn.emit(true)
@@ -1508,13 +1536,11 @@ class SettingsViewModel(
     }
 
     fun setSpotifyLogIn(loggedIn: Boolean) {
-        viewModelScope.launch {
+        changePreference {
             _spotifyLogIn.emit(loggedIn)
             if (!loggedIn) {
                 dataStoreManager.setSpdc("")
                 delay(500)
-            } else {
-                dataStoreManager.setLoggedIn(true)
             }
             getSpotifyLogIn()
             getLoggedIn()
@@ -1528,7 +1554,7 @@ class SettingsViewModel(
     val spotifyCanvas: StateFlow<Boolean> = _spotifyCanvas
 
     fun getSpotifyLyrics() {
-        viewModelScope.launch {
+        observePreference("getSpotifyLyrics") {
             dataStoreManager.spotifyLyrics.collect {
                 if (it == DataStoreManager.TRUE) {
                     _spotifyLyrics.emit(true)
@@ -1540,14 +1566,14 @@ class SettingsViewModel(
     }
 
     fun setSpotifyLyrics(loggedIn: Boolean) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setSpotifyLyrics(loggedIn)
             getSpotifyLyrics()
         }
     }
 
     fun getSpotifyCanvas() {
-        viewModelScope.launch {
+        observePreference("getSpotifyCanvas") {
             dataStoreManager.spotifyCanvas.collect {
                 if (it == DataStoreManager.TRUE) {
                     _spotifyCanvas.emit(true)
@@ -1559,7 +1585,7 @@ class SettingsViewModel(
     }
 
     fun setSpotifyCanvas(loggedIn: Boolean) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setSpotifyCanvas(loggedIn)
             getSpotifyCanvas()
         }
@@ -1567,7 +1593,7 @@ class SettingsViewModel(
 
     // Lấy giá trị của killServiceOnExit từ DataStore
     fun getKillServiceOnExit() {
-        viewModelScope.launch {
+        observePreference("getKillServiceOnExit") {
             dataStoreManager.killServiceOnExit.collect { killServiceOnExit ->
                 _killServiceOnExit.emit(killServiceOnExit)
             }
@@ -1576,14 +1602,15 @@ class SettingsViewModel(
 
     // Lưu giá trị killServiceOnExit vào DataStore
     fun setKillServiceOnExit(kill: Boolean) {
-        viewModelScope.launch {
+        changePreference {
+            if (kill) dataStoreManager.setKeepServiceAlive(false)
             dataStoreManager.setKillServiceOnExit(kill)
             getKillServiceOnExit()
         }
     }
 
     fun getYoutubeSubtitleLanguage() {
-        viewModelScope.launch {
+        observePreference("getYoutubeSubtitleLanguage") {
             dataStoreManager.youtubeSubtitleLanguage.collect { language ->
                 _youtubeSubtitleLanguage.emit(language)
             }
@@ -1591,14 +1618,14 @@ class SettingsViewModel(
     }
 
     fun setYoutubeSubtitleLanguage(language: String) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setYoutubeSubtitleLanguage(language)
             getYoutubeSubtitleLanguage()
         }
     }
 
     fun getHelpBuildLyricsDatabase() {
-        viewModelScope.launch {
+        observePreference("getHelpBuildLyricsDatabase") {
             dataStoreManager.helpBuildLyricsDatabase.collect { helpBuildLyricsDatabase ->
                 _helpBuildLyricsDatabase.emit(helpBuildLyricsDatabase == DataStoreManager.TRUE)
             }
@@ -1606,7 +1633,7 @@ class SettingsViewModel(
     }
 
     fun setHelpBuildLyricsDatabase(help: Boolean) {
-        viewModelScope.launch {
+        changePreference {
             dataStoreManager.setHelpBuildLyricsDatabase(help)
             getHelpBuildLyricsDatabase()
         }
@@ -1687,6 +1714,7 @@ data class SettingAlertState(
     data class TextFieldData(
         val label: String,
         val value: String = "",
+        val sensitive: Boolean = false,
         // User typing string -> (true or false, If false, show error message)
         val verifyCodeBlock: ((String) -> Pair<Boolean, String?>)? = null,
     )

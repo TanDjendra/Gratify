@@ -1,5 +1,6 @@
 package com.tan.domain.data.model.streams
 
+@kotlinx.serialization.Serializable
 data class YouTubeWatchEndpoint(
     val videoId: String? = null,
     val playlistId: String? = null,
@@ -8,9 +9,11 @@ data class YouTubeWatchEndpoint(
     val index: Int? = null,
     val watchEndpointMusicSupportedConfigs: WatchEndpointMusicSupportedConfigs? = null,
 ) {
+    @kotlinx.serialization.Serializable
     data class WatchEndpointMusicSupportedConfigs(
         val watchEndpointMusicConfig: WatchEndpointMusicConfig,
     ) {
+        @kotlinx.serialization.Serializable
         data class WatchEndpointMusicConfig(
             val musicVideoType: String,
         ) {

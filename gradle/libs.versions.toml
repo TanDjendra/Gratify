@@ -1,38 +1,36 @@
 [versions]
-sentry = "8.58.0"
+sentry = "8.60.0"
 # App version
-version-name = "2.1.0"
-version-code = "61"
+version-name = "2.1.5"
+version-code = "66"
 
 android = "9.2.1"
 kotlin = "2.4.0"
 serialization = "2.4.0"
 ksp = "2.3.9"
-compose-bom = "2026.05.01"
-material3-expressive = "1.5.0-alpha21"
-constraintlayout-compose = "1.1.1"
+compose-bom = "2026.09.00"
+material3-expressive = "1.5.0-alpha22"
+constraintlayout-compose = "1.1.2"
 activity-compose = "1.13.0"
-lifecycle = "2.11.0-beta01"
-core-ktx = "1.19.0"
+lifecycle = "2.11.0"
+core-ktx = "1.19.1"
 appcompat = "1.7.1"
 work = "2.11.2"
 startup-runtime = "1.2.0"
-media3 = "1.10.1"
+media3 = "1.11.1"
 okhttp3 = "5.3.2"
 junit = "4.13.2"
 androidx-junit = "1.3.0"
 espresso-core = "3.7.0"
-room = "2.8.4"
-legacy-support-v4 = "1.0.0"
+room = "2.8.5"
 coroutines-android = "1.11.0"
 coroutines-guava = "1.11.0"
 navigation = "2.9.2"
 gson = "2.14.0"
-coil3 = "3.4.0"
+coil3 = "3.6.3"
 kmpalette = "3.1.0"
-easypermissions = "3.0.0"
 datastore-preferences = "1.2.1"
-paging = "3.5.0"
+paging = "3.5.2"
 customactivityoncrash = "2.4.0"
 aboutlibraries = "14.0.1" # BUG Can not upgrade version
 ktor = "3.5.0"
@@ -41,52 +39,51 @@ multiplatform-settings = "1.3.0"
 brotli = "0.1.2"
 ksoup = "0.6.0"
 desugaring = "2.1.5"
-koin-bom = "4.2.1"
+koin-bom = "4.2.2"
 md = "0.41.0"
 haze = "1.7.2"
 onetimepassword = "3.0.0"
-common = "1.22.0"
+common = "1.22.1"
 json = "1.11.0"
-slf4j = "1.7.36"
-newpipe = "v0.26.1"
 brave-newpipe = "v0.26.3"
 # org.json ships with the Android SDK but is absent on JVM desktop; PipePipeExtractor references it.
-org-json = "20231013"
+org-json = "20260814"
 pipepipe = "c3139c584d"
-webkit = "1.16.0"
 kermit = "2.1.0"
-paging-common = "3.5.0"
+paging-common = "3.5.2"
 glance = "1.1.1"
-liquid-glass = "2.0.0"
-liquid-glass-shapes = "1.2.0"
+liquid-glass = "2.0.1"
+liquid-glass-shapes = "1.2.1"
 ffmpeg-kit-audio = "6.0.1"
 composeHotReload = "1.1.1"
-composeMultiplatform = "1.11.1"
-datetime = "0.6.0"
+composeMultiplatform = "1.12.1"
 sqlite = "2.6.2"
 okio = "3.17.0"
 vlcj = "4.12.1"
 vlc = "3.0.23"
-material3-multiplatform = "1.12.0-alpha01"
+material3-multiplatform = "1.12.0-alpha03"
 adaptive = "1.2.0"
 material-icons-multiplatform = "1.7.3"
-componentsResources = "1.11.1"
-compottie = "2.2.1" # 2.2.0 buggy
+componentsResources = "1.12.1"
+compottie = "2.3.3"
 cmptoast = "1.0.71"
 uri = "0.0.21"
 buildkonfig = "0.21.2"
-jna = "5.19.0"
-jnaPlatform = "5.19.0"
+jna = "5.19.1"
 calf = "0.12.0"
 material = "1.14.0"
 osdetector = "1.7.3"
 tray = "1.3.0"
-commonsIo = "2.5"
 packagedeps = "0.2.5"
 conveyor = "2.0"
 firebase-bom = "33.1.0"
 google-services = "4.4.2"
-zxing = "3.5.3"
+zxing = "3.5.4"
+# Security patches for transitive extractor dependencies (see root resolution policy).
+wire-runtime = "6.4.5"
+commons-lang3 = "3.21.0"
+java-websocket = "1.6.0"
+jsoup = "1.23.2"
 play-services-code-scanner = "16.1.0"
 
 [libraries]
@@ -97,6 +94,7 @@ compose-material3-lib = { group = "androidx.compose.material3", name = "material
 compose-material3 = { group = "org.jetbrains.compose.material3", name = "material3", version.ref = "material3-multiplatform" }
 compose-material3-adaptive = { group = "org.jetbrains.compose.material3.adaptive", name = "adaptive", version.ref = "adaptive" }
 compose-ui = { group = "org.jetbrains.compose.ui", name = "ui", version.ref = "composeMultiplatform" }
+compose-ui-backhandler = { group = "org.jetbrains.compose.ui", name = "ui-backhandler", version.ref = "composeMultiplatform" }
 compose-material-ripple = { group = "org.jetbrains.compose.material", name = "material-ripple", version.ref = "composeMultiplatform" }
 compose-material-icons-core = { group = "org.jetbrains.compose.material", name = "material-icons-core", version.ref = "material-icons-multiplatform" }
 compose-material-icons-extended = { group = "org.jetbrains.compose.material", name = "material-icons-extended", version.ref = "material-icons-multiplatform" }
@@ -137,12 +135,10 @@ androidx-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.r
 androidx-room-migration = { module = "androidx.room:room-migration", version.ref = "room" }
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
-legacy-support-v4 = { group = "androidx.legacy", name = "legacy-support-v4", version.ref = "legacy-support-v4" }
 coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines-android" }
 coroutines-guava = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-guava", version.ref = "coroutines-guava" }
 navigation-compose = { group = "org.jetbrains.androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
-easypermissions = { group = "pub.devrel", name = "easypermissions", version.ref = "easypermissions" }
 datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore-preferences" }
 paging-compose = { group = "androidx.paging", name = "paging-compose", version.ref = "paging"}
 customactivityoncrash = { group = "cat.ereza", name = "customactivityoncrash", version.ref = "customactivityoncrash" }
@@ -154,13 +150,13 @@ kmpalette-core = { module = "com.kmpalette:kmpalette-core", version.ref = "kmpal
 kmpalette-network = { module = "com.kmpalette:extensions-network", version.ref = "kmpalette" }
 okhttp3-okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp3" }
 ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktor" }
+ktor-client-mock = { group = "io.ktor", name = "ktor-client-mock", version.ref = "ktor" }
 ktor-client-cio = { group = "io.ktor", name = "ktor-client-cio", version.ref = "ktor" }
 supabase-bom = { module = "io.github.jan-tennert.supabase:bom", version.ref = "supabase" }
 supabase-auth = { module = "io.github.jan-tennert.supabase:auth-kt" }
 supabase-postgrest = { module = "io.github.jan-tennert.supabase:postgrest-kt" }
 supabase-storage = { module = "io.github.jan-tennert.supabase:storage-kt" }
 multiplatform-settings = { module = "com.russhwolf:multiplatform-settings", version.ref = "multiplatform-settings" }
-multiplatform-settings-no-arg = { module = "com.russhwolf:multiplatform-settings-no-arg", version.ref = "multiplatform-settings" }
 ktor-client-okhttp = { group = "io.ktor", name = "ktor-client-okhttp", version.ref = "ktor" }
 ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
 ktor-client-encoding = { group = "io.ktor", name = "ktor-client-encoding", version.ref = "ktor" }
@@ -181,8 +177,6 @@ haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
 haze-material = { module = "dev.chrisbanes.haze:haze-materials", version.ref = "haze" }
 kotlin-onetimepassword = { module = "dev.turingcomplete:kotlin-onetimepassword", version.ref = "onetimepassword" }
 common = { module = "commons-codec:commons-codec", version.ref = "common" }
-logging = { module = "org.slf4j:slf4j-android", version.ref = "slf4j" }
-newpipe-extractor = { module = "com.github.teamnewpipe:NewPipeExtractor", version.ref = "newpipe" }
 brave-extractor = { module = "com.github.maxrave-dev:BravePipeExtractor", version.ref = "brave-newpipe" }
 org-json = { module = "org.json:json", version.ref = "org-json" }
 pipepipe-extractor = { module = "com.github.maxrave-dev:PipePipeExtractor", version.ref = "pipepipe" }
@@ -191,7 +185,6 @@ kermit-logging = { module = "co.touchlab:kermit", version.ref = "kermit" }
 glance = { group = "androidx.glance", name = "glance", version.ref = "glance" }
 glance-appwidget = { group = "androidx.glance", name = "glance-appwidget", version.ref = "glance" }
 glance-material3 = { group = "androidx.glance", name = "glance-material3", version.ref = "glance" }
-commons-io = { module = "commons-io:commons-io", version.ref = "commonsIo" }
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebase-bom" }
 firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
 
@@ -210,10 +203,6 @@ androidx-lifecycle-viewmodelCompose = { module = "org.jetbrains.androidx.lifecyc
 androidx-lifecycle-runtimeCompose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
 kotlinx-coroutinesSwing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "coroutines-android" }
 compottie = { module = "io.github.alexzhirkevich:compottie", version.ref = "compottie" }
-compottie-lite = { module = "io.github.alexzhirkevich:compottie-lite", version.ref = "compottie" }
-compottie-dot = { module = "io.github.alexzhirkevich:compottie-dot", version.ref = "compottie" }
-compottie-network = { module = "io.github.alexzhirkevich:compottie-network", version.ref = "compottie" }
-compottie-resources = { module = "io.github.alexzhirkevich:compottie-resources", version.ref = "compottie" }
 cmptoast = { module = "network.chaintech:cmptoast", version.ref = "cmptoast" }
 file-picker = { module = "com.mohamedrejeb.calf:calf-file-picker", version.ref = "calf" }
 native-tray = { module = "io.github.kdroidfilter:composenativetray", version.ref = "tray" }
@@ -221,7 +210,7 @@ native-tray = { module = "io.github.kdroidfilter:composenativetray", version.ref
 #JVM
 vlcj = { module = "uk.co.caprica:vlcj", version.ref = "vlcj" }
 jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
-jna-platform = { module = "net.java.dev.jna:jna-platform", version.ref = "jnaPlatform" }
+jna-platform = { module = "net.java.dev.jna:jna-platform", version.ref = "jna" }
 
 
 #Koin
@@ -234,7 +223,6 @@ koin-androidx-compose = { module = "io.insert-koin:koin-androidx-compose" }
 koin-android = { module = "io.insert-koin:koin-android"}
 
 
-androidx-webkit = { group = "androidx.webkit", name = "webkit", version.ref = "webkit" }
 
 androidx-paging-common = { group = "androidx.paging", name = "paging-common", version.ref = "paging-common" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }

@@ -1,5 +1,17 @@
 # Launch fixes, 2026-10-01
 
+## Integrasi resmi YouTube untuk uji terbatas
+
+`202610020002_youtube_oauth_connections.sql` diterapkan pada 4 Oktober 2026
+ke proyek `bnabldxsqpvkyqpjcsdv` setelah persetujuan aktivasi uji terbatas.
+Migrasi ini menyediakan penyimpanan token terenkripsi yang hanya dapat diakses
+backend serta callback OAuth sekali pakai. Aktivasi memerlukan akun pengelola
+proyek Google Cloud 1072882393306, API YouTube, redirect URI, dan secret Edge
+Function. Konfigurasi tersebut sudah terpasang; OAuth masih Testing untuk
+`supportgratify@gmail.com`. Enam pemeriksaan RLS/grant database aktif lulus.
+Rincian ada di [panduan aktivasi](../../docs/YOUTUBE_OAUTH_ACTIVATION.md) dan
+[laporan pemeriksaan](../../docs/YOUTUBE_ACTIVATION_CHECK_2026-10-04.md).
+
 Urutan perbaikan database yang disiapkan: `supabase_user_data_rls_hotfix.sql`,
 `supabase_social_rls_hotfix.sql`, lalu tujuh migrasi `20261001…` secara berurutan.
 Paket kompatibilitas UUID sudah diterapkan pada proyek Gratify aktif
@@ -49,3 +61,27 @@ RPC identitas baru memakai SECURITY DEFINER dengan search_path kosong dan pemeri
 Dua RPC snapshot baca memakai SECURITY INVOKER dan RLS. Setiap RPC mengembalikan
 satu nilai JSON berurutan agar playlist dengan lebih dari 1.000 lagu tidak
 terpotong oleh batas baris PostgREST. Tes menggunakan 1.025 lagu.
+
+Migrasi `202610020001_profile_playlist_pins.sql` diterapkan pada 2 Oktober 2026
+ke proyek aktif `bnabldxsqpvkyqpjcsdv`, setelah persetujuan pengguna. Migrasi
+memisahkan status publik dari pilihan dipajang di profil. Unpin mempertahankan
+tautan publik; profil yang disembunyikan menyembunyikan daftar profil, sedangkan
+playlist privat tetap dilindungi. Backfill pilihan lama hanya berjalan pertama kali.
+Verifikasi aktif mengonfirmasi kolom, tiga RPC, trigger, grant, policy cloud/shared,
+serta nol playlist privat yang masih dipin. Dua puluh pemeriksaan regresi lokal
+lulus pada skema TEXT dan UUID. Bukti: `artifacts/music-quality/profile-pin-verification.json`,
+`live-migration-verification.json`, dan `supabase-pin-migration-proof.jpg`.
+
+Migrasi `202610030002_playlist_saves_covers.sql` menyiapkan sampul privat yang
+mengikuti status publik playlist, RPC love/Simpan idempotent dengan pemeriksaan
+identitas akun, hitungan unik dari pengguna lain, pemulihan simpan lintas perangkat,
+serta pemeliharaan ID dan simpan saat sumber diubah privat. Jalur INSERT simpan APK
+lama tetap tersedia dengan RLS yang memeriksa publik/non-pemilik. Lima puluh
+pemeriksaan lokal pada skema TEXT dan UUID lulus. Status aktivasi dicatat dalam
+`docs/PLAYLIST_AUDIT_FIX_2026-10-03.md` dan artefak playlist-audit.
+
+Migrasi playlist di atas telah diterapkan pada 3 Oktober 2026 ke proyek aktif
+`bnabldxsqpvkyqpjcsdv`, sesuai permintaan perbaikan dan pilihan pengguna mengenai
+love/Simpan serta privasi sampul. Verifikasi aktif mengonfirmasi dua RPC baru,
+grant, bucket privat, tiga policy sampul, identitas tetap saat privat, dan nol
+selisih hitungan. Bukti tersimpan di `artifacts/playlist-audit-2026-10-03`.

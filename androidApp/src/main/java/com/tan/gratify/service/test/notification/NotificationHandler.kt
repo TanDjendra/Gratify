@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -24,40 +25,42 @@ object NotificationHandler {
     ) {
         //  No back-stack when launched
         val action = Intent(context, MainActivity::class.java)
-        action.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        action.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         action.data = "gratify://notification".toUri()
         val pendingIntent =
             PendingIntent.getActivity(
                 context,
                 0,
                 action,
-                PendingIntent.FLAG_IMMUTABLE,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
 
-        val contentText = if (noti.single.isNotEmpty()) {
-            "${ComposeResUtils.getResString(ComposeResUtils.StringType.NEW_SINGLES)}: ${noti.single.joinToString { it.title }}"
-        } else {
-            "${ComposeResUtils.getResString(ComposeResUtils.StringType.NEW_ALBUMS)}: ${noti.album.joinToString { it.title }}"
-        }
+        val contentText = listOfNotNull(
+            noti.single.takeIf { it.isNotEmpty() }?.let { "${ComposeResUtils.getResString(ComposeResUtils.StringType.NEW_SINGLES)}: ${it.joinToString { item -> item.title }}" },
+            noti.album.takeIf { it.isNotEmpty() }?.let { "${ComposeResUtils.getResString(ComposeResUtils.StringType.NEW_ALBUMS)}: ${it.joinToString { item -> item.title }}" },
+        ).joinToString("\n")
         val builder =
             NotificationCompat
                 .Builder(context, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_launcher_foreground_vector)
+                .setSmallIcon(R.drawable.monochrome)
                 .setContentTitle(noti.name)
                 .setContentText(contentText)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(contentText))
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setContentIntent(pendingIntent) // For launching the MainActivity
                 .setAutoCancel(true) // Remove notification when tapped
-                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // Show on lock screen
+                .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
         with(NotificationManagerCompat.from(context)) {
-            if (ActivityCompat.checkSelfPermission(
+            if (!areNotificationsEnabled()) return
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && ActivityCompat.checkSelfPermission(
                     context,
                     Manifest.permission.POST_NOTIFICATIONS,
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
                 return
             }
-            notify(noti.hashCode(), builder.build())
+            try { notify(noti.channelId.hashCode() xor 0x41000000, builder.build()) }
+            catch (_: SecurityException) { /* Permission can change between checking and posting. */ }
         }
     }
 
@@ -68,9 +71,8 @@ object NotificationHandler {
         val notificationManager: NotificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (notificationManager.getNotificationChannel(CHANNEL_ID) == null) {
-            val name = "Update Followed Artists"
-            val descriptionText =
-                "This channel sends notification when followed artists release new music"
+            val name = context.getString(R.string.notif_channel_artists)
+            val descriptionText = context.getString(R.string.notif_channel_artists_hint)
             val importance = NotificationManager.IMPORTANCE_HIGH
             val channel =
                 NotificationChannel(CHANNEL_ID, name, importance).apply {

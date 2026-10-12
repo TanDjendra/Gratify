@@ -36,6 +36,7 @@ fun MiniPlayer(
     sharedViewModel: SharedViewModel = koinInject(),
     onClose: () -> Unit,
     onClick: () -> Unit,
+    progressEnabled: Boolean = true,
 ) {
     val playing by sharedViewModel.nowPlayingState.collectAsStateWithLifecycle()
     val controls by sharedViewModel.controllerState.collectAsStateWithLifecycle()
@@ -80,7 +81,7 @@ fun MiniPlayer(
                 Icon(Icons.Default.Close, stringResource(Res.string.close_miniplayer))
             }
         },
-        progress = { MiniPlayerProgress(sharedViewModel) },
+        progress = { if (progressEnabled) MiniPlayerProgress(sharedViewModel) },
     )
 }
 
@@ -178,7 +179,7 @@ private fun MiniPlayerProgress(viewModel: SharedViewModel) {
         (timeline.current.toFloat() / timeline.total).coerceIn(0f, 1f)
     } else 0f
     if (getPlatform() == Platform.Desktop) {
-        Slider(value = progress, onValueChange = { viewModel.onUIEvent(UIEvent.UpdateProgress(it)) }, modifier = Modifier.fillMaxWidth().height(20.dp))
+        Slider(value = progress, onValueChange = { viewModel.onUIEvent(UIEvent.UpdateProgress(it * 100f)) }, modifier = Modifier.fillMaxWidth().height(20.dp))
     } else LinearProgressIndicator(
         progress = { progress },
         modifier = Modifier.fillMaxWidth().height(2.dp),

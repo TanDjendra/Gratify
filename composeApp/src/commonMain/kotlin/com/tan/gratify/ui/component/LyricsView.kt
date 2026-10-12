@@ -1,5 +1,7 @@
 package com.tan.gratify.ui.component
 
+import com.tan.gratify.ui.component.lyrics.toShareLyricsLines
+import com.tan.gratify.ui.component.lyrics.stripRichLyricsTimestamps
 import androidx.compose.ui.text.style.TextOverflow
 
 import com.tan.gratify.ui.theme.GratifyColors
@@ -24,6 +26,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.MarqueeAnimationMode
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -48,6 +51,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.rounded.Animation
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.QueueMusic
 import androidx.compose.material.icons.outlined.Info
@@ -56,11 +61,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -118,6 +121,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import gratify.composeapp.generated.resources.lyrics_animation_on
+import gratify.composeapp.generated.resources.lyrics_no_animation
+import gratify.composeapp.generated.resources.share_lyrics
 import gratify.composeapp.generated.resources.Res
 import gratify.composeapp.generated.resources.baseline_more_vert_24
 import gratify.composeapp.generated.resources.crossfading
@@ -135,9 +141,9 @@ private const val MIN_WIPE_MS = 150
 
 // Repeated lyrics palette tokens hoisted to file scope: avoids re-allocating
 // the same Color() objects on every recomposition of every line item.
-private val DimOriginalColor = GratifyColors.TextSecondary.copy(alpha = 0.35f)
-private val DimTranslatedColor = Color(0xFF97971A).copy(alpha = 0.3f)
-private val DimRichPendingColor = GratifyColors.TextSecondary.copy(alpha = 0.6f)
+private val DimOriginalColor = GratifyColors.TextSecondary.copy(alpha = 0.78f)
+private val DimTranslatedColor = GratifyColors.TextSecondary.copy(alpha = 0.7f)
+private val DimRichPendingColor = GratifyColors.TextSecondary.copy(alpha = 0.8f)
 
 private data class TimedLineIndex(
     val index: Int,
@@ -253,6 +259,11 @@ fun LyricsView(
     showScrollShadows: Boolean = false,
     backgroundColor: Color = GratifyColors.SurfaceRaised,
     hasBlurBackground: Boolean = false,
+    accentColor: Color = Color.White.copy(alpha = 0.82f),
+    appleMusicStyle: Boolean = true,
+    isPlaying: Boolean = false,
+    animationsEnabled: Boolean = false,
+    onShareLyrics: ((Int) -> Unit)? = null,
 ) {
     val listState = rememberLazyListState()
     val current by timeLine.collectAsStateWithLifecycle()
@@ -263,7 +274,9 @@ fun LyricsView(
                 .orEmpty()
                 .mapIndexedNotNull { index, line ->
                     line.startTimeMs.toLongOrNull()?.let { TimedLineIndex(index, it) }
-                }.sortedBy { it.startTimeMs }
+                }.let { timed ->
+                    if (timed.distinctBy { it.startTimeMs }.size <= 1) emptyList() else timed.sortedBy { it.startTimeMs }
+                }
         }
 
     val currentLineIndex by remember(timedLineIndexes) {
@@ -284,7 +297,7 @@ fun LyricsView(
                 thresholdMs = 1000L,
             )
         }
-    LaunchedEffect(currentLineIndex, lyricsData.lyrics.syncType) {
+    LaunchedEffect(currentLineIndex, lyricsData.lyrics.syncType, animationsEnabled) {
         if (currentLineIndex > -1 &&
             (lyricsData.lyrics.syncType == "LINE_SYNCED" || lyricsData.lyrics.syncType == "RICH_SYNCED")
         ) {
@@ -295,6 +308,8 @@ fun LyricsView(
     Box(modifier = modifier) {
         LazyColumn(
             state = listState,
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxSize(),
         ) {
             items(lyricsData.lyrics.lines?.size ?: 0) { index ->
@@ -313,6 +328,37 @@ fun LyricsView(
 
                 line?.words?.let { words ->
                     when {
+                        appleMusicStyle -> {
+                            val unsynced = lyricsData.lyrics.syncType != "LINE_SYNCED" && lyricsData.lyrics.syncType != "RICH_SYNCED"
+                            val parsed = remember(words, line.startTimeMs, line.endTimeMs, lyricsData.lyrics.syncType) {
+                                if (lyricsData.lyrics.syncType == "RICH_SYNCED") parseRichSyncWords(words, line.startTimeMs, line.endTimeMs) else null
+                            }
+                            val plainText = remember(words, parsed) {
+                                if (parsed == null) stripRichLyricsTimestamps(words) else words
+                            }
+                            val active = unsynced || index == currentLineIndex
+                            AppleMusicLyricsLine(
+                                text = plainText,
+                                translation = translatedWords,
+                                parsed = parsed,
+                                nowMs = if (parsed != null && active) current.current else 0L,
+                                active = active,
+                                isPlaying = parsed != null && active && isPlaying,
+                                translationColor = accentColor,
+                                animationsEnabled = animationsEnabled,
+                                modifier = Modifier.appleLyricsFocus(
+                                    if (currentLineIndex >= 0) index - currentLineIndex else 0,
+                                    hasActiveLine = currentLineIndex >= 0, unsynced = unsynced,
+                                ).combinedClickable(
+                                    onLongClick = onShareLyrics?.let { callback -> { callback(index) } },
+                                    onClick = {
+                                        if (!unsynced) line.startTimeMs.toFloatOrNull()?.let { start ->
+                                            if (timeLine.value.total > 0) onLineClick((start * 100 / timeLine.value.total).coerceIn(0f, 100f))
+                                        }
+                                    },
+                                )
+                            )
+                        }
                         // Rich sync: parse and use RichSyncLyricsLineItem
                         lyricsData.lyrics.syncType == "RICH_SYNCED" -> {
                             val parsedLine =
@@ -325,12 +371,15 @@ fun LyricsView(
                                 RichSyncLyricsLineItem(
                                     parsedLine = parsedLine,
                                     translatedWords = translatedWords,
+                                    accentColor = accentColor,
                                     currentTimeMs = current.current,
                                     isCurrent = index == currentLineIndex,
                                     modifier =
                                         Modifier
                                             .clickable {
-                                                onLineClick(line.startTimeMs.toFloat() * 100 / timeLine.value.total)
+                                                line.startTimeMs.toFloatOrNull()?.let { start ->
+                                                    if (timeLine.value.total > 0) onLineClick((start * 100 / timeLine.value.total).coerceIn(0f, 100f))
+                                                }
                                             },
                                 )
                             } else {
@@ -338,12 +387,15 @@ fun LyricsView(
                                 LyricsLineItem(
                                     originalWords = words,
                                     translatedWords = translatedWords,
+                                    accentColor = accentColor,
                                     isBold = index <= currentLineIndex,
                                     isCurrent = index == currentLineIndex,
                                     modifier =
                                         Modifier
                                             .clickable {
-                                                onLineClick(line.startTimeMs.toFloat() * 100 / timeLine.value.total)
+                                                line.startTimeMs.toFloatOrNull()?.let { start ->
+                                                    if (timeLine.value.total > 0) onLineClick((start * 100 / timeLine.value.total).coerceIn(0f, 100f))
+                                                }
                                             },
                                 )
                             }
@@ -354,12 +406,15 @@ fun LyricsView(
                             LyricsLineItem(
                                 originalWords = words,
                                 translatedWords = translatedWords,
+                                accentColor = accentColor,
                                 isBold = index <= currentLineIndex || lyricsData.lyrics.syncType != "LINE_SYNCED",
                                 isCurrent = index == currentLineIndex || lyricsData.lyrics.syncType != "LINE_SYNCED",
                                 modifier =
                                     Modifier
                                         .clickable(enabled = lyricsData.lyrics.syncType == "LINE_SYNCED") {
-                                            onLineClick(line.startTimeMs.toFloat() * 100 / timeLine.value.total)
+                                            line.startTimeMs.toFloatOrNull()?.let { start ->
+                                                    if (timeLine.value.total > 0) onLineClick((start * 100 / timeLine.value.total).coerceIn(0f, 100f))
+                                                }
                                         },
                             )
                         }
@@ -377,6 +432,7 @@ fun LyricsLineItem(
     isBold: Boolean,
     isCurrent: Boolean = false,
     modifier: Modifier = Modifier,
+    accentColor: Color = Color.White.copy(alpha = 0.82f),
 ) {
     Crossfade(targetState = isBold) {
         if (it) {
@@ -386,14 +442,14 @@ fun LyricsLineItem(
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = originalWords,
-                    style = typo().headlineLarge,
+                    style = typo().headlineLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
                     color = if (isCurrent) Color.White else DimOriginalColor,
                 )
                 if (translatedWords != null) {
                     Text(
                         text = translatedWords,
                         style = typo().bodyMedium,
-                        color = if (isCurrent) Color.Yellow else DimTranslatedColor,
+                        color = if (isCurrent) accentColor else DimTranslatedColor,
                     )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
@@ -407,7 +463,7 @@ fun LyricsLineItem(
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = originalWords,
-                style = typo().headlineMedium,
+                style = typo().headlineLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
                 color = DimOriginalColor,
             )
             if (translatedWords != null) {
@@ -432,6 +488,7 @@ fun RichSyncLyricsLineItem(
     customFontSize: TextUnit? = null,
     customPadding: Dp = 12.dp,
     modifier: Modifier = Modifier,
+    accentColor: Color = Color.White.copy(alpha = 0.82f),
 ) {
     val currentWordIndex by remember(currentTimeMs, parsedLine.words) {
         derivedStateOf {
@@ -486,7 +543,7 @@ fun RichSyncLyricsLineItem(
             Text(
                 text = translatedWords,
                 style = typo().bodyMedium,
-                color = if (isCurrent) Color.Yellow else DimTranslatedColor,
+                color = if (isCurrent) accentColor else DimTranslatedColor,
             )
         }
 
@@ -583,693 +640,35 @@ fun FullscreenLyricsSheet(
     shouldHaze: Boolean,
     onDismiss: () -> Unit,
 ) {
-    val screenDataState by sharedViewModel.nowPlayingScreenData.collectAsStateWithLifecycle()
-    val timelineState by sharedViewModel.timeline.collectAsStateWithLifecycle()
-    val controllerState by sharedViewModel.controllerState.collectAsStateWithLifecycle()
-
-    val sheetState =
-        rememberModalBottomSheetState(
-            skipPartiallyExpanded = true,
-        )
-    val coroutineScope = rememberCoroutineScope()
-    val localDensity = LocalDensity.current
-    val windowInsets = WindowInsets.systemBars
-
-    var sliderValue by rememberSaveable {
-        mutableFloatStateOf(0f)
-    }
-
-    // Auto-hide controls state - Only hide control buttons, not title/progress
-    var showControlButtons by rememberSaveable {
-        mutableStateOf(true)
-    }
-
-    var showNowPlayingSheet by rememberSaveable {
-        mutableStateOf(false)
-    }
-
-    // Animated gradient colors - SMOOTH ANIMATION
-    val startColor = remember { Animatable(color) }
-    val midColor1 = remember { Animatable(color.copy(alpha = 0.95f)) }
-    val midColor2 = remember { Animatable(color.copy(alpha = 0.85f)) }
-    val endColor = remember { Animatable(Color.Black) }
-
-    // Dynamic gradient animation - MULTIPLE DIRECTIONS
-    // Replaces the previous `while(true) { delay(16) }` loop with a Compose
-    // infinite transition. When haze is ON the gradient is hidden, so we keep
-    // values at 0f and skip the transition entirely.
-    val gradientAngle: Float
-    val gradientOffsetX: Float
-    val gradientOffsetY: Float
-    if (!shouldHaze) {
-        val gradientTransition = rememberInfiniteTransition(label = "lyricsGradient")
-        val animatedAngle by gradientTransition.animateFloat(
-            initialValue = -45f,
-            targetValue = 45f,
-            animationSpec =
-                infiniteRepeatable(
-                    animation = tween(durationMillis = 6000, easing = LinearEasing),
-                    repeatMode = RepeatMode.Reverse,
-                ),
-            label = "lyricsGradientAngle",
-        )
-        val animatedOffsetX by gradientTransition.animateFloat(
-            initialValue = -1500f,
-            targetValue = 1500f,
-            animationSpec =
-                infiniteRepeatable(
-                    animation = tween(durationMillis = 8000, easing = LinearEasing),
-                    repeatMode = RepeatMode.Reverse,
-                ),
-            label = "lyricsGradientOffsetX",
-        )
-        val animatedOffsetY by gradientTransition.animateFloat(
-            initialValue = -1000f,
-            targetValue = 1000f,
-            animationSpec =
-                infiniteRepeatable(
-                    animation = tween(durationMillis = 8000, easing = LinearEasing),
-                    repeatMode = RepeatMode.Reverse,
-                ),
-            label = "lyricsGradientOffsetY",
-        )
-        gradientAngle = animatedAngle
-        gradientOffsetX = animatedOffsetX
-        gradientOffsetY = animatedOffsetY
-    } else {
-        gradientAngle = 0f
-        gradientOffsetX = 0f
-        gradientOffsetY = 0f
-    }
-
-    // Smooth color animation based on lyrics color — only when haze is OFF
-    LaunchedEffect(color, shouldHaze) {
-        if (!shouldHaze) {
-            launch {
-                startColor.animateTo(
-                    targetValue = color,
-                    animationSpec = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
-                )
-            }
-            launch {
-                midColor1.animateTo(
-                    targetValue = color.copy(alpha = 0.95f),
-                    animationSpec = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
-                )
-            }
-            launch {
-                midColor2.animateTo(
-                    targetValue = color.copy(alpha = 0.85f),
-                    animationSpec = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
-                )
-            }
-            launch {
-                endColor.animateTo(
-                    targetValue = Color.Black,
-                    animationSpec = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
-                )
-            }
-        }
-    }
-
-    // Reset auto-hide timer when controls are shown
-    LaunchedEffect(key1 = showControlButtons) {
-        if (showControlButtons) {
-            delay(4000) // Hide after 4 seconds
-            showControlButtons = false
-        }
-    }
-
-    LaunchedEffect(key1 = timelineState) {
-        sliderValue =
-            if (timelineState.total > 0L) {
-                timelineState.current.toFloat() * 100 / timelineState.total.toFloat()
-            } else {
-                0f
-            }
-    }
-
-    if (screenDataState.lyricsData != null) {
-        KeepScreenOn()
-    }
-
-    var showQueueBottomSheet by rememberSaveable {
-        mutableStateOf(false)
-    }
-
-    var showInfoBottomSheet by rememberSaveable {
-        mutableStateOf(false)
-    }
-
-    ModalBottomSheet(
-        onDismissRequest = {
-            onDismiss()
-        },
-        containerColor = Color.Black,
-        contentColor = Color.Transparent,
-        dragHandle = {},
-        scrimColor = Color.Black.copy(alpha = .5f),
-        sheetState = sheetState,
-        modifier =
-            Modifier
-                .fillMaxHeight()
-                .clickable(
-                    indication = null,
-                    interactionSource = remember { MutableInteractionSource() },
-                ) {
-                    // Show controls on tap
-                    showControlButtons = true
-                },
-        contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
-        shape = RectangleShape,
-    ) {
-        // Crossfade: RGB rainbow color cycling when transitioning between tracks
-        val infiniteTransition = rememberInfiniteTransition(label = "crossfadeRainbow")
-        val rainbowHue by infiniteTransition.animateFloat(
-            initialValue = 0f,
-            targetValue = 360f,
-            animationSpec =
-                infiniteRepeatable(
-                    animation = tween(1000, easing = LinearEasing),
-                    repeatMode = RepeatMode.Restart,
-                ),
-            label = "rainbowHue",
-        )
-        val rainbowColor = hsvToColor(rainbowHue, 1f, 1f)
-        val sliderTrackColor by animateColorAsState(
-            targetValue = if (timelineState.isCrossfading) rainbowColor else Color.White,
-            animationSpec = tween(300),
-            label = "sliderCrossfadeColor",
-        )
-        Box(modifier = Modifier.fillMaxSize()) {
-            // ── Haze state (used only when shouldHaze = true) ─────────────────
-            val hazeState = rememberHazeState(blurEnabled = true)
-
-            if (shouldHaze) {
-                // Full-screen album art as haze SOURCE — blurred poster background
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            ,
-                ) {
-                    AsyncImage(
-                        model =
-                            ImageRequest
-                                .Builder(LocalPlatformContext.current)
-                                .data(screenDataState.thumbnailURL)
-                                .crossfade(300)
-                                .diskCachePolicy(CachePolicy.ENABLED)
-                                .diskCacheKey(screenDataState.thumbnailURL)
-                                .build(),
-                        contentDescription = null,
-                        contentScale = ContentScale.FillHeight,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
-            } else {
-                // Animated gradient background — only shown when haze is OFF
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.linearGradient(
-                                    colors =
-                                        listOf(
-                                            startColor.value,
-                                            midColor1.value,
-                                            midColor2.value,
-                                            endColor.value.copy(alpha = 0.9f),
-                                            endColor.value,
-                                        ),
-                                    start =
-                                        Offset(
-                                            x = gradientOffsetX + (cos(gradientAngle * PI.toFloat() / 180f) * 800f),
-                                            y = gradientOffsetY + (sin(gradientAngle * PI.toFloat() / 180f) * 800f),
-                                        ),
-                                    end =
-                                        Offset(
-                                            x = gradientOffsetX + 2500f + (cos((gradientAngle + 180f) * PI.toFloat() / 180f) * 800f),
-                                            y = gradientOffsetY + 2500f + (sin((gradientAngle + 180f) * PI.toFloat() / 180f) * 800f),
-                                        ),
-                                ),
-                            ),
-                )
-            }
-
-            // ── Foreground content column ─────────────────────────────────────
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        // Apply frosted glass haze effect over the poster when enabled
-                        .then(
-                            if (shouldHaze) {
-                                Modifier
-                            } else {
-                                Modifier
-                            },
-                        ).padding(
-                            bottom =
-                                with(localDensity) {
-                                    windowInsets.getBottom(localDensity).toDp()
-                                },
-                            top =
-                                with(localDensity) {
-                                    windowInsets.getTop(localDensity).toDp()
-                                },
-                        ),
-            ) {
-                // New Apple Music Style Header
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 36.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    // Song Poster (Small, Top Left)
-                    AsyncImage(
-                        model =
-                            ImageRequest
-                                .Builder(LocalPlatformContext.current)
-                                .data(screenDataState.thumbnailURL)
-                                .crossfade(300)
-                                .diskCachePolicy(CachePolicy.ENABLED)
-                                .diskCacheKey(screenDataState.thumbnailURL)
-                                .build(),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier =
-                            Modifier
-                                .size(45.dp)
-                                .clip(GratifyShapes.small),
-                    )
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    // Song Info Column
-                    Column(
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        // Song Name
-                        Text(
-                            text = screenDataState.nowPlayingTitle,
-                            style = typo().labelSmall,
-                            color = Color.White,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier =
-                                Modifier
-                                    .focusable(),
-                        )
-
-                        Spacer(modifier = Modifier.height(2.dp))
-
-                        // Artist Name with Explicit Badge
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier =
-                                Modifier.clickable {
-                                    coroutineScope.launch {
-                                        val song = sharedViewModel.nowPlayingState.value?.songEntity
-                                        (
-                                            song?.artistId?.firstOrNull()?.takeIf { it.isNotEmpty() }
-                                                ?: screenDataState.songInfoData?.authorId
-                                        )?.let { channelId ->
-                                            sheetState.hide()
-                                            onDismiss()
-                                            navController.navigate(
-                                                ArtistDestination(
-                                                    channelId = channelId,
-                                                ),
-                                            )
-                                        }
-                                    }
-                                },
-                        ) {
-                            if (screenDataState.isExplicit) {
-                                ExplicitBadge(
-                                    modifier =
-                                        Modifier
-                                            .size(16.dp)
-                                            .padding(end = 4.dp),
-                                )
-                            }
-                            Text(
-                                text = screenDataState.artistName,
-                                style = typo().bodySmall,
-                                color = Color.White.copy(alpha = 0.7f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier =
-                                    Modifier
-                                        .focusable(),
-                            )
-                        }
+    val screen by sharedViewModel.nowPlayingScreenData.collectAsStateWithLifecycle()
+    val controls by sharedViewModel.controllerState.collectAsStateWithLifecycle()
+    val motion by sharedViewModel.lyricsAnimationsEnabled.collectAsStateWithLifecycle()
+    val handler: com.tan.domain.mediaservice.handler.MediaPlayerHandler = org.koin.compose.koinInject()
+    val queueData by handler.queueData.collectAsStateWithLifecycle()
+    val queue = queueData?.data?.listTracks.orEmpty()
+    val now by sharedViewModel.nowPlayingState.collectAsStateWithLifecycle()
+    val index = queue.indexOfFirst { it.videoId == now?.track?.videoId }
+    val pager = androidx.compose.foundation.pager.rememberPagerState(initialPage = index.coerceAtLeast(0)) { queue.size.coerceAtLeast(1) }
+    var queueSheet by remember { mutableStateOf(false) }
+    var infoSheet by remember { mutableStateOf(false) }
+    var moreSheet by remember { mutableStateOf(false) }
+    PlayerModalSheet(onDismiss = onDismiss) { dismiss ->
+        com.tan.gratify.ui.screen.player.AppleMusicPlayerContent(
+            state = com.tan.gratify.ui.screen.player.AppleMusicPlayerState(
+                screen, controls, sharedViewModel.timeline, queue, index, color,
+                com.tan.gratify.ui.screen.player.AppleMusicPlayerTab.LYRICS, pager, lyricsAnimationsEnabled = motion),
+            actions = com.tan.gratify.ui.screen.player.AppleMusicPlayerActions(
+                sharedViewModel::onUIEvent, {}, handler::playMediaItemInMediaSource, sharedViewModel::setBitmap,
+                dismiss, { moreSheet = true }, { infoSheet = true }, {
+                    now?.track?.artists?.firstOrNull()?.id?.let { artist ->
+                        dismiss(); navController.navigate(com.tan.gratify.ui.navigation.destination.list.ArtistDestination(artist))
                     }
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    // Like Button (Heart)
-                    HeartCheckBox(
-                        checked = controllerState.isLiked,
-                        size = 28,
-                    ) {
-                        sharedViewModel.onUIEvent(UIEvent.ToggleLike)
-                    }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    // Three Dot Menu
-                    IconButton(
-                        onClick = { showNowPlayingSheet = true },
-                    ) {
-                        Icon(
-                            painter = painterResource(Res.drawable.baseline_more_vert_24),
-                            contentDescription = "",
-                            tint = Color.White,
-                        )
-                    }
-                }
-
-                // Lyrics Content - Expands when controls are hidden
-                Box(
-                    modifier =
-                        Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .padding(horizontal = 50.dp),
-                ) {
-                    Crossfade(
-                        targetState = screenDataState.lyricsData != null,
-                        modifier = Modifier.fillMaxSize(),
-                    ) {
-                        if (it) {
-                            screenDataState.lyricsData?.let { lyrics ->
-                                LyricsView(
-                                    lyricsData = lyrics,
-                                    timeLine = sharedViewModel.timeline,
-                                    onLineClick = { f ->
-                                        sharedViewModel.onUIEvent(UIEvent.UpdateProgress(f))
-                                    },
-                                    modifier = Modifier.fillMaxSize(),
-                                    showScrollShadows = true,
-                                    backgroundColor = startColor.value,
-                                    hasBlurBackground = shouldHaze,
-                                )
-                            }
-                        } else {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(
-                                    text = stringResource(Res.string.unavailable),
-                                    style = typo().bodyMedium,
-                                    color = Color.White,
-                                    textAlign = TextAlign.Center,
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Progress Bar and Time - Always visible
-                Column {
-                    // Real Slider
-                    Box(
-                        Modifier
-                            .padding(
-                                top = 15.dp,
-                            ).padding(horizontal = 40.dp),
-                    ) {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(24.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Crossfade(timelineState.loading) {
-                                if (it) {
-                                    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
-                                        LinearProgressIndicator(
-                                            modifier =
-                                                Modifier
-                                                    .fillMaxWidth()
-                                                    .height(4.dp)
-                                                    .padding(
-                                                        horizontal = 3.dp,
-                                                    ).clip(
-                                                        GratifyShapes.small,
-                                                    ),
-                                            color = GratifyColors.TextSecondary,
-                                            trackColor = GratifyColors.SurfaceHighest,
-                                            strokeCap = StrokeCap.Round,
-                                        )
-                                    }
-                                } else {
-                                    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
-                                        LinearProgressIndicator(
-                                            progress = { timelineState.bufferedPercent.toFloat() / 100 },
-                                            modifier =
-                                                Modifier
-                                                    .fillMaxWidth()
-                                                    .height(4.dp)
-                                                    .padding(
-                                                        horizontal = 3.dp,
-                                                    ).clip(
-                                                        GratifyShapes.small,
-                                                    ),
-                                            color = GratifyColors.TextSecondary,
-                                            trackColor = GratifyColors.SurfaceHighest,
-                                            strokeCap = StrokeCap.Round,
-                                            drawStopIndicator = {},
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
-                            Slider(
-                                value = sliderValue,
-                                onValueChange = {
-                                    sharedViewModel.onUIEvent(
-                                        UIEvent.UpdateProgress(it),
-                                    )
-                                },
-                                valueRange = 0f..100f,
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(top = 3.dp)
-                                        .align(
-                                            Alignment.TopCenter,
-                                        ),
-                                track = { sliderState ->
-                                    SliderDefaults.Track(
-                                        modifier =
-                                            Modifier
-                                                .height(5.dp),
-                                        enabled = true,
-                                        sliderState = sliderState,
-                                        colors =
-                                            SliderDefaults.colors().copy(
-                                                thumbColor = sliderTrackColor,
-                                                activeTrackColor = sliderTrackColor,
-                                                inactiveTrackColor = Color.Transparent,
-                                            ),
-                                        thumbTrackGapSize = 0.dp,
-                                        drawTick = { _, _ -> },
-                                        drawStopIndicator = null,
-                                    )
-                                },
-                                thumb = {
-                                    SliderDefaults.Thumb(
-                                        modifier =
-                                            Modifier
-                                                .height(18.dp)
-                                                .width(8.dp)
-                                                .padding(
-                                                    vertical = 4.dp,
-                                                ),
-                                        thumbSize = DpSize(8.dp, 8.dp),
-                                        interactionSource =
-                                            remember {
-                                                MutableInteractionSource()
-                                            },
-                                        colors =
-                                            SliderDefaults.colors().copy(
-                                                thumbColor = Color.White,
-                                                activeTrackColor = Color.White,
-                                                inactiveTrackColor = Color.Transparent,
-                                            ),
-                                        enabled = true,
-                                    )
-                                },
-                            )
-                        }
-                    }
-                    LazyColumn {
-                        item {
-                            // Time Layout
-                            Row(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 40.dp),
-                            ) {
-                                Text(
-                                    text = formatDuration(timelineState.current),
-                                    style = typo().bodyMedium,
-                                    modifier = Modifier.weight(1f),
-                                    textAlign = TextAlign.Left,
-                                )
-                                AnimatedVisibility(
-                                    enter = fadeIn(),
-                                    exit = fadeOut(),
-                                    visible = timelineState.isCrossfading,
-                                ) {
-                                    Text(
-                                        text = stringResource(Res.string.crossfading),
-                                        style = typo().bodyMedium,
-                                        modifier = Modifier.weight(1f),
-                                        textAlign = TextAlign.Center,
-                                    )
-                                }
-                                Text(
-                                    text = formatDuration(timelineState.total),
-                                    style = typo().bodyMedium,
-                                    modifier = Modifier.weight(1f),
-                                    textAlign = TextAlign.Right,
-                                )
-                            }
-
-                            Spacer(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .height(5.dp),
-                            )
-                        }
-
-                        item {
-                            // Control Buttons - Animated visibility
-                            AnimatedVisibility(
-                                visible = showControlButtons,
-                                enter =
-                                    expandVertically(
-                                        tween(300),
-                                    ),
-                                exit =
-                                    shrinkVertically(
-                                        tween(300),
-                                    ),
-                            ) {
-                                PlayerControlLayout(controllerState) {
-                                    sharedViewModel.onUIEvent(it)
-                                }
-                            }
-                            AnimatedVisibility(
-                                visible = showControlButtons,
-                                enter =
-                                    expandVertically(
-                                        tween(300),
-                                    ),
-                                exit =
-                                    shrinkVertically(
-                                        tween(300),
-                                    ),
-                            ) {
-                                // List Bottom Buttons
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .height(32.dp)
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 40.dp),
-                                ) {
-                                    IconButton(
-                                        modifier =
-                                            Modifier
-                                                .size(24.dp)
-                                                .aspectRatio(1f)
-                                                .align(Alignment.CenterStart)
-                                                .clip(
-                                                    CircleShape,
-                                                ),
-                                        onClick = {
-                                            showInfoBottomSheet = true
-                                            showControlButtons = true
-                                        },
-                                    ) {
-                                        Icon(imageVector = Icons.Outlined.Info, tint = Color.White, contentDescription = "")
-                                    }
-                                    Row(
-                                        Modifier.align(Alignment.CenterEnd),
-                                    ) {
-                                        Spacer(modifier = Modifier.size(8.dp))
-                                        IconButton(
-                                            modifier =
-                                                Modifier
-                                                    .size(24.dp)
-                                                    .aspectRatio(1f)
-                                                    .clip(
-                                                        CircleShape,
-                                                    ),
-                                            onClick = {
-                                                showQueueBottomSheet = true
-                                                showControlButtons = true
-                                            },
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.AutoMirrored.Outlined.QueueMusic,
-                                                tint = Color.White,
-                                                contentDescription = "",
-                                            )
-                                        }
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(20.dp))
-                            }
-                        }
-                    }
-                }
-
-                // When control buttons are hidden, add spacer to maintain proper spacing
-                if (!showControlButtons) {
-                    Spacer(modifier = Modifier.height(20.dp))
-                }
-            }
-        }
-    }
-    if (showQueueBottomSheet) {
-        QueueBottomSheet(
-            onDismiss = {
-                showQueueBottomSheet = false
-            },
+                }, {}, {}, { queueSheet = true }, onLyricsAnimationsChange = sharedViewModel::setLyricsAnimationsEnabled),
+            fullscreenLyrics = true,
         )
-    }
-    if (showInfoBottomSheet) {
-        InfoPlayerBottomSheet(
-            onDismiss = {
-                showInfoBottomSheet = false
-            },
-        )
-    }
-    if (showNowPlayingSheet) {
-        NowPlayingBottomSheet(
-            onDismiss = {
-                showNowPlayingSheet = false
-            },
-            navController = navController,
-            onNavigateToOtherScreen = {
-                onDismiss()
-            },
-            song = null,
-            setSleepTimerEnable = true,
-            changeMainLyricsProviderEnable = true,
-        )
+        if (queueSheet) QueueBottomSheet(onDismiss = { queueSheet = false })
+        if (infoSheet) InfoPlayerBottomSheet(onDismiss = { infoSheet = false })
+        if (moreSheet) NowPlayingBottomSheet(onDismiss = { moreSheet = false }, navController = navController,
+            onNavigateToOtherScreen = dismiss, song = null, setSleepTimerEnable = true, changeMainLyricsProviderEnable = true)
     }
 }

@@ -20,41 +20,47 @@ actual suspend fun compressImage(filePath: String): ByteArray? = withContext(Dis
     try {
         val context = getKoin().get<Context>()
         val uri = Uri.parse(filePath)
-        
-        // Coba buka InputStream dari URI
-        val inputStream = context.contentResolver.openInputStream(uri) ?: return@withContext null
-        val originalBitmap = BitmapFactory.decodeStream(inputStream)
-        inputStream.close()
-        
-        if (originalBitmap == null) return@withContext null
-        
-        // Tentukan batas maksimal lebar/tinggi, misal 512px
-        val maxSize = 512
-        val width = originalBitmap.width
-        val height = originalBitmap.height
-        
-        val bitmapToCompress = if (width > maxSize || height > maxSize) {
-            val ratio = max(width, height).toFloat() / maxSize
-            val newWidth = (width / ratio).toInt()
-            val newHeight = (height / ratio).toInt()
-            Bitmap.createScaledBitmap(originalBitmap, newWidth, newHeight, true)
-        } else {
-            originalBitmap
-        }
-        
-        val outputStream = ByteArrayOutputStream()
-        // Avatar Storage uses a .jpg path on every platform.
-        bitmapToCompress.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
+        val resolver = context.contentResolver
+        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        val boundsStream = resolver.openInputStream(uri) ?: return@withContext null
+        boundsStream.use { BitmapFactory.decodeStream(it, null, options) }
 
-        val byteArray = outputStream.toByteArray()
-        
-        // Membersihkan memori
-        if (bitmapToCompress != originalBitmap) {
-            bitmapToCompress.recycle()
+        val width = options.outWidth
+        val height = options.outHeight
+        if (width <= 0 || height <= 0) return@withContext null
+
+        // Keep the final size based on the original bounds, not decoder rounding.
+        val maxSize = 512
+        val ratio = max(width, height).toFloat() / maxSize
+        val newWidth = if (ratio > 1) (width / ratio).toInt() else width
+        val newHeight = if (ratio > 1) (height / ratio).toInt() else height
+        if (newWidth <= 0 || newHeight <= 0) return@withContext null
+
+        // Decode the smallest power-of-two sample that still covers both target axes.
+        // Reopen the URI: content-provider streams need not support mark/reset.
+        var sampleSize = 1
+        while (width / sampleSize / 2 >= newWidth && height / sampleSize / 2 >= newHeight) {
+            sampleSize *= 2
         }
-        originalBitmap.recycle()
-        
-        return@withContext byteArray
+        options.inJustDecodeBounds = false
+        options.inSampleSize = sampleSize
+        val sampledBitmap = resolver.openInputStream(uri)?.use {
+            BitmapFactory.decodeStream(it, null, options)
+        } ?: return@withContext null
+
+        var bitmapToCompress = sampledBitmap
+        try {
+            if (sampledBitmap.width != newWidth || sampledBitmap.height != newHeight) {
+                bitmapToCompress = Bitmap.createScaledBitmap(sampledBitmap, newWidth, newHeight, true)
+            }
+            val outputStream = ByteArrayOutputStream()
+            // Avatar Storage uses a .jpg path on every platform.
+            bitmapToCompress.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
+            return@withContext outputStream.toByteArray()
+        } finally {
+            if (bitmapToCompress !== sampledBitmap) bitmapToCompress.recycle()
+            sampledBitmap.recycle()
+        }
     } catch (e: Exception) {
         if (e is kotlinx.coroutines.CancellationException) throw e
         return@withContext null

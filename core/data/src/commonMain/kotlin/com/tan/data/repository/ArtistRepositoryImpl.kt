@@ -55,14 +55,11 @@ internal class ArtistRepositoryImpl(
         Dispatchers.Main,
     ) { localDataSource.updateFollowed(followedStatus, channelId) }
 
-    override fun getFollowedArtists(): Flow<List<ArtistEntity>> =
-        flow {
-            emit(
-                getFullDataFromDB { limit, offset ->
-                    localDataSource.getFollowedArtists(limit, offset)
-                },
-            )
-        }.flowOn(Dispatchers.IO)
+    override fun getFollowedArtists(): Flow<List<ArtistEntity>> = flow {
+        emit(getFullDataFromDB { limit, offset -> localDataSource.getFollowedArtists(limit, offset) })
+    }.flowOn(Dispatchers.IO)
+
+    override fun observeFollowedArtists(): Flow<List<ArtistEntity>> = localDataSource.observeFollowedArtists()
 
     override suspend fun updateArtistInLibrary(
         inLibrary: LocalDateTime,

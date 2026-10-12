@@ -1,5 +1,7 @@
 package com.tan.gratify.viewModel.handler
 
+import com.tan.domain.utils.uploadedProfileAvatar
+
 import com.tan.domain.data.entities.NowPlayingUpdate
 import com.tan.domain.manager.DataStoreManager
 import com.tan.domain.mediaservice.handler.NowPlayingTrackState
@@ -35,19 +37,16 @@ class ProfileHandler(
                 val artist = state.songEntity?.artistName?.joinToString(", ")
                     ?: state.track?.artists?.joinToString(", ") { it.name }
                     ?: state.mediaItem.metadata?.artist
-
-                val localName = dataStoreManager.getString("AppProfileName").firstOrNull()?.takeIf { it.isNotBlank() } ?: "Pengguna Gratify"
-                val localAvatar = dataStoreManager.getString("AppProfileImage").firstOrNull()
                 val update = NowPlayingUpdate(
-                    displayName = localName,
-                    avatarUrl = localAvatar,
                     nowPlayingVideoId = videoId,
                     nowPlayingTitle = title,
                     nowPlayingArtist = artist,
                     lastActiveAt = Clock.System.now().toEpochMilliseconds().toString()
                 )
-                userRepository.updateNowPlaying(currentUserId, update).collectLatest {}
-            } catch (_: Exception) {
+                if (supabase.auth.currentUserOrNull()?.id == currentUserId)
+                    userRepository.updateNowPlaying(currentUserId, update).collectLatest {}
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) {
             }
         }
     }
@@ -56,18 +55,16 @@ class ProfileHandler(
         scope.launch(Dispatchers.IO) {
             try {
                 val currentUserId = supabase.auth.currentUserOrNull()?.id ?: return@launch
-                val localName = dataStoreManager.getString("AppProfileName").firstOrNull()?.takeIf { it.isNotBlank() } ?: "Pengguna Gratify"
-                val localAvatar = dataStoreManager.getString("AppProfileImage").firstOrNull()
                 val update = NowPlayingUpdate(
-                    displayName = localName,
-                    avatarUrl = localAvatar,
                     nowPlayingVideoId = null,
                     nowPlayingTitle = null,
                     nowPlayingArtist = null,
                     lastActiveAt = Clock.System.now().toEpochMilliseconds().toString()
                 )
-                userRepository.updateNowPlaying(currentUserId, update).collectLatest {}
-            } catch (_: Exception) {
+                if (supabase.auth.currentUserOrNull()?.id == currentUserId)
+                    userRepository.updateNowPlaying(currentUserId, update).collectLatest {}
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) {
             }
         }
     }

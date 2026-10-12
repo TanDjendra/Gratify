@@ -5,6 +5,7 @@ import com.tan.domain.data.entities.SharedPlaylistTrack
 import kotlinx.coroutines.flow.Flow
 
 interface SharedPlaylistRepository {
+    suspend fun uploadPlaylistThumbnail(localPlaylistId: Long, image: ByteArray): Result<String>
     suspend fun sharePlaylist(
         userId: String,
         localPlaylistId: Long,

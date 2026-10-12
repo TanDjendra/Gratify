@@ -1,4 +1,5 @@
 import com.tan.domain.data.entities.LibraryRemoval
+import com.tan.domain.data.entities.DownloadState
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
@@ -17,6 +18,8 @@ import com.tan.domain.data.entities.LocalPlaylistEntity
 import com.tan.domain.data.entities.LyricsEntity
 import com.tan.domain.data.entities.NewFormatEntity
 import com.tan.domain.data.entities.NotificationEntity
+import com.tan.domain.data.entities.NotificationReceipt
+import com.tan.domain.data.entities.eventKey
 import com.tan.domain.data.entities.PairSongLocalPlaylist
 import com.tan.domain.data.entities.PlaylistEntity
 import com.tan.domain.data.entities.PodcastWithEpisodes
@@ -194,8 +197,31 @@ interface DatabaseDao {
     }
 
     // Get search history
-    @Query("SELECT * FROM search_history")
+    @Query("SELECT * FROM search_history ORDER BY rowid DESC LIMIT 30")
     suspend fun getSearchHistory(): List<SearchHistory>
+
+    @Query("SELECT * FROM search_history ORDER BY rowid DESC LIMIT 30")
+    fun observeSearchHistory(): Flow<List<SearchHistory>>
+
+    @Query("DELETE FROM search_history WHERE query = :query")
+    suspend fun deleteSearchHistoryItem(query: String)
+
+    @Query("DELETE FROM search_history WHERE query NOT IN (SELECT query FROM search_history ORDER BY rowid DESC LIMIT 30)")
+    suspend fun pruneSearchHistory()
+
+    @Transaction
+    suspend fun insertOwnedSearchHistory(owner: String?, entry: SearchHistory): Long {
+        check(getLibraryOwner() == owner) { "Library owner changed" }
+        val id = insertSearchHistory(entry)
+        pruneSearchHistory()
+        return id
+    }
+
+    @Transaction
+    suspend fun deleteOwnedSearchHistory(owner: String?, query: String?) {
+        check(getLibraryOwner() == owner) { "Library owner changed" }
+        if (query == null) deleteSearchHistory() else deleteSearchHistoryItem(query)
+    }
 
     @Query("DELETE FROM search_history")
     suspend fun deleteSearchHistory()
@@ -329,6 +355,9 @@ interface DatabaseDao {
         limit: Int,
         offset: Int,
     ): List<ArtistEntity>
+
+    @Query("SELECT * FROM artist WHERE followed = 1 ORDER BY followedAt DESC, channelId ASC")
+    fun observeFollowedArtists(): Flow<List<ArtistEntity>>
 
     @Insert(onConflict = OnConflictStrategy.Companion.IGNORE)
     suspend fun insertArtist(artist: ArtistEntity)
@@ -486,6 +515,7 @@ interface DatabaseDao {
         require(playlist.title.isNotBlank()) { "Playlist title is required" }
         require(songs.map { it.videoId }.distinct().size == songs.size) { "Duplicate playlist tracks" }
         playlist.sourceSharedPlaylistId?.let { source ->
+            ownerId?.let { cancelLibraryRemoval(it, "shared_playlist_saves", source) }
             getLocalPlaylistBySourceSharedId(source)?.let { return it.id }
         }
         val id = insertLocalPlaylist(playlist.copy(tracks = songs.map { it.videoId }))
@@ -497,8 +527,89 @@ interface DatabaseDao {
         return id
     }
 
+    @Transaction
+    suspend fun appendOwnedPlaylistSongs(owner: String?, id: Long, songs: List<SongEntity>, revision: String): List<SongEntity> {
+        check(getLibraryOwner() == owner) { "Account ownership changed" }
+        val playlist = requireNotNull(getLocalPlaylist(id)) { "Playlist not found" }
+        check(playlist.canonicalPlaylistId == null) { "Canonical playlist requires member operations" }
+        check(playlist.sourceSharedPlaylistId == null) { "Saved playlists cannot be edited" }
+        val pairs = getAllPlaylistPairSongByPosition(id)
+        val existing = pairs.map { it.songId }.toSet() + playlist.tracks.orEmpty()
+        val added = songs.filter { it.videoId.isNotBlank() && it.videoId !in existing }.distinctBy { it.videoId }
+        var position = (pairs.maxOfOrNull { it.position } ?: -1) + 1
+        added.forEach { song ->
+            if (getSong(song.videoId) == null) insertSong(song)
+            insertPairSongLocalPlaylist(PairSongLocalPlaylist(playlistId = id, songId = song.videoId, position = position++, inPlaylist = now()))
+        }
+        if (added.isNotEmpty()) {
+            updateLocalPlaylistTracks((playlist.tracks ?: pairs.map { it.songId }) + added.map { it.videoId }, id)
+            markPlaylistMetadataDirty(owner, id, revision)
+        }
+        return added
+    }
+
     @Query("SELECT * FROM local_playlist WHERE sync_id = :syncId LIMIT 1")
     suspend fun getLocalPlaylistBySyncId(syncId: String): LocalPlaylistEntity?
+
+    @Query("SELECT * FROM local_playlist WHERE canonical_playlist_id = :canonicalId LIMIT 1")
+    suspend fun getCanonicalPlaylist(canonicalId: String): LocalPlaylistEntity?
+
+    @Query("UPDATE local_playlist SET title=:title, thumbnail=:thumbnail, tracks=:tracks, canonical_playlist_id=:canonicalId WHERE id=:id")
+    suspend fun updateCanonicalPlaylistCache(id: Long, canonicalId: String, title: String, thumbnail: String?, tracks: List<String>)
+
+    @Query("DELETE FROM pair_song_local_playlist WHERE playlistId=:id")
+    suspend fun clearPlaylistCachePairs(id: Long)
+
+    @Transaction
+    suspend fun cacheCanonicalPlaylist(owner: String, playlist: LocalPlaylistEntity, songs: List<SongEntity>): Long {
+        check(getLibraryOwner() == owner) { "Account ownership changed" }
+        val canonicalId = requireNotNull(playlist.canonicalPlaylistId)
+        require(songs.map { it.videoId }.distinct().size == songs.size)
+        val existing = getCanonicalPlaylist(canonicalId) ?: playlist.syncId?.let { getLocalPlaylistBySyncId(it) }
+            ?:playlist.sourceSharedPlaylistId?.let{getLocalPlaylistBySourceSharedId(it)}
+        val id = existing?.id ?: insertLocalPlaylist(playlist.copy(tracks=songs.map { it.videoId }))
+        check(id > 0)
+        if(existing?.canonicalPlaylistId==canonicalId && existing.title==playlist.title && existing.thumbnail==playlist.thumbnail &&
+            existing.tracks==songs.map{it.videoId}) return id
+        val pairs=getAllPlaylistPairSongByPosition(id).associateBy{it.songId}
+        if(existing?.downloadState==3 && songs.any{it.videoId !in pairs}) updateLocalPlaylistDownloadState(0,id)
+        updateCanonicalPlaylistCache(id, canonicalId, playlist.title, playlist.thumbnail, songs.map { it.videoId })
+        clearPlaylistCachePairs(id)
+        songs.forEachIndexed { position, song ->
+            if (getSong(song.videoId) == null) insertSong(song)
+            insertPairSongLocalPlaylist(PairSongLocalPlaylist(playlistId=id,songId=song.videoId,position=position,inPlaylist=pairs[song.videoId]?.inPlaylist?:now()))
+        }
+        playlist.syncId?.let { cancelLibraryRemoval(owner,"playlist_metadata",it) }
+        return id
+    }
+
+    @Transaction
+    suspend fun reconcileCanonicalPlaylists(owner: String, memberIds: List<String>) {
+        check(getLibraryOwner() == owner) { "Account ownership changed" }
+        getCanonicalCaches()
+            .filter { it.canonicalPlaylistId !in memberIds }
+            .forEach { deleteLocalPlaylist(it.id) }
+    }
+
+    @Query("SELECT * FROM local_playlist WHERE canonical_playlist_id IS NOT NULL")
+    suspend fun getCanonicalCaches(): List<LocalPlaylistEntity>
+
+    @Transaction
+    suspend fun removeOwnedPlaylistSong(owner: String?, id: Long, videoId: String, revision: String): Boolean {
+        check(getLibraryOwner() == owner) { "Account ownership changed" }
+        val playlist = requireNotNull(getLocalPlaylist(id)) { "Playlist not found" }
+        check(playlist.canonicalPlaylistId == null) { "Canonical playlist requires member operations" }
+        check(playlist.sourceSharedPlaylistId == null) { "Saved playlists cannot be edited" }
+        val pairs = getAllPlaylistPairSongByPosition(id)
+        if (videoId !in playlist.tracks.orEmpty() && pairs.none { it.songId == videoId }) return false
+        deletePairSongLocalPlaylist(id, videoId)
+        pairs.filter { it.songId != videoId }.forEachIndexed { index, pair ->
+            editPositionOfSongInPlaylist(id, pair.songId, index)
+        }
+        updateLocalPlaylistTracks((playlist.tracks ?: pairs.map { it.songId }).filter { it != videoId }, id)
+        markPlaylistMetadataDirty(owner, id, revision)
+        return true
+    }
 
     @Query("UPDATE local_playlist SET owner_email = :ownerEmail WHERE id = :id AND (owner_email IS NULL OR owner_email = '')")
     suspend fun bindRestoredPlaylistEmail(id: Long, ownerEmail: String)
@@ -549,6 +660,31 @@ interface DatabaseDao {
     @Query("SELECT * FROM local_playlist WHERE source_shared_playlist_id = :sharedPlaylistId LIMIT 1")
     suspend fun getLocalPlaylistBySourceSharedId(sharedPlaylistId: String): LocalPlaylistEntity?
 
+    @Update
+    suspend fun updateSavedPlaylist(playlist: LocalPlaylistEntity)
+
+    @Transaction
+    suspend fun restoreSavedPlaylist(owner: String, incoming: LocalPlaylistEntity, songs: List<SongEntity>) {
+        check(getLibraryOwner() == owner) { "Account ownership changed" }
+        val source = requireNotNull(incoming.sourceSharedPlaylistId)
+        if (getLibraryRemovals(owner, "shared_playlist_saves").any { it.itemId == source }) return
+        val existing = getLocalPlaylistBySourceSharedId(source)
+        if (existing == null) {
+            createLocalPlaylistWithSongs(owner, incoming, songs)
+        } else {
+            if(existing.canonicalPlaylistId!=null)return
+            require(songs.map { it.videoId }.distinct().size == songs.size) { "Duplicate playlist tracks" }
+            getAllPlaylistPairSongByPosition(existing.id).orEmpty().forEach { deletePairSongLocalPlaylist(existing.id, it.songId) }
+            songs.forEachIndexed { position, song ->
+                if (getSong(song.videoId) == null) insertSong(song)
+                insertPairSongLocalPlaylist(PairSongLocalPlaylist(playlistId=existing.id, songId=song.videoId, position=position, inPlaylist=now()))
+            }
+            updateSavedPlaylist(existing.copy(title=incoming.title, thumbnail=incoming.thumbnail,
+                creatorName=incoming.creatorName, tracks=songs.map { it.videoId }, sourceAvailability=LocalPlaylistEntity.SourceAvailability.AVAILABLE,
+                downloadState=if (existing.tracks==songs.map { it.videoId }) existing.downloadState else DownloadState.STATE_NOT_DOWNLOADED))
+        }
+    }
+
     @Query("UPDATE local_playlist SET source_availability = :availability WHERE source_shared_playlist_id = :sharedPlaylistId")
     suspend fun updateSourceAvailability(sharedPlaylistId: String, availability: Int)
 
@@ -557,6 +693,7 @@ interface DatabaseDao {
 
     @Transaction
     suspend fun deleteOwnedLocalPlaylist(id: Long, revision: String) {
+        check(getLocalPlaylist(id)?.canonicalPlaylistId == null) { "Canonical playlist requires member operations" }
         val owner = getLibraryOwner()
         if (!owner.isNullOrBlank()) {
             getLocalPlaylist(id)?.syncId?.let {
@@ -580,6 +717,44 @@ interface DatabaseDao {
         title: String,
         id: Long,
     )
+
+    @Transaction
+    suspend fun setOwnedPlaylistTitle(owner: String?, id: Long, title: String, revision: String) {
+        check(getLibraryOwner()==owner) { "Account ownership changed" }
+        require(title.isNotBlank() && title.length<=512) { "Invalid playlist title" }
+        check(getLocalPlaylist(id)?.sourceSharedPlaylistId==null) { "Saved playlists cannot be edited" }
+        updateLocalPlaylistTitle(title,id)
+        markPlaylistMetadataDirty(owner,id,revision)
+    }
+
+    @Transaction
+    suspend fun setOwnedPlaylistThumbnail(owner: String?, id: Long, thumbnail: String, revision: String) {
+        check(getLibraryOwner()==owner) { "Account ownership changed" }
+        check(getLocalPlaylist(id)?.sourceSharedPlaylistId==null) { "Saved playlists cannot be edited" }
+        updateLocalPlaylistThumbnail(thumbnail,id)
+        markPlaylistMetadataDirty(owner,id,revision)
+    }
+
+    @Transaction
+    suspend fun setOwnedPlaylistDetails(owner: String?, id: Long, title: String, thumbnail: String?, revision: String) {
+        check(getLibraryOwner() == owner) { "Account ownership changed" }
+        require(title.isNotBlank() && title.length <= 100) { "Invalid playlist title" }
+        val playlist = checkNotNull(getLocalPlaylist(id)) { "Playlist no longer exists" }
+        check(playlist.sourceSharedPlaylistId == null) { "Saved playlists cannot be edited" }
+        updateLocalPlaylistTitle(title, id)
+        if (thumbnail != null) updateLocalPlaylistThumbnail(thumbnail, id)
+        markPlaylistMetadataDirty(owner, id, revision)
+    }
+
+    @Transaction
+    suspend fun markPlaylistMetadataDirty(owner: String?, id: Long, revision: String) {
+        check(getLibraryOwner()==owner) { "Account ownership changed" }
+        val playlist=getLocalPlaylist(id) ?: return
+        check(playlist.canonicalPlaylistId == null) { "Canonical playlist requires member operations" }
+        val syncId=playlist.syncId
+        if (!owner.isNullOrBlank() && playlist.sourceSharedPlaylistId==null && !syncId.isNullOrBlank())
+            insertLibraryRemoval(LibraryRemoval(owner,"playlist_metadata",syncId,revision))
+    }
 
     @Query("UPDATE local_playlist SET tracks = :tracks WHERE id = :id")
     suspend fun updateLocalPlaylistTracks(
@@ -768,6 +943,7 @@ interface DatabaseDao {
 
     @Transaction
     suspend fun movePlaylistSong(playlistId: Long, videoId: String, newIndex: Int) {
+        check(getLocalPlaylist(playlistId)?.canonicalPlaylistId == null) { "Canonical playlist requires member operations" }
         val pairs = getAllPlaylistPairSongByPosition(playlistId).toMutableList()
         val previous = pairs.indexOfFirst { it.songId == videoId }
         require(previous >= 0 && newIndex in pairs.indices) { "Invalid playlist position" }
@@ -877,15 +1053,59 @@ interface DatabaseDao {
 
     @Transaction
     suspend fun insertNotification(notificationEntity: NotificationEntity) {
-        insertNotificationRaw(notificationEntity)
+        insertNotificationOnce(notificationEntity)
+    }
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertNotificationReceipt(receipt: NotificationReceipt): Long
+
+    @Transaction
+    suspend fun claimNotificationDelivery(entity: NotificationEntity): Boolean {
+        val owner = entity.single.firstOrNull()?.get("ownerId") ?: return false
+        if (owner != getLibraryOwner()) return false
+        return insertNotificationReceipt(NotificationReceipt(entity.eventKey())) != -1L
+    }
+
+    @Transaction
+    suspend fun claimDeveloperNotificationDelivery(entity: NotificationEntity): Boolean {
+        if (entity.channelId != "developer") return false
+        val key = entity.eventKey()
+        // Polling may have cached the card already. Deleted/pruned cards must remain dismissed.
+        if (getAllNotification().none { it.eventKey() == key }) return false
+        return insertNotificationReceipt(NotificationReceipt("developer-delivery:$key")) != -1L
+    }
+
+    @Transaction
+    suspend fun insertNotificationOnce(entity: NotificationEntity): Boolean {
+        val owner = (entity.single.firstOrNull()?.get("ownerId") ?: entity.album.firstOrNull()?.get("ownerId"))?.takeIf { it.isNotBlank() }
+        if (owner != null && owner != getLibraryOwner()) return false
+        val key = entity.eventKey()
+        if (insertNotificationReceipt(NotificationReceipt(key)) == -1L) return false
+        // Adopt older cards without issuing a second alert after upgrading.
+        if (getAllNotification().any { old -> old.eventKey() == key ||
+                entity.channelId == "follower_activity" && old.channelId == entity.channelId &&
+                old.single.firstOrNull()?.get("browseId") == entity.single.firstOrNull()?.get("browseId") }) return false
+        insertNotificationRaw(entity)
         pruneOldNotifications()
+        return true
     }
 
     @Query("SELECT * FROM notification ORDER BY time DESC LIMIT 100")
     suspend fun getAllNotification(): List<NotificationEntity>
 
+    @Query("SELECT notification.* FROM notification LEFT JOIN account_library_state ON account_library_state.id = 1 ORDER BY notification.time DESC, notification.id DESC LIMIT 100")
+    fun observeNotifications(): Flow<List<NotificationEntity>>
+
     @Query("DELETE FROM notification WHERE id = :id")
-    suspend fun deleteNotification(id: Long)
+    suspend fun deleteNotificationRaw(id: Long)
+
+    @Transaction
+    suspend fun deleteNotification(id: Long) {
+        getAllNotification().firstOrNull { it.id == id }?.let {
+            insertNotificationReceipt(NotificationReceipt(it.eventKey()))
+        }
+        deleteNotificationRaw(id)
+    }
 
     @Insert(onConflict = OnConflictStrategy.Companion.REPLACE)
     suspend fun insertTranslatedLyrics(translatedLyricsEntity: TranslatedLyricsEntity)
@@ -964,6 +1184,12 @@ interface DatabaseDao {
     suspend fun deleteAllYourYouTubePlaylist()
 
     // Playback Event
+    @Query("SELECT * FROM playback_event WHERE timestamp >= :start AND timestamp < :endExclusive ORDER BY timestamp, eventId")
+    suspend fun getPlaybackEventsInRange(start: LocalDateTime, endExclusive: LocalDateTime): List<PlaybackEventEntity>
+
+    @Query("SELECT DISTINCT CAST(STRFTIME('%Y', timestamp / 1000, 'unixepoch') AS INTEGER) FROM playback_event WHERE listenedSecond BETWEEN 1 AND 86400 AND TRIM(videoId) != '' ORDER BY 1 DESC")
+    suspend fun getPlaybackYears(): List<Int>
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertPlaybackEvent(playbackEventEntity: PlaybackEventEntity): Long
 

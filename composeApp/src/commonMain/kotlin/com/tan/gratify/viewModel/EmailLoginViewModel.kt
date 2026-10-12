@@ -1,313 +1,162 @@
 package com.tan.gratify.viewModel
 
 import androidx.lifecycle.viewModelScope
-import com.tan.gratify.viewModel.auth.isValidEmailAddress
+import com.tan.data.sync.UserDataSyncManager
 import com.tan.domain.manager.DataStoreManager
-import com.tan.gratify.viewModel.auth.AuthUiState
-import com.tan.gratify.viewModel.auth.LoginFormState
-import com.tan.gratify.viewModel.auth.OtpFormState
+import com.tan.gratify.viewModel.auth.*
 import com.tan.gratify.viewModel.base.BaseViewModel
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
-import io.github.jan.supabase.postgrest.postgrest
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
-import com.tan.data.sync.UserDataSyncManager
-import com.tan.logger.Logger
+import kotlinx.coroutines.flow.*
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import gratify.composeapp.generated.resources.*
 
-/**
- * EmailLoginViewModel — ViewModel untuk alur login menggunakan email + password.
- *
- * Alur utama:
- *   Idle → Loading (signIn) → Authenticated (sukses)
- *                            → VerificationPending (email belum dikonfirmasi → OTP)
- *                            → Error (kredensial salah)
- *
- * Fitur:
- * - Login dengan email + password via `signInWith(Email)`
- * - Fallback ke OTP verification jika email belum dikonfirmasi
- * - Resend OTP dengan cooldown 60 detik
- * - Error mapping ke pesan Bahasa Indonesia
- */
 class EmailLoginViewModel(
     private val dataStoreManager: DataStoreManager,
     private val supabase: SupabaseClient,
     private val userDataSyncManager: UserDataSyncManager,
 ) : BaseViewModel() {
-
-    // ── Auth State ────────────────────────────────────────────────────────────
     private val _authState = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
-    val authState: StateFlow<AuthUiState> = _authState.asStateFlow()
-
-    // ── Form State (email + password) ─────────────────────────────────────────
+    val authState = _authState.asStateFlow()
     private val _formState = MutableStateFlow(LoginFormState())
-    val formState: StateFlow<LoginFormState> = _formState.asStateFlow()
-
-    // ── OTP State (untuk fallback verifikasi) ─────────────────────────────────
+    val formState = _formState.asStateFlow()
     private val _otpState = MutableStateFlow(OtpFormState())
-    val otpState: StateFlow<OtpFormState> = _otpState.asStateFlow()
+    val otpState = _otpState.asStateFlow()
+    private val request = AuthRequestGate(viewModelScope)
+    private val cooldown = AuthResendCooldown(viewModelScope) { seconds -> _otpState.update { it.copy(resendCooldownSeconds = seconds) } }
+    private var verifiedEmail: String? = null
 
-    private var cooldownJob: Job? = null
-
-    // ── Form Field Updates ───────────────────────────────────────────────────
+    init {
+        viewModelScope.launch {
+            combine(supabase.auth.sessionStatus, _otpState) { status, otp -> status to otp }.collect { (status, otp) ->
+                val email = otp.email
+                if (email != null && !otp.verified && status is io.github.jan.supabase.auth.status.SessionStatus.Authenticated &&
+                    _authState.value is AuthUiState.VerificationPending && !PasswordRecoveryCoordinator.pending.value &&
+                    supabase.auth.currentUserOrNull()?.email.equals(email, ignoreCase = true)) {
+                    request.launch {
+                        _authState.value = AuthUiState.Loading(getString(Res.string.auth_verifying))
+                        verifiedEmail = email
+                        _otpState.update { it.copy(verified = true, errorMessage = null) }
+                        try { completeLogin() }
+                        catch (cancelled: CancellationException) { throw cancelled }
+                        catch (_: Exception) {
+                            _authState.value = AuthUiState.VerificationPending(email)
+                            _otpState.update { it.copy(errorMessage = getString(Res.string.auth_finish_failed)) }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     fun updateEmail(email: String) {
-        _formState.update {
-            it.copy(
-                email = email,
-                isEmailValid = isValidEmail(email),
-            )
-        }
-        if (_authState.value is AuthUiState.Error) {
-            _authState.value = AuthUiState.Idle
-        }
+        if (request.busy) return
+        _formState.update { it.copy(email = email, isEmailValid = isValidEmailAddress(normalizeAuthEmail(email))) }
+        clearError()
     }
-
     fun updatePassword(password: String) {
-        _formState.update {
-            it.copy(
-                password = password,
-                isPasswordValid = password.length >= 8,
-            )
-        }
-        if (_authState.value is AuthUiState.Error) {
-            _authState.value = AuthUiState.Idle
-        }
+        if (request.busy) return
+        // Login accepts existing credentials; a new-password policy must not lock out older accounts.
+        _formState.update { it.copy(password = password, isPasswordValid = password.isNotEmpty()) }
+        clearError()
     }
-
     fun updateOtpCode(code: String) {
-        if (code.length <= 6 && code.all { it.isDigit() }) {
-            _otpState.update { it.copy(code = code) }
-        }
+        if (request.busy) return
+        _otpState.update { it.copy(code = normalizeOtpCode(code), errorMessage = null) }
     }
+    private fun clearError() { if (_authState.value is AuthUiState.Error) _authState.value = AuthUiState.Idle }
 
-    // ── Validation ───────────────────────────────────────────────────────────
-
-    private fun isValidEmail(email: String): Boolean = isValidEmailAddress(email)
-
-    // ── Core Auth: Login ─────────────────────────────────────────────────────
-
-    /**
-     * Login dengan email + password.
-     *
-     * Jika Supabase mengembalikan error "Email not confirmed",
-     * secara otomatis mengirim ulang OTP dan pindah ke state VerificationPending.
-     */
     fun signIn() {
         val form = _formState.value
-        if (!form.isValid()) return
-
-        viewModelScope.launch {
-            _authState.value = AuthUiState.Loading("Masuk ke akun...")
+        if (!form.isValid() || _otpState.value.email != null) return
+        request.launch {
+            _authState.value = AuthUiState.Loading(getString(Res.string.auth_signing_in))
             try {
-                supabase.auth.signInWith(Email) {
-                    email = form.email
-                    password = form.password
-                }
-
-                // Login berhasil — simpan data dan navigasi
-                handleSuccessfulLogin()
-
-            } catch (e: Throwable) {
-                log("signIn failed: [details omitted]", com.tan.logger.LogLevel.ERROR)
-                val errorMsg = e.message ?: e.toString()
-
-                when {
-                    errorMsg.contains("email_not_confirmed", ignoreCase = true) ||
-                    errorMsg.contains("Email not confirmed", ignoreCase = true) -> {
-                        handleEmailNotConfirmed(form.email)
-                    }
-
-                    else -> {
-                        _authState.value = AuthUiState.Error(mapLoginError(e))
-                    }
-                }
+                supabase.auth.signInWith(Email) { email = normalizeAuthEmail(form.email); password = form.password }
+                completeLogin()
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (error: Exception) {
+                log("Email login failed; provider details omitted")
+                val message = error.message.orEmpty()
+                if (message.contains("email_not_confirmed", true) || message.contains("Email not confirmed", true)) {
+                    val email = normalizeAuthEmail(form.email)
+                    _otpState.update { it.copy(email = email, code = "", errorMessage = null, isResending = true) }
+                    _authState.value = AuthUiState.VerificationPending(email)
+                    try {
+                        supabase.auth.resendEmail(io.github.jan.supabase.auth.OtpType.Email.SIGNUP, email)
+                        cooldown.start()
+                    } catch (cancelled: CancellationException) { throw cancelled }
+                    catch (_: Exception) { _otpState.update { it.copy(errorMessage = getString(Res.string.auth_resend_failed)) } }
+                    finally { _otpState.update { it.copy(isResending = false) } }
+                } else _authState.value = AuthUiState.Error(authFailureMessage(error, ::getString))
             }
         }
     }
-
-    /**
-     * Verifikasi 6-digit OTP code (fallback saat email belum dikonfirmasi).
-     * Setelah OTP berhasil, login ulang dengan email + password.
-     */
     fun verifyOtp() {
-        val code = _otpState.value.code
-        val email = (_authState.value as? AuthUiState.VerificationPending)?.email
-            ?: _formState.value.email
-
-        if (code.length != 6 || email.isBlank()) return
-
-        viewModelScope.launch {
-            _authState.value = AuthUiState.Loading("Memverifikasi kode...")
+        val otp = _otpState.value
+        val email = otp.email ?: return
+        if (!otp.isCodeComplete() && !otp.verified) return
+        request.launch {
+            _authState.value = AuthUiState.Loading(getString(Res.string.auth_verifying))
+            _otpState.update { it.copy(errorMessage = null) }
             try {
-                supabase.auth.verifyEmailOtp(
-                    type = io.github.jan.supabase.auth.OtpType.Email.SIGNUP,
-                    email = email,
-                    token = code,
-                )
-
-                // OTP terverifikasi — sekarang coba login ulang
-                handleSuccessfulLogin()
-
-            } catch (e: Throwable) {
-                log("verifyOtp failed: [details omitted]", com.tan.logger.LogLevel.ERROR)
-                val errorMsg = e.message ?: e.toString()
-                val userMsg = when {
-                    errorMsg.contains("otp_expired", ignoreCase = true) ||
-                    errorMsg.contains("expired", ignoreCase = true) ->
-                        "Kode verifikasi sudah kedaluwarsa. Silakan kirim ulang."
-
-                    errorMsg.contains("invalid", ignoreCase = true) ->
-                        "Kode verifikasi salah atau sudah kedaluwarsa."
-
-                    else -> "Verifikasi gagal. Silakan coba lagi."
+                if (verifiedEmail != email || !supabase.auth.currentUserOrNull()?.email.equals(email, ignoreCase = true)) {
+                    supabase.auth.verifyEmailOtp(io.github.jan.supabase.auth.OtpType.Email.SIGNUP, email, otp.code)
+                    require(supabase.auth.currentUserOrNull()?.email.equals(email, ignoreCase = true))
+                    verifiedEmail = email
+                    _otpState.update { it.copy(verified = true) }
                 }
+                completeLogin()
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) {
                 _authState.value = AuthUiState.VerificationPending(email)
-                makeToast(userMsg)
+                _otpState.update { it.copy(errorMessage = getString(if (verifiedEmail == email) Res.string.auth_finish_failed else Res.string.auth_otp_failed)) }
             }
         }
     }
-
-    /**
-     * Kirim ulang OTP ke email user.
-     */
     fun resendOtp() {
-        val email = (_authState.value as? AuthUiState.VerificationPending)?.email
-            ?: _formState.value.email
-        if (email.isBlank() || _otpState.value.isResending) return
-
-        viewModelScope.launch {
-            _otpState.update { it.copy(isResending = true) }
+        val otp = _otpState.value
+        val email = otp.email ?: return
+        if (otp.resendCooldownSeconds > 0 || otp.isResending || verifiedEmail == email) return
+        request.launch {
+            _otpState.update { it.copy(isResending = true, errorMessage = null, statusMessage = null) }
             try {
-                supabase.auth.resendEmail(
-                    type = io.github.jan.supabase.auth.OtpType.Email.SIGNUP,
-                    email = email,
-                )
-                makeToast("Kode verifikasi baru telah dikirim ke $email")
-                _otpState.update { it.copy(code = "", isResending = false) }
-                startResendCooldown()
-            } catch (e: Throwable) {
-                log("Resend OTP gagal: [details omitted]", com.tan.logger.LogLevel.ERROR)
-                _otpState.update { it.copy(isResending = false) }
-                makeToast("Gagal mengirim ulang kode. Coba lagi nanti.")
-            }
+                supabase.auth.resendEmail(io.github.jan.supabase.auth.OtpType.Email.SIGNUP, email)
+                _otpState.update { it.copy(code = "", statusMessage = getString(Res.string.auth_code_sent)) }
+                cooldown.start()
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { _otpState.update { it.copy(errorMessage = getString(Res.string.auth_resend_failed)) } }
+            finally { _otpState.update { it.copy(isResending = false) } }
         }
     }
-
-    /**
-     * Reset state ke Idle.
-     */
-    fun resetToIdle() {
+    fun editCredentials() {
+        if (request.busy) return
+        verifiedEmail = null
         _authState.value = AuthUiState.Idle
-        _otpState.value = OtpFormState()
+        _otpState.update { it.copy(email = null, code = "", errorMessage = null, statusMessage = null, verified = false) }
     }
-
-    // ── Private Helpers ──────────────────────────────────────────────────────
-
-    /**
-     * Handle email yang belum dikonfirmasi:
-     * Kirim ulang OTP dan pindah ke VerificationPending.
-     */
-    private suspend fun handleEmailNotConfirmed(email: String) {
-        try {
-            supabase.auth.resendEmail(
-                type = io.github.jan.supabase.auth.OtpType.Email.SIGNUP,
-                email = email,
-            )
-            _authState.value = AuthUiState.VerificationPending(email)
-            startResendCooldown()
-            makeToast("Email belum diverifikasi. Kode verifikasi dikirim ke $email")
-        } catch (resendError: Throwable) {
-            log("handleEmailNotConfirmed resend failed: ${resendError.message}", com.tan.logger.LogLevel.ERROR)
-            _authState.value = AuthUiState.Error(
-                "Email belum diverifikasi dan gagal mengirim kode verifikasi. Coba lagi nanti."
-            )
+    fun resetToIdle() {
+        request.cancel()
+        _authState.value = AuthUiState.Idle
+        _otpState.update { it.copy(email = null, code = "", errorMessage = null, statusMessage = null, verified = false) }
+        _formState.update { it.copy(password = "", isPasswordValid = false) }
+        verifiedEmail = null
+    }
+    private suspend fun completeLogin() {
+        val user = supabase.auth.currentUserOrNull() ?: error("Missing session")
+        userDataSyncManager.performLoginSync(waitForCloud = false)
+        dataStoreManager.putString("AccountEmail", user.email.orEmpty())
+        val name = user.userMetadata?.get("display_name")?.jsonPrimitive?.contentOrNull.orEmpty()
+        if (dataStoreManager.getString("AppProfileName").first().isNullOrBlank() && name.isNotBlank()) {
+            dataStoreManager.putString("AppProfileName", name)
+            dataStoreManager.putString("AccountName", name)
         }
-    }
-
-    /**
-     * Handle login berhasil: simpan data ke DataStore dan emit Authenticated.
-     */
-    private suspend fun handleSuccessfulLogin() {
-        val user = supabase.auth.currentUserOrNull()
-        if (user != null) {
-            userDataSyncManager.performLoginSync(waitForCloud = false)
-            // Account-specific preferences are cleared before cloud restore by the sync manager.
-            dataStoreManager.setLoggedIn(true)
-            dataStoreManager.putString("AccountEmail", user.email ?: "")
-
-            val profileName = user.userMetadata
-                ?.get("display_name")
-                ?.toString()
-                ?.replace("\"", "")
-                ?: ""
-            if (profileName.isNotEmpty()) {
-                dataStoreManager.putString("AccountName", profileName)
-                dataStoreManager.putString("AppProfileName", profileName)
-            }
-
-            val needsProfile = checkNeedsProfile()
-            
-            // Pulihkan semua data user (playlist, likes, artists, history, dll).
-            // performLoginSync membersihkan DB akun sebelumnya bila akun yang login berbeda,
-            // agar tiap akun punya datanya sendiri dan tidak saling menabrak.
-            _authState.value = AuthUiState.Authenticated(needsProfile = needsProfile)
-        } else {
-            _authState.value = AuthUiState.Error("Sesi tidak ditemukan setelah login.")
-        }
-    }
-
-    /**
-     * Cek apakah user membutuhkan profile setup.
-     */
-    private suspend fun checkNeedsProfile(): Boolean {
-        val appProfileName = dataStoreManager.getString("AppProfileName").first()
-        return appProfileName.isNullOrEmpty()
-    }
-
-    /**
-     * Map Supabase error ke pesan Indonesia yang user-friendly.
-     */
-    private fun mapLoginError(e: Throwable): String {
-        val msg = e.message ?: e.toString()
-        return when {
-            msg.contains("Invalid login credentials", ignoreCase = true) ||
-            msg.contains("invalid_credentials", ignoreCase = true) ->
-                "Email atau password salah. Silakan coba lagi."
-
-            msg.contains("rate limit", ignoreCase = true) ||
-            msg.contains("too many requests", ignoreCase = true) ->
-                "Terlalu banyak percobaan. Silakan tunggu beberapa menit."
-
-            msg.contains("network", ignoreCase = true) ||
-            msg.contains("timeout", ignoreCase = true) ||
-            msg.contains("connection", ignoreCase = true) ->
-                "Koneksi bermasalah. Periksa internet Anda dan coba lagi."
-
-            msg.contains("user not found", ignoreCase = true) ->
-                "Akun tidak ditemukan. Silakan daftar terlebih dahulu."
-
-            else -> "Login gagal. Silakan coba lagi nanti."
-        }
-    }
-
-    /**
-     * Start 60-second cooldown untuk resend OTP.
-     */
-    private fun startResendCooldown() {
-        cooldownJob?.cancel()
-        cooldownJob = viewModelScope.launch {
-            for (i in 60 downTo 0) {
-                _otpState.update { it.copy(resendCooldownSeconds = i) }
-                if (i > 0) delay(1000)
-            }
-        }
+        dataStoreManager.setLoggedIn(true)
+        _formState.update { it.copy(password = "", isPasswordValid = false) }
+        _authState.value = AuthUiState.Authenticated(dataStoreManager.getString("AppProfileName").first().isNullOrBlank())
     }
 }

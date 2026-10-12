@@ -25,6 +25,7 @@ data class Lyrics(
             val syllables: List<String>? = null,
             @SerialName("words")
             val words: String,
+            val wordBoundariesVerified: Boolean = false,
         )
     }
 }

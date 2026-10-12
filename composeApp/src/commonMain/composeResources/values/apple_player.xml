@@ -1,0 +1,12 @@
+<resources>
+    <string name="apple_player_close">Close player</string>
+    <string name="apple_player_more">Song options</string>
+    <string name="apple_player_info">Song information</string>
+    <string name="apple_player_fullscreen">Open fullscreen</string>
+    <string name="apple_player_favorite">Toggle favorite</string>
+    <string name="apple_player_progress">Playback progress</string>
+    <string name="apple_lyrics_loading">Loading lyrics…</string>
+    <string name="apple_lyrics_unavailable">Lyrics are not available for this song.</string>
+    <string name="apple_queue_empty">Your queue is empty.</string>
+    <string name="apple_queue_manage">Manage queue</string>
+</resources>

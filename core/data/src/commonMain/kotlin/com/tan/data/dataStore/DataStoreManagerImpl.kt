@@ -22,6 +22,7 @@ import com.tan.domain.manager.DataStoreManager.Values.REPEAT_ALL
 import com.tan.domain.manager.DataStoreManager.Values.REPEAT_MODE_OFF
 import com.tan.domain.manager.DataStoreManager.Values.REPEAT_ONE
 import com.tan.domain.manager.DataStoreManager.Values.GRATIFYMUSIC
+import com.tan.domain.manager.DataStoreManager.Values.SIMPMUSIC
 import com.tan.domain.manager.DataStoreManager.Values.TRUE
 import com.tan.logger.Logger
 import kotlinx.coroutines.Dispatchers
@@ -420,7 +421,9 @@ internal class DataStoreManagerImpl(
 
     override val lyricsProvider =
         settingsDataStore.data.map { preferences ->
-            preferences[LYRICS_PROVIDER] ?: GRATIFYMUSIC
+            // The former Gratify default now uses the upstream SimpMusic fetcher.
+            // Explicit LRCLIB, YouTube, and Better Lyrics selections remain unchanged.
+            preferences[LYRICS_PROVIDER]?.takeUnless { it == GRATIFYMUSIC } ?: SIMPMUSIC
         }
 
     override suspend fun setLyricsProvider(provider: String) {
@@ -1096,7 +1099,7 @@ internal class DataStoreManagerImpl(
 
     override val killServiceOnExit: Flow<String> =
         settingsDataStore.data.map { preferences ->
-            preferences[KILL_SERVICE_ON_EXIT] ?: TRUE
+            preferences[KILL_SERVICE_ON_EXIT] ?: FALSE
         }
 
     override suspend fun setKillServiceOnExit(kill: Boolean) {
@@ -1439,6 +1442,7 @@ internal class DataStoreManagerImpl(
                 val userKeys = listOf(
                     "AccountName", "AccountThumbUrl", "AppProfileName",
                     "AppProfileEmail", "AppProfileImage", "AccountEmail",
+                    "YouTubeAccountName", "YouTubeAccountThumbUrl",
                     "pinned_playlist_ids",
                     "privacy_show_followers", "privacy_show_playlist",
                     "privacy_show_recent_artists",

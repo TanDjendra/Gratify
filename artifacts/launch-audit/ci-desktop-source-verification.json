@@ -1,0 +1,62 @@
+{
+  "id": 36950880905,
+  "name": "Launch verification",
+  "status": "in_progress",
+  "conclusion": null,
+  "head_sha": "749a7daa27687832ea3ece85b0912a2050fd72f3",
+  "html_url": "https://github.com/TanDjendra/Gratify/actions/runs/36950880905",
+  "jobs": [
+    {
+      "name": "verify",
+      "status": "in_progress",
+      "conclusion": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/setup-java@v4",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Configure full Android build",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify shared behavior and Android lint",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build full Android release and upload crash mapping",
+          "status": "in_progress",
+          "conclusion": null
+        },
+        {
+          "name": "Keep verification reports",
+          "status": "pending",
+          "conclusion": null
+        },
+        {
+          "name": "Post Run actions/setup-java@v4",
+          "status": "pending",
+          "conclusion": null
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "pending",
+          "conclusion": null
+        }
+      ]
+    }
+  ]
+}

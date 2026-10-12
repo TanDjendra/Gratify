@@ -22,5 +22,6 @@ kotlin {
 
         // VLC
         implementation(libs.vlcj)
+        testImplementation(libs.kotlin.test)
     }
 }

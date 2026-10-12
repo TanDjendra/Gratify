@@ -26,6 +26,15 @@ interface CommonRepository {
     // Notifications
     suspend fun insertNotification(notificationEntity: NotificationEntity)
 
+    suspend fun insertNotificationOnce(notificationEntity: NotificationEntity): Boolean {
+        insertNotification(notificationEntity)
+        return true
+    }
+
+    suspend fun notificationAccountOwner(): String? = null
+    suspend fun claimNotificationDelivery(notification: NotificationEntity): Boolean = false
+    suspend fun claimDeveloperNotificationDelivery(notification: NotificationEntity): Boolean = false
+
     suspend fun getAllNotifications(): Flow<List<NotificationEntity>?>
 
     suspend fun deleteNotification(id: Long)

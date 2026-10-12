@@ -18,6 +18,8 @@ import com.tan.domain.data.model.streams.TimeLine
 import com.tan.domain.data.model.update.UpdateData
 import com.tan.domain.extension.isSong
 import com.tan.domain.extension.isVideo
+import com.tan.domain.manager.lyricsAnimationsEnabled
+import com.tan.domain.manager.setLyricsAnimationsEnabled
 import com.tan.domain.manager.DataStoreManager
 import com.tan.domain.manager.DataStoreManager.Values.TRUE
 import com.tan.domain.mediaservice.handler.ControlState
@@ -82,10 +84,18 @@ class SharedViewModel(
     private val cacheRepository: CacheRepository,
     private val commonRepository: CommonRepository,
 ) : BaseViewModel() {
+    val developerSupportPrompt = com.tan.gratify.viewModel.support.SupportPromptController(
+        read = { dataStoreManager.getString(com.tan.gratify.viewModel.support.SUPPORT_PROMPT_PREFERENCE).first() },
+        write = { dataStoreManager.putString(com.tan.gratify.viewModel.support.SUPPORT_PROMPT_PREFERENCE, it) },
+    )
     private val supabase: SupabaseClient by inject()
     private val userRepository: UserRepository by inject()
 
     var isFirstLiked: Boolean = false
+    private val _lyricsStoryDraft = MutableStateFlow<com.tan.domain.data.model.social.MusicStoryDraft?>(null)
+    val lyricsStoryDraft = _lyricsStoryDraft.asStateFlow()
+    fun requestLyricsStory(draft: com.tan.domain.data.model.social.MusicStoryDraft) { _lyricsStoryDraft.value = draft }
+    fun consumeLyricsStory() { _lyricsStoryDraft.value = null }
     var isFirstMiniplayer: Boolean = false
     var isFirstSuggestions: Boolean = false
     var showedUpdateDialog: Boolean
@@ -113,6 +123,9 @@ class SharedViewModel(
 
     private val _intent: MutableStateFlow<GenericIntent?> = MutableStateFlow(null)
     val intent: StateFlow<GenericIntent?> = _intent
+    private val _socialNotificationTarget = MutableStateFlow<com.tan.gratify.ui.navigation.SocialNotificationTarget?>(null)
+    val socialNotificationTarget = _socialNotificationTarget.asStateFlow()
+    fun openSocialNotification(target: com.tan.gratify.ui.navigation.SocialNotificationTarget?) { _socialNotificationTarget.value = target }
 
     private val _showNotificationPermissionDialog = MutableStateFlow(false)
     val showNotificationPermissionDialog: StateFlow<Boolean> = _showNotificationPermissionDialog
@@ -123,6 +136,18 @@ class SharedViewModel(
 
     private var _nowPlayingState = MutableStateFlow<NowPlayingTrackState?>(null)
     val nowPlayingState: StateFlow<NowPlayingTrackState?> = _nowPlayingState
+
+    // Retain the Apple Music tab when the player sheet is dismissed and reopened.
+    val lyricsAnimationsEnabled = dataStoreManager.lyricsAnimationsEnabled
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    fun setLyricsAnimationsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            dataStoreManager.setLyricsAnimationsEnabled(enabled)
+        }
+    }
+
+    val appleMusicPlayerTab = MutableStateFlow(com.tan.gratify.ui.screen.player.AppleMusicPlayerTab.MUSIC)
 
     fun getQueueDataState() = mediaPlayerHandler.queueData
 
@@ -261,11 +286,10 @@ class SharedViewModel(
         downloadHandler.checkAllDownloadingSongs()
         downloadHandler.checkAllDownloadingPlaylists()
         downloadHandler.checkAllDownloadingLocalPlaylists()
-        startGlobalFollowerSync()
     }
 
     private fun initGuideFlags() {
-        runBlocking {
+        viewModelScope.launch {
             dataStoreManager.getString("miniplayer_guide").first().let {
                 isFirstMiniplayer = it != STATUS_DONE
             }
@@ -346,6 +370,7 @@ class SharedViewModel(
                     Logger.d("PLAYER_DEBUG", "SharedViewModel NowPlayingState collectLatest begins, state=${state.mediaItem.mediaId}")
                     Logger.w(tag, "NowPlayingState is $state")
                     canvasHandler.cancelCanvas()
+                    lyricsHandler.cancelLyrics()
                     _nowPlayingState.value = state
                     syncNowPlayingToProfile(state)
 
@@ -554,6 +579,10 @@ class SharedViewModel(
 
     private fun getCanvas(videoId: String, duration: Int) = canvasHandler.getCanvas(videoId, duration)
 
+    suspend fun readPreference(key: String): String? = dataStoreManager.getString(key).first()
+
+    suspend fun writePreference(key: String, value: String) = dataStoreManager.putString(key, value)
+
     fun getString(key: String): String? = runBlocking { dataStoreManager.getString(key).first() }
 
     fun putString(
@@ -577,6 +606,7 @@ class SharedViewModel(
     fun checkIsRestoring() = downloadHandler.checkIsRestoring()
 
     fun insertLyrics(lyrics: LyricsEntity) = lyricsHandler.insertLyrics(lyrics)
+    fun retryLyrics() = lyricsHandler.setLyricsProvider()
 
     fun loadSharedMediaItem(videoId: String) = playbackHandler.loadSharedMediaItem(videoId)
 
@@ -593,9 +623,11 @@ class SharedViewModel(
     }
 
     fun getLocation() {
-        regionCode = runBlocking { dataStoreManager.location.first() }
-        quality = runBlocking { dataStoreManager.quality.first() }
-        language = runBlocking { dataStoreManager.getString(SELECTED_LANGUAGE).first() }
+        viewModelScope.launch {
+            regionCode = dataStoreManager.location.first()
+            quality = dataStoreManager.quality.first()
+            language = dataStoreManager.getString(SELECTED_LANGUAGE).first()
+        }
     }
 
     private fun getFormat(mediaId: String?) = playbackHandler.getFormat(mediaId)
@@ -603,6 +635,7 @@ class SharedViewModel(
     fun getSongInfo(mediaId: String?) = playbackHandler.getSongInfo(mediaId)
 
     val updateResponse: StateFlow<UpdateData?> get() = updateHandler.updateResponse
+    val updateDialogRequest: StateFlow<Long> get() = updateHandler.updateDialogRequest
 
     fun checkForUpdate(isManual: Boolean = false) = updateHandler.checkForUpdate(isManual)
 
@@ -638,7 +671,7 @@ class SharedViewModel(
         _reloadDestination.value = null
     }
 
-    fun shouldCheckForUpdate(): Boolean = runBlocking { dataStoreManager.autoCheckForUpdates.first() == TRUE }
+    suspend fun shouldCheckForUpdate(): Boolean = dataStoreManager.autoCheckForUpdates.first() == TRUE
 
     val downloadFileProgress: StateFlow<DownloadProgress> get() = downloadHandler.downloadFileProgress
 
@@ -684,54 +717,40 @@ class SharedViewModel(
     private val _snackbarEvent = MutableSharedFlow<SnackbarEvent>()
     val snackbarEvent = _snackbarEvent.asSharedFlow()
 
-    private fun startGlobalFollowerSync() {
-        viewModelScope.launch {
+    private var notificationSyncJob: kotlinx.coroutines.Job? = null
+
+    fun stopForegroundNotificationSync() {
+        notificationSyncJob?.cancel()
+        notificationSyncJob = null
+    }
+
+    fun startForegroundNotificationSync() {
+        if (notificationSyncJob?.isActive == true) return
+        notificationSyncJob = viewModelScope.launch {
             while (true) {
                 try {
-                    val currentUserId = supabase.auth.currentUserOrNull()?.id
-                    if (currentUserId != null) {
-                        userRepository.getFollowers(currentUserId).firstOrNull()?.let { followers ->
-                            val localNotifications = commonRepository.getAllNotifications().firstOrNull() ?: emptyList()
-                            var newlyFollowed = false
-                            
-                            for (follower in followers) {
-                                val isDuplicateFollower = localNotifications.any { local ->
-                                    local.channelId == "follower_activity" &&
-                                            local.single.firstOrNull()?.get("browseId") == follower.id
-                                }
-                                if (!isDuplicateFollower) {
-                                    val entity = NotificationEntity(
-                                        channelId = "follower_activity",
-                                        thumbnail = follower.avatarUrl ?: "",
-                                        name = follower.displayName.takeIf { !it.isNullOrBlank() } ?: "User",
-                                        single = listOf(
-                                            mapOf(
-                                                "title" to "mulai mengikuti Anda",
-                                                "browseId" to follower.id
-                                            )
-                                        ),
-                                        album = emptyList(),
-                                        time = com.tan.domain.extension.now()
-                                    )
-                                    commonRepository.insertNotification(entity)
-                                    newlyFollowed = true
-                                    
-                                    // Trigger snackbar
-                                    _snackbarEvent.emit(
-                                        SnackbarEvent(
-                                            message = "${entity.name} mulai mengikuti Anda",
-                                            actionLabel = "Lihat",
-                                            actionId = "view_notification"
-                                        )
-                                    )
-                                }
-                            }
-                        }
+                    com.tan.gratify.viewModel.handler.syncFollowerNotifications(
+                        userRepository, commonRepository, { supabase.auth.currentUserOrNull()?.id },
+                    ) { entity ->
+                        _snackbarEvent.emit(SnackbarEvent(
+                            message = "${entity.name} mulai mengikuti Anda", actionLabel = "Lihat",
+                            actionId = "view_notification", title = "Pengikut baru",
+                            kind = InAppNotificationKind.FOLLOWER, avatarUrl = entity.thumbnail, avatarName = entity.name,
+                        ))
                     }
-                } catch (e: Exception) {
-                    com.tan.logger.Logger.e(tag, "Failed to sync followers globally: ${e.message}")
+                } catch (timeout: kotlinx.coroutines.TimeoutCancellationException) {
+                    Logger.w(tag, "Follower notification sync timed out")
+                } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    Logger.w(tag, "Follower notification sync unavailable")
                 }
-                delay(60000) // check every 60 seconds
+                try {
+                    com.tan.gratify.viewModel.handler.syncSocialNotifications(supabase, commonRepository)
+                } catch (_: kotlinx.coroutines.TimeoutCancellationException) { }
+                catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                catch (_: Exception) { }
+                delay(60_000)
             }
         }
     }

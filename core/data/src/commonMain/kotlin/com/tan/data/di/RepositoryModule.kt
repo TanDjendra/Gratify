@@ -41,6 +41,10 @@ import org.koin.dsl.module
 
 val repositoryModule =
     module {
+        single { com.tan.data.cache.JsonContentCache() }
+        single<com.tan.domain.repository.FriendsSocialRepository> {
+            com.tan.data.repository.FriendsSocialRepositoryImpl(get())
+        }
         single<AccountRepository>(createdAtStart = true) {
             AccountRepositoryImpl(get(), get())
         }
@@ -60,19 +64,19 @@ val repositoryModule =
         }
 
         single<HomeRepository>(createdAtStart = true) {
-            HomeRepositoryImpl(get(), get())
+            HomeRepositoryImpl(get(), get(), get())
         }
 
         single<LocalPlaylistRepository>(createdAtStart = true) {
-            LocalPlaylistRepositoryImpl(get(), get(), get())
+            LocalPlaylistRepositoryImpl(get(), get(), get(), get(), get(), get(named(SERVICE_SCOPE)))
         }
 
         single<LyricsCanvasRepository>(createdAtStart = true) {
-            LyricsCanvasRepositoryImpl(get(), get(), get(), get(), get())
+            LyricsCanvasRepositoryImpl(get(), get(), get(), get(), get(), get())
         }
 
         single<PlaylistRepository>(createdAtStart = true) {
-            PlaylistRepositoryImpl(get(), get(), get())
+            PlaylistRepositoryImpl(get(), get(), get(), get())
         }
 
         single<PodcastRepository>(createdAtStart = true) {

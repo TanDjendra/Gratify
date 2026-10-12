@@ -96,7 +96,7 @@ kotlin {
                 implementation(libs.ffmpeg.kit.audio)
                 implementation(libs.gson)
 
-                implementation("com.github.maxrave-dev:PipePipeExtractor:${libs.versions.pipepipe.get()}") {
+                implementation(libs.pipepipe.extractor.get().toString()) {
                     exclude(group = "com.google.protobuf", module = "protobuf-java")
                 }
                 implementation(libs.brave.extractor)
@@ -116,7 +116,7 @@ kotlin {
 
         jvmMain {
             dependencies {
-                implementation("com.github.maxrave-dev:PipePipeExtractor:${libs.versions.pipepipe.get()}") {
+                implementation(libs.pipepipe.extractor.get().toString()) {
                     exclude(group = "com.google.protobuf", module = "protobuf-java")
                 }
                 implementation(libs.brave.extractor)

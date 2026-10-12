@@ -1,0 +1,5 @@
+{
+  "action": "Read-only anonymous OpenAPI metadata; no user rows requested",
+  "admin_access": false,
+  "http_status": 401
+}

@@ -13,8 +13,8 @@ import java.nio.ByteOrder
  *
  * Key design:
  * - [enabled], [cutoffFrequencyHz], and [filterType] can be changed at runtime (thread-safe).
- * - When [enabled] is false, [isActive] returns false and ExoPlayer skips this processor
- *   entirely — zero CPU overhead during normal playback.
+ * - The processor stays in the chain so a running crossfade can enable it. When disabled,
+ *   PCM passes through with a bulk buffer copy rather than processing individual bytes.
  * - Coefficient recalculation is lazy: only when cutoff or filter type changes.
  * - Supports PCM 16-bit audio (mono and stereo).
  */
@@ -78,6 +78,8 @@ class CrossfadeFilterAudioProcessor : BaseAudioProcessor() {
         return inputAudioFormat
     }
 
+    // The filter must stay in the chain so it can be enabled during a running fade.
+    @android.annotation.SuppressLint("MissingSuperCall")
     override fun isActive(): Boolean = true
 
     override fun queueInput(inputBuffer: ByteBuffer) {
@@ -128,11 +130,7 @@ class CrossfadeFilterAudioProcessor : BaseAudioProcessor() {
             dst.limit(size)
             return
         }
-        val pos = src.position()
-        for (i in 0 until size) {
-            dst.put(src.get(pos + i))
-        }
-        src.position(pos + size)
+        dst.put(src)
     }
 
     private fun processMonoBlock(input: ByteBuffer, output: ByteBuffer) {

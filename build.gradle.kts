@@ -27,6 +27,17 @@ tasks.register<Delete>("Clean") {
     delete(rootProject.layout.buildDirectory)
 }
 
+// Extractor forks pin vulnerable parser/network dependencies. Patch both platforms
+// centrally while retaining Wire 6.x compatibility with their generated messages.
+val patchedExtractorDependencies = listOf(
+    "com.squareup.wire:wire-runtime:${libs.versions.wire.runtime.get()}",
+    "com.squareup.wire:wire-runtime-jvm:${libs.versions.wire.runtime.get()}",
+    "org.apache.commons:commons-lang3:${libs.versions.commons.lang3.get()}",
+    "org.java-websocket:Java-WebSocket:${libs.versions.java.websocket.get()}",
+    "org.jsoup:jsoup:${libs.versions.jsoup.get()}",
+)
+val desktopJnaVersion = libs.versions.jna.get()
+
 subprojects {
     tasks.withType<KotlinCompile>().configureEach {
         compilerOptions {
@@ -50,6 +61,17 @@ subprojects {
     // so the merged APK/JAR carries a nanojson with the API both extractors expect.
     configurations.all {
         resolutionStrategy {
+            force(*patchedExtractorDependencies.toTypedArray())
+            // VLCJ's JPMS variants contain the same classes as the standard JNA
+            // artifacts used by our tray and transport controls. Ship one pair.
+            dependencySubstitution {
+                substitute(module("net.java.dev.jna:jna-jpms"))
+                    .using(module("net.java.dev.jna:jna:$desktopJnaVersion"))
+                    .because("Avoid duplicate JNA classes and native binaries on desktop")
+                substitute(module("net.java.dev.jna:jna-platform-jpms"))
+                    .using(module("net.java.dev.jna:jna-platform:$desktopJnaVersion"))
+                    .because("Use the same JNA version across desktop integrations")
+            }
             force("com.github.TeamNewPipe:nanojson:c7a6c1c08d16b6d5ecded34758e6415e07be2166")
             
             // Supabase 3.0.3 relies on Clock$System which was completely removed in kotlinx-datetime 0.7.1

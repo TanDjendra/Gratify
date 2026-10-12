@@ -1,6 +1,7 @@
 package com.tan.gratify.viewModel
 
 enum class LyricsProvider {
+    SIMPMUSIC,
     GRATIFYMUSIC,
     YOUTUBE,
     SPOTIFY,

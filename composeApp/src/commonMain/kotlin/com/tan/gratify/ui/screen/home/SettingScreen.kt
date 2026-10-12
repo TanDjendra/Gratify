@@ -1,4 +1,5 @@
 package com.tan.gratify.ui.screen.home
+import gratify.composeapp.generated.resources.*
 import com.tan.gratify.viewModel.SyncUiState
 import gratify.composeapp.generated.resources.cloud_backup_title
 import gratify.composeapp.generated.resources.cloud_backup_description
@@ -43,6 +44,10 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -163,6 +168,8 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import gratify.composeapp.generated.resources.playback_close_behavior
+import gratify.composeapp.generated.resources.playback_close_behavior_description
 import gratify.composeapp.generated.resources.Res
 import gratify.composeapp.generated.resources.settings_category_account
 import gratify.composeapp.generated.resources.settings_category_account_desc
@@ -270,12 +277,8 @@ import gratify.composeapp.generated.resources.invalid_language_code
 import gratify.composeapp.generated.resources.invalid_port
 import gratify.composeapp.generated.resources.keep_backups
 import gratify.composeapp.generated.resources.keep_backups_format
-import gratify.composeapp.generated.resources.keep_service_alive
-import gratify.composeapp.generated.resources.keep_service_alive_description
 import gratify.composeapp.generated.resources.keep_your_youtube_playlist_offline
 import gratify.composeapp.generated.resources.keep_your_youtube_playlist_offline_description
-import gratify.composeapp.generated.resources.kill_service_on_exit
-import gratify.composeapp.generated.resources.kill_service_on_exit_description
 import gratify.composeapp.generated.resources.language
 import gratify.composeapp.generated.resources.last_backup
 import gratify.composeapp.generated.resources.last_checked_at
@@ -290,6 +293,8 @@ import gratify.composeapp.generated.resources.log_out_warning
 import gratify.composeapp.generated.resources.logged_in
 import gratify.composeapp.generated.resources.lrclib
 import gratify.composeapp.generated.resources.lyrics
+import gratify.composeapp.generated.resources.lyrics_animation
+import gratify.composeapp.generated.resources.lyrics_no_animation
 import gratify.composeapp.generated.resources.main_lyrics_provider
 import gratify.composeapp.generated.resources.manage_your_youtube_accounts
 import gratify.composeapp.generated.resources.tan_dev
@@ -332,6 +337,7 @@ import gratify.composeapp.generated.resources.set
 import gratify.composeapp.generated.resources.settings
 import gratify.composeapp.generated.resources.signed_in
 import gratify.composeapp.generated.resources.gratify_lyrics
+import gratify.composeapp.generated.resources.simp_music_lyrics
 import gratify.composeapp.generated.resources.skip_no_music_part
 import gratify.composeapp.generated.resources.skip_silent
 import gratify.composeapp.generated.resources.skip_sponsor_part_of_video
@@ -346,6 +352,8 @@ import gratify.composeapp.generated.resources.such_as_music_video_lyrics_video_p
 
 import gratify.composeapp.generated.resources.thumbnail_cache
 import gratify.composeapp.generated.resources.translation_language
+import gratify.composeapp.generated.resources.lyrics_translation_enabled
+import gratify.composeapp.generated.resources.lyrics_translation_enabled_description
 import gratify.composeapp.generated.resources.translation_language_message
 import gratify.composeapp.generated.resources.translucent_bottom_navigation_bar
 import gratify.composeapp.generated.resources.unknown
@@ -385,6 +393,11 @@ fun SettingScreen(
     viewModel: SettingsViewModel = koinViewModel(),
     sharedViewModel: SharedViewModel = koinInject(),
 ) {
+    val ui_settings_custom_url = stringResource(Res.string.settings_custom_url)
+    val ui_settings_custom_url_hint = stringResource(Res.string.settings_custom_url_hint)
+    val ui_settings_custom_headers = stringResource(Res.string.settings_custom_headers)
+    val ui_settings_custom_headers_hint = stringResource(Res.string.settings_custom_headers_hint)
+    val ui_settings_api_key_hint = stringResource(Res.string.settings_api_key_hint)
     val ui_ai_api_key = stringResource(Res.string.ai_api_key)
     val ui_ai_provider = stringResource(Res.string.ai_provider)
     val ui_backup_frequency = stringResource(Res.string.backup_frequency)
@@ -396,6 +409,9 @@ fun SettingScreen(
     val ui_checking = stringResource(Res.string.checking)
     val ui_clear = stringResource(Res.string.clear)
     val ui_clear_canvas_cache = stringResource(Res.string.clear_canvas_cache)
+    val ui_download_remove_hint = stringResource(Res.string.settings_remove_downloads_hint)
+    val ui_restore_confirm = stringResource(Res.string.settings_restore_confirm)
+    val ui_restore_confirm_hint = stringResource(Res.string.settings_restore_confirm_hint)
     val ui_clear_downloaded_cache = stringResource(Res.string.clear_downloaded_cache)
     val ui_clear_player_cache = stringResource(Res.string.clear_player_cache)
     val ui_clear_thumbnail_cache = stringResource(Res.string.clear_thumbnail_cache)
@@ -409,7 +425,7 @@ fun SettingScreen(
     val ui_daily = stringResource(Res.string.daily)
     val ui_download_quality = stringResource(Res.string.download_quality)
     val ui_gemini = stringResource(Res.string.gemini)
-    val ui_gratify_lyrics = stringResource(Res.string.gratify_lyrics)
+    val ui_simp_music_lyrics = stringResource(Res.string.simp_music_lyrics)
     val ui_invalid = stringResource(Res.string.invalid)
     val ui_invalid_api_key = stringResource(Res.string.invalid_api_key)
     val ui_invalid_host = stringResource(Res.string.invalid_host)
@@ -457,6 +473,21 @@ fun SettingScreen(
 
     var width by rememberSaveable { mutableIntStateOf(0) }
     var activeCategory by rememberSaveable { mutableStateOf<SettingCategory?>(null) }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var sectionTarget by rememberSaveable { mutableStateOf<String?>(null) }
+    var topBarHeight by remember { mutableStateOf(64.dp) }
+    val homeListState = rememberLazyListState()
+    val detailListState = rememberSaveable(activeCategory, saver = LazyListState.Saver) { LazyListState() }
+    val focusManager = LocalFocusManager.current
+    val accountCoordinator: com.tan.data.sync.AccountSessionCoordinator = koinInject()
+    val accountAccess by accountCoordinator.access.collectAsStateWithLifecycle()
+    val signedIn = accountAccess is com.tan.data.sync.AccountAccess.Ready
+    val settingsWriteFailed by viewModel.settingsWriteFailed.collectAsStateWithLifecycle()
+    val settingsReadFailed by viewModel.settingsReadFailed.collectAsStateWithLifecycle()
+    LaunchedEffect(activeCategory, sectionTarget) {
+        activeCategory?.let { category -> detailListState.scrollToItem(category.sections().indexOf(sectionTarget).coerceAtLeast(0)) }
+    }
+    com.tan.gratify.ui.component.LayerBackHandler(activeCategory != null) { activeCategory = null }
 
     // Backup and restore
     val formatter =
@@ -508,7 +539,6 @@ fun SettingScreen(
     val skipSilent by viewModel.skipSilent.map { it == TRUE }.collectAsStateWithLifecycle(initialValue = false)
     val savePlaybackState by viewModel.savedPlaybackState.map { it == TRUE }.collectAsStateWithLifecycle(initialValue = false)
     val saveLastPlayed by viewModel.saveRecentSongAndQueue.map { it == TRUE }.collectAsStateWithLifecycle(initialValue = false)
-    val killServiceOnExit by viewModel.killServiceOnExit.map { it == TRUE }.collectAsStateWithLifecycle(initialValue = true)
     val mainLyricsProvider by viewModel.mainLyricsProvider.collectAsStateWithLifecycle()
     val youtubeSubtitleLanguage by viewModel.youtubeSubtitleLanguage.collectAsStateWithLifecycle()
     val enableSponsorBlock by viewModel.sponsorBlockEnabled.map { it == TRUE }.collectAsStateWithLifecycle(initialValue = false)
@@ -533,6 +563,7 @@ fun SettingScreen(
     val aiProvider by viewModel.aiProvider.collectAsStateWithLifecycle()
     val isHasApiKey by viewModel.isHasApiKey.collectAsStateWithLifecycle()
     val useAITranslation by viewModel.useAITranslation.collectAsStateWithLifecycle()
+    val useTranslation by viewModel.useTranslation.collectAsStateWithLifecycle()
     val translationLanguage by viewModel.translationLanguage.collectAsStateWithLifecycle()
     val customModelId by viewModel.customModelId.collectAsStateWithLifecycle()
     val customOpenAIBaseUrl by viewModel.customOpenAIBaseUrl.collectAsStateWithLifecycle()
@@ -545,7 +576,6 @@ fun SettingScreen(
     val autoBackupMaxFiles by viewModel.autoBackupMaxFiles.collectAsStateWithLifecycle()
     val autoBackupLastTime by viewModel.autoBackupLastTime.collectAsStateWithLifecycle()
     val updateChannel by viewModel.updateChannel.collectAsStateWithLifecycle()
-    val keepServiceAlive by viewModel.keepServiceAlive.collectAsStateWithLifecycle()
     val deletingAccount by viewModel.deletingAccount.collectAsStateWithLifecycle()
     val cloudSyncState by viewModel.syncState.collectAsStateWithLifecycle()
 
@@ -554,96 +584,40 @@ fun SettingScreen(
     val crossfadeDjMode by viewModel.crossfadeDjMode.collectAsStateWithLifecycle()
 
     val isCheckingUpdate by sharedViewModel.isCheckingUpdate.collectAsStateWithLifecycle()
+    val apkUpdateState by com.tan.gratify.expect.updateInstallState().collectAsStateWithLifecycle()
 
 
     val lastChecked = lastCheckUpdate?.toLongOrNull() ?: 0L
     val checkForUpdateSubtitle = when {
+        apkUpdateState.stage != com.tan.gratify.expect.UpdateStage.IDLE -> when (apkUpdateState.stage) {
+            com.tan.gratify.expect.UpdateStage.DOWNLOADING -> stringResource(Res.string.settings_update_downloading)
+            com.tan.gratify.expect.UpdateStage.PREPARING -> stringResource(Res.string.settings_update_preparing)
+            com.tan.gratify.expect.UpdateStage.APPLYING -> stringResource(Res.string.settings_update_applying)
+            com.tan.gratify.expect.UpdateStage.VERIFYING -> stringResource(Res.string.settings_update_verifying)
+            com.tan.gratify.expect.UpdateStage.ERROR -> stringResource(Res.string.settings_update_failed)
+            else -> stringResource(Res.string.settings_update_ready)
+        }
         isCheckingUpdate -> ui_checking
         lastChecked == 0L -> ui_never
         else -> stringResource(Res.string.last_checked_at,
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
                 .withZone(ZoneId.systemDefault()).format(Instant.ofEpochMilli(lastChecked)))
     }
-    var showYouTubeAccountDialog by rememberSaveable {
-        mutableStateOf(false)
-    }
-
-
-    LaunchedEffect(true) {
-        viewModel.getAllGoogleAccount()
-    }
-
     LaunchedEffect(true) {
         viewModel.getData()
         viewModel.getThumbCacheSize(platformContext)
     }
 
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     LazyColumn(
-        contentPadding = innerPadding,
-        modifier =
-            Modifier
-                .padding(horizontal = 16.dp)
-                ,
+        state = if (activeCategory == null) homeListState else detailListState,
+        contentPadding = PaddingValues(top = topBarHeight + innerPadding.calculateTopPadding(), bottom = innerPadding.calculateBottomPadding() + 24.dp),
+        modifier = Modifier.widthIn(max = 760.dp).fillMaxSize().imePadding().padding(horizontal = 16.dp),
     ) {
-        item {
-            Spacer(Modifier.height(64.dp))
-        }
-        if (activeCategory == null) {
-            item(key = "categories_list") {
-                Column {
-                    Spacer(Modifier.height(16.dp))
-                    SettingCategoryRow(stringResource(Res.string.settings_category_account), stringResource(Res.string.settings_category_account_desc), Res.drawable.baseline_people_alt_24) { activeCategory = SettingCategory.AKUN }
-                    SettingCategoryRow(stringResource(Res.string.settings_category_content_display), stringResource(Res.string.settings_category_content_display_desc), Res.drawable.baseline_lyrics_24) { activeCategory = SettingCategory.KONTEN_TAMPILAN }
-                    SettingCategoryRow(stringResource(Res.string.settings_category_privacy_social), stringResource(Res.string.settings_category_privacy_social_desc), Res.drawable.baseline_settings_24) { activeCategory = SettingCategory.PRIVASI_SOSIAL }
-                    SettingCategoryRow(stringResource(Res.string.settings_category_playback), stringResource(Res.string.settings_category_playback_desc), Res.drawable.baseline_play_circle_24) { activeCategory = SettingCategory.PLAYBACK }
-                    SettingCategoryRow(stringResource(Res.string.settings_category_media_quality), stringResource(Res.string.settings_category_media_quality_desc), Res.drawable.baseline_signal_cellular_alt_24) { activeCategory = SettingCategory.KUALITAS_MEDIA }
-                    SettingCategoryRow(stringResource(Res.string.settings_category_data_saver), stringResource(Res.string.settings_category_data_saver_desc), Res.drawable.outline_download_for_offline_24) { activeCategory = SettingCategory.MODE_HEMAT_DATA }
-                    SettingCategoryRow(stringResource(Res.string.settings_category_storage_backup), stringResource(Res.string.settings_category_storage_backup_desc), Res.drawable.baseline_settings_24) { activeCategory = SettingCategory.PENYIMPANAN }
-                    SettingCategoryRow(stringResource(Res.string.settings_category_about_support), stringResource(Res.string.settings_category_about_support_desc), Res.drawable.baseline_info_24) { activeCategory = SettingCategory.TENTANG_DUKUNGAN }
-                    
-                    Spacer(Modifier.height(32.dp))
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = stringResource(Res.string.log_out),
-                            style = typo().bodyLarge.copy(color = Color.Black, fontWeight = FontWeight.Bold),
-                            modifier = Modifier
-                                .clip(GratifyShapes.large)
-                                .background(Color.White)
-                                .clickable {
-                                    viewModel.setBasicAlertData(
-                                        SettingBasicAlertState(
-                                            title = ui_warning,
-                                            message = ui_log_out_warning,
-                                            confirm = ui_log_out to {
-                                                viewModel.setBasicAlertData(null)
-                                                viewModel.logOutAllYouTube()
-                                            },
-                                            dismiss = ui_cancel
-                                        )
-                                    )
-                                }
-                                .padding(horizontal = 32.dp, vertical = 12.dp)
-                        )
-                    }
-                    Spacer(Modifier.height(16.dp))
-                    Text(
-                        text = if (deletingAccount) "Menghapus akun…" else "Hapus akun Gratify",
-                        color = GratifyColors.Error,
-                        modifier = Modifier.align(Alignment.CenterHorizontally).clickable(enabled = !deletingAccount) {
-                            viewModel.setBasicAlertData(SettingBasicAlertState(
-                                title = "Hapus akun secara permanen?",
-                                message = "Akun, profil, playlist cloud, likes, riwayat dan antrean akan dihapus. Backup yang sudah Anda ekspor tetap berada di penyimpanan Anda. Tindakan ini tidak dapat dibatalkan.",
-                                confirm = "Hapus akun" to { viewModel.setBasicAlertData(null); viewModel.deleteGratifyAccount() },
-                                dismiss = ui_cancel,
-                            ))
-                        }.padding(12.dp),
-                    )
-                    Spacer(Modifier.height(48.dp))
-                }
-            }
+        if (activeCategory == null) item(key = "categories_list") {
+            SettingsHomeContent(searchQuery, { searchQuery = it }, { category, section ->
+                focusManager.clearFocus(); sectionTarget = section; activeCategory = category
+            }, Modifier.padding(top = 16.dp))
         }
         if (activeCategory == SettingCategory.KONTEN_TAMPILAN) {
             item(key = "user_interface") {
@@ -678,10 +652,9 @@ fun SettingScreen(
                     )
                     SettingItem(
                         title = stringResource(Res.string.youtube_account),
-                        subtitle = stringResource(Res.string.manage_your_youtube_accounts),
+                        subtitle = stringResource(Res.string.settings_youtube_hint),
                         onClick = {
-                            viewModel.getAllGoogleAccount()
-                            showYouTubeAccountDialog = true
+                            navController.navigate(LoginDestination)
                         },
                     )
                 }
@@ -721,9 +694,8 @@ fun SettingScreen(
                                                     message = ui_change_language_warning,
                                                     confirm =
                                                         ui_change to {
-                                                            sharedViewModel.activityRecreate()
-                                                            viewModel.setBasicAlertData(null)
                                                             viewModel.changeLanguage(code)
+                                                            viewModel.setBasicAlertData(null)
                                                         },
                                                     dismiss = ui_cancel,
                                                 ),
@@ -773,7 +745,7 @@ fun SettingScreen(
                 Column {
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        text = "Kualitas Media",
+                        text = stringResource(Res.string.settings_category_media_quality),
                         style = typo().labelMedium,
                         color = white,
                         modifier = Modifier.padding(vertical = 8.dp),
@@ -834,7 +806,7 @@ fun SettingScreen(
                 Column {
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        text = "Mode Hemat Data dan Offline",
+                        text = stringResource(Res.string.settings_category_data_saver),
                         style = typo().labelMedium,
                         color = white,
                         modifier = Modifier.padding(vertical = 8.dp),
@@ -900,7 +872,7 @@ fun SettingScreen(
                 Column {
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        text = "Konten & Pemutaran Video",
+                        text = stringResource(Res.string.settings_video_section),
                         style = typo().labelMedium,
                         color = white,
                         modifier = Modifier.padding(vertical = 8.dp),
@@ -920,7 +892,7 @@ fun SettingScreen(
                 Column {
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        text = "Privasi dan Sosial",
+                        text = stringResource(Res.string.settings_category_privacy_social),
                         style = typo().labelMedium,
                         color = white,
                         modifier = Modifier.padding(vertical = 8.dp),
@@ -940,26 +912,24 @@ fun SettingScreen(
                         subtitle = stringResource(Res.string.local_tracking_description),
                         switch = (localTrackingEnabled to { viewModel.setLocalTrackingEnabled(it) }),
                     )
-                    SettingItem(
-                        title = stringResource(Res.string.proxy),
-                        subtitle = stringResource(Res.string.proxy_description),
-                        switch = (usingProxy to { viewModel.setUsingProxy(it) }),
-                    )
                 }
             }
         }
-        if (activeCategory == SettingCategory.PRIVASI_SOSIAL) {
+        if (activeCategory == SettingCategory.KONEKSI) item(key = "network") {
+            Column {
+                Text(stringResource(Res.string.settings_category_network_desc), style = typo().bodySmall,
+                    color = GratifyColors.TextSecondary, modifier = Modifier.padding(vertical = 16.dp))
+                SettingItem(title = stringResource(Res.string.proxy), subtitle = stringResource(Res.string.proxy_description),
+                    switch = usingProxy to viewModel::setUsingProxy)
+            }
+        }
+        if (activeCategory == SettingCategory.KONEKSI) {
             item(key = "proxy") {
-                Crossfade(usingProxy) { it ->
-                if (it) {
-                    Column {
+                Crossfade(usingProxy) { enabled ->
+                    if (enabled) Column {
                         SettingItem(
                             title = stringResource(Res.string.proxy_type),
-                            subtitle =
-                                when (proxyType) {
-                                    DataStoreManager.ProxyType.PROXY_TYPE_HTTP -> stringResource(Res.string.http)
-                                    DataStoreManager.ProxyType.PROXY_TYPE_SOCKS -> stringResource(Res.string.socks)
-                                },
+                            subtitle = if (proxyType == DataStoreManager.ProxyType.PROXY_TYPE_SOCKS) ui_socks else "HTTP",
                             onClick = {
                                 viewModel.setAlertData(
                                     SettingAlertState(
@@ -1037,7 +1007,7 @@ fun SettingScreen(
                                                 label = ui_proxy_port,
                                                 value = proxyPort.toString(),
                                                 verifyCodeBlock = {
-                                                    (it.toIntOrNull() != null) to ui_invalid_port
+                                                    (it.toIntOrNull()?.let { port -> port in 1..65535 } == true) to ui_invalid_port
                                                 },
                                             ),
                                         confirm =
@@ -1094,6 +1064,7 @@ fun SettingScreen(
                                         textField =
                                             SettingAlertState.TextFieldData(
                                                 label = ui_proxy_password,
+                                        sensitive = true,
                                                 value = proxyPassword,
                                             ),
                                         confirm =
@@ -1111,7 +1082,6 @@ fun SettingScreen(
                     }
                 }
             }
-        }
         }
         if (activeCategory == SettingCategory.PLAYBACK) {
             item(key = "audio") {
@@ -1167,14 +1137,9 @@ fun SettingScreen(
                 )
                 if (getPlatform() == Platform.Android) {
                     SettingItem(
-                        title = stringResource(Res.string.kill_service_on_exit),
-                        subtitle = stringResource(Res.string.kill_service_on_exit_description),
-                        switch = (killServiceOnExit to { viewModel.setKillServiceOnExit(it) }),
-                    )
-                    SettingItem(
-                        title = stringResource(Res.string.keep_service_alive),
-                        subtitle = stringResource(Res.string.keep_service_alive_description),
-                        switch = (keepServiceAlive to { viewModel.setKeepServiceAlive(it) }),
+                        title = stringResource(Res.string.playback_close_behavior),
+                        subtitle = stringResource(Res.string.playback_close_behavior_description),
+                        smallSubtitle = true,
                     )
                 }
             }
@@ -1262,7 +1227,7 @@ fun SettingScreen(
             }
         }
         }
-        if (activeCategory == SettingCategory.PLAYBACK) {
+        if (activeCategory == SettingCategory.LIRIK) {
             item(key = "lyrics") {
                 Column {
                 Text(
@@ -1272,10 +1237,14 @@ fun SettingScreen(
                     modifier = Modifier.padding(vertical = 8.dp),
                 )
                 SettingItem(
+                    title = stringResource(Res.string.lyrics_animation),
+                    subtitle = stringResource(Res.string.lyrics_no_animation),
+                )
+                SettingItem(
                     title = stringResource(Res.string.main_lyrics_provider),
                     subtitle =
                         when (mainLyricsProvider) {
-                            DataStoreManager.GRATIFYMUSIC -> stringResource(Res.string.gratify_lyrics)
+                            DataStoreManager.SIMPMUSIC, DataStoreManager.GRATIFYMUSIC -> stringResource(Res.string.simp_music_lyrics)
                             DataStoreManager.YOUTUBE -> stringResource(Res.string.youtube_transcript)
                             DataStoreManager.LRCLIB -> stringResource(Res.string.lrclib)
                             DataStoreManager.BETTER_LYRICS -> stringResource(Res.string.better_lyrics)
@@ -1289,8 +1258,8 @@ fun SettingScreen(
                                     SettingAlertState.SelectData(
                                         listSelect =
                                             listOf(
-                                                (mainLyricsProvider == DataStoreManager.GRATIFYMUSIC) to
-                                                    ui_gratify_lyrics,
+                                                (mainLyricsProvider == DataStoreManager.SIMPMUSIC || mainLyricsProvider == DataStoreManager.GRATIFYMUSIC) to
+                                                    ui_simp_music_lyrics,
                                                 (mainLyricsProvider == DataStoreManager.YOUTUBE) to
                                                     ui_youtube_transcript,
                                                 (mainLyricsProvider == DataStoreManager.LRCLIB) to ui_lrclib,
@@ -1302,11 +1271,11 @@ fun SettingScreen(
                                     ui_change to { state ->
                                         viewModel.setLyricsProvider(
                                             when (state.selectOne?.getSelected()) {
-                                                ui_gratify_lyrics -> DataStoreManager.GRATIFYMUSIC
+                                                ui_simp_music_lyrics -> DataStoreManager.SIMPMUSIC
                                                 ui_youtube_transcript -> DataStoreManager.YOUTUBE
                                                 ui_lrclib -> DataStoreManager.LRCLIB
                                                 ui_better_lyrics -> DataStoreManager.BETTER_LYRICS
-                                                else -> DataStoreManager.GRATIFYMUSIC
+                                                else -> DataStoreManager.SIMPMUSIC
                                             },
                                         )
                                     },
@@ -1316,6 +1285,11 @@ fun SettingScreen(
                     },
                 )
 
+                SettingItem(
+                    title = stringResource(Res.string.lyrics_translation_enabled),
+                    subtitle = stringResource(Res.string.lyrics_translation_enabled_description),
+                    switch = ((useTranslation == DataStoreManager.TRUE || useAITranslation) to viewModel::setUseTranslation),
+                )
                 SettingItem(
                     title = stringResource(Res.string.translation_language),
                     subtitle = translationLanguage ?: "",
@@ -1430,7 +1404,7 @@ fun SettingScreen(
             }
         }
         }
-        if (activeCategory == SettingCategory.PLAYBACK) {
+        if (activeCategory == SettingCategory.LIRIK) {
             item(key = "AI") {
                 Column {
                 Text(text = stringResource(Res.string.ai), style = typo().labelMedium, color = white, modifier = Modifier.padding(vertical = 8.dp))
@@ -1451,11 +1425,11 @@ fun SettingScreen(
                                     SettingAlertState.SelectData(
                                         listSelect =
                                             listOf(
-                                                (mainLyricsProvider == DataStoreManager.AI_PROVIDER_OPENAI) to
+                                                (aiProvider == DataStoreManager.AI_PROVIDER_OPENAI) to
                                                     ui_openai,
-                                                (mainLyricsProvider == DataStoreManager.AI_PROVIDER_GEMINI) to
+                                                (aiProvider == DataStoreManager.AI_PROVIDER_GEMINI) to
                                                     ui_gemini,
-                                                (mainLyricsProvider == DataStoreManager.AI_PROVIDER_CUSTOM_OPENAI) to
+                                                (aiProvider == DataStoreManager.AI_PROVIDER_CUSTOM_OPENAI) to
                                                     ui_openai_api_compatible,
                                             ),
                                     ),
@@ -1483,7 +1457,7 @@ fun SettingScreen(
                 )
                 SettingItem(
                     title = stringResource(Res.string.ai_api_key),
-                    subtitle = if (isHasApiKey) "XXXXXXXXXX" else "N/A",
+                    subtitle = stringResource(if (isHasApiKey) Res.string.settings_configured else Res.string.settings_not_set),
                     onClick = {
                         viewModel.setAlertData(
                             SettingAlertState(
@@ -1491,12 +1465,13 @@ fun SettingScreen(
                                 textField =
                                     SettingAlertState.TextFieldData(
                                         label = ui_ai_api_key,
+                                        sensitive = true,
                                         value = "",
                                         verifyCodeBlock = {
-                                            (it.isNotEmpty()) to ui_invalid_api_key
+                                            true to null
                                         },
                                     ),
-                                message = "",
+                                message = ui_settings_api_key_hint,
                                 confirm =
                                     ui_set to { state ->
                                         viewModel.setAIApiKey(state.textField?.value ?: "")
@@ -1534,21 +1509,21 @@ fun SettingScreen(
                 // Custom OpenAI Base URL - only show when Custom OpenAI is selected
                 if (aiProvider == DataStoreManager.AI_PROVIDER_CUSTOM_OPENAI) {
                     SettingItem(
-                        title = "Custom Base URL",
+                        title = ui_settings_custom_url,
                         subtitle = customOpenAIBaseUrl.ifEmpty { "https://api.openai.com/v1/" },
                         onClick = {
                             viewModel.setAlertData(
                                 SettingAlertState(
-                                    title = "Custom Base URL",
+                                    title = ui_settings_custom_url,
                                     textField =
                                         SettingAlertState.TextFieldData(
-                                            label = "Base URL",
+                                            label = ui_settings_custom_url,
                                             value = customOpenAIBaseUrl,
                                             verifyCodeBlock = {
-                                                (it.isEmpty() || it.startsWith("http")) to "Invalid URL format"
+                                                validSettingsApiUrl(it) to ui_invalid
                                             },
                                         ),
-                                    message = "Enter OpenAI-compatible API base URL (e.g., https://api.openai.com/v1/)",
+                                    message = ui_settings_custom_url_hint,
                                     confirm =
                                         ui_set to { state ->
                                             viewModel.setCustomOpenAIBaseUrl(state.textField?.value ?: "")
@@ -1559,31 +1534,21 @@ fun SettingScreen(
                         },
                     )
                     SettingItem(
-                        title = "Custom Headers",
-                        subtitle = if (customOpenAIHeaders.isNotEmpty()) "Configured" else "Not set",
+                        title = ui_settings_custom_headers,
+                        subtitle = if (customOpenAIHeaders.isNotEmpty()) stringResource(Res.string.settings_configured) else stringResource(Res.string.settings_not_set),
                         onClick = {
                             viewModel.setAlertData(
                                 SettingAlertState(
-                                    title = "Custom Headers (JSON)",
+                                    title = ui_settings_custom_headers,
                                     textField =
                                         SettingAlertState.TextFieldData(
-                                            label = "Headers JSON",
+                                            label = ui_settings_custom_headers,
                                             value = customOpenAIHeaders,
                                             verifyCodeBlock = { input ->
-                                                if (input.isEmpty()) {
-                                                    true to null
-                                                } else {
-                                                    try {
-                                                        // Simple validation: check if it looks like JSON
-                                                        val trimmed = input.trim()
-                                                        (trimmed.startsWith("{") && trimmed.endsWith("}")) to "Invalid JSON format"
-                                                    } catch (e: Exception) {
-                                                        false to "Invalid JSON format"
-                                                    }
-                                                }
+                                                validSettingsHeaders(input) to ui_invalid
                                             },
                                         ),
-                                    message = "Enter custom headers in JSON format:\n{\"key1\":\"value1\",\"key2\":\"value2\"}",
+                                    message = ui_settings_custom_headers_hint,
                                     confirm =
                                         ui_set to { state ->
                                             viewModel.setCustomOpenAIHeaders(state.textField?.value ?: "")
@@ -1599,18 +1564,14 @@ fun SettingScreen(
                     subtitle = stringResource(Res.string.use_ai_translation_description),
                     switch = (useAITranslation to { viewModel.setAITranslation(it) }),
                     isEnable = isHasApiKey,
-                    onDisable = {
-                        if (useAITranslation) {
-                            viewModel.setAITranslation(false)
-                        }
-                    },
+
                 )
             }
         }
         }
         if (activeCategory == SettingCategory.AKUN) {
             item(key = "google_link") {
-                Column {
+                if (signedIn) Column {
                     Text(
                         text = "Google",
                         style = typo().labelMedium,
@@ -1619,7 +1580,7 @@ fun SettingScreen(
                     )
                     SettingItem(
                         title = "Tautkan Akun Google",
-                        subtitle = "Hubungkan akun ini ke Google",
+                        subtitle = stringResource(Res.string.settings_google_link_hint),
                         onClick = {
                             viewModel.linkGoogleAccount()
                         },
@@ -1739,7 +1700,7 @@ fun SettingScreen(
                             viewModel.setBasicAlertData(
                                 SettingBasicAlertState(
                                     title = ui_clear_downloaded_cache,
-                                    message = null,
+                                    message = ui_download_remove_hint,
                                     confirm =
                                         ui_clear to {
                                             viewModel.clearDownloadedCache()
@@ -1808,213 +1769,6 @@ fun SettingScreen(
                             )
                         },
                     )
-                    Box(
-                        Modifier.padding(
-                            horizontal = 24.dp,
-                            vertical = 16.dp,
-                        ),
-                    ) {
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(0.dp),
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(8.dp)
-                                    .clip(GratifyShapes.small)
-                                    .onGloballyPositioned { layoutCoordinates ->
-                                        with(localDensity) {
-                                            width =
-                                                layoutCoordinates.size.width
-                                                    .toDp()
-                                                    .value
-                                                    .toInt()
-                                        }
-                                    },
-                        ) {
-                            item {
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .width(
-                                                (fraction.otherApp * width).dp,
-                                            ).background(
-                                                md_theme_dark_primary,
-                                            ).fillMaxHeight(),
-                                )
-                            }
-                            item {
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .width(
-                                                (fraction.downloadCache * width).dp,
-                                            ).background(
-                                                Color(0xD540FF17),
-                                            ).fillMaxHeight(),
-                                )
-                            }
-                            item {
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .width(
-                                                (fraction.playerCache * width).dp,
-                                            ).background(
-                                                Color(0xD5FFFF00),
-                                            ).fillMaxHeight(),
-                                )
-                            }
-                            item {
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .width(
-                                                (fraction.canvasCache * width).dp,
-                                            ).background(
-                                                Color.Cyan,
-                                            ).fillMaxHeight(),
-                                )
-                            }
-                            item {
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .width(
-                                                (fraction.thumbCache * width).dp,
-                                            ).background(
-                                                Color.Magenta,
-                                            ).fillMaxHeight(),
-                                )
-                            }
-                            item {
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .width(
-                                                (fraction.appDatabase * width).dp,
-                                            ).background(
-                                                Color.White,
-                                            ),
-                                )
-                            }
-                            item {
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .width(
-                                                (fraction.freeSpace * width).dp,
-                                            ).background(
-                                                GratifyColors.SurfaceHighest,
-                                            ).fillMaxHeight(),
-                                )
-                            }
-                        }
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
-                    ) {
-                        Box(
-                            Modifier
-                                .size(12.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    md_theme_dark_primary,
-                                ),
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(text = stringResource(Res.string.other_app), style = typo().bodySmall)
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
-                    ) {
-                        Box(
-                            Modifier
-                                .size(12.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    Color.Green,
-                                ),
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(text = stringResource(Res.string.downloaded_cache), style = typo().bodySmall)
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
-                    ) {
-                        Box(
-                            Modifier
-                                .size(12.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    Color.Yellow,
-                                ),
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(text = stringResource(Res.string.player_cache), style = typo().bodySmall)
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
-                    ) {
-                        Box(
-                            Modifier
-                                .size(12.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    Color.Cyan,
-                                ),
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(text = stringResource(Res.string.spotify_canvas_cache), style = typo().bodySmall)
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
-                    ) {
-                        Box(
-                            Modifier
-                                .size(12.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    Color.Magenta,
-                                ),
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(text = stringResource(Res.string.thumbnail_cache), style = typo().bodySmall)
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
-                    ) {
-                        Box(
-                            Modifier
-                                .size(12.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    Color.White,
-                                ),
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(text = stringResource(Res.string.database), style = typo().bodySmall)
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
-                    ) {
-                        Box(
-                            Modifier
-                                .size(12.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    GratifyColors.TextSecondary,
-                                ),
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(text = stringResource(Res.string.free_space), style = typo().bodySmall)
-                    }
                 }
             }
         }
@@ -2022,16 +1776,17 @@ fun SettingScreen(
             item(key = "backup") {
                 Column {
                 val syncing = cloudSyncState is SyncUiState.InProgress
+                if (!signedIn) Text(stringResource(Res.string.settings_cloud_sign_in), style = typo().bodySmall, color = GratifyColors.TextSecondary, modifier = Modifier.padding(16.dp))
                 SettingItem(
                     title = stringResource(Res.string.cloud_backup_title),
                     subtitle = stringResource(if (syncing) Res.string.cloud_sync_working else Res.string.cloud_backup_description),
-                    isEnable = !syncing,
+                    isEnable = !syncing && signedIn,
                     onClick = { viewModel.syncUpNow() },
                 )
                 SettingItem(
                     title = stringResource(Res.string.cloud_restore_title),
                     subtitle = stringResource(if (syncing) Res.string.cloud_sync_working else Res.string.cloud_restore_description),
-                    isEnable = !syncing,
+                    isEnable = !syncing && signedIn,
                     onClick = { viewModel.syncDownNow() },
                 )
                 if (cloudSyncState is SyncUiState.Success || cloudSyncState is SyncUiState.Error) {
@@ -2174,7 +1929,8 @@ fun SettingScreen(
                     subtitle = stringResource(Res.string.restore_your_saved_data),
                     onClick = {
                         coroutineScope.launch {
-                            restoreLauncher.launch()
+                            viewModel.setBasicAlertData(SettingBasicAlertState(ui_restore_confirm, ui_restore_confirm_hint,
+                                ui_restore_confirm to { coroutineScope.launch { restoreLauncher.launch() } }, ui_cancel))
                         }
                     },
                 )
@@ -2183,51 +1939,64 @@ fun SettingScreen(
         }
         if (activeCategory == SettingCategory.TENTANG_DUKUNGAN) {
             item(key = "about_us") {
-                Column {
-                Text(
-                    text = stringResource(Res.string.about_us),
-                    style = typo().labelMedium,
-                    color = white,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
-                SettingItem(
-                    title = stringResource(Res.string.version),
-                    subtitle = stringResource(Res.string.version_format, VersionManager.getVersionName()),
-                    onClick = {
-                        navController.navigate(CreditDestination)
-                    },
-                )
-                SettingItem(
-                    title = stringResource(Res.string.instagram),
-                    subtitle = "@calestaan",
-                    onClick = {
-                        uriHandler.openUri("https://instagram.com/calestaan")
-                    },
-                )
-                SettingItem(
-                    title = stringResource(Res.string.auto_check_for_update),
-                    subtitle = stringResource(Res.string.auto_check_for_update_description),
-                    smallSubtitle = true,
-                    switch = (autoCheckUpdate to { viewModel.setAutoCheckUpdate(it) }),
-                )
-                SettingItem(
-                    title = stringResource(Res.string.check_for_update),
-                    subtitle = checkForUpdateSubtitle,
-                    smallSubtitle = true,
-                    onClick = {
-                        if (!isCheckingUpdate) {
+                AboutSupportContent(
+                    version = VersionManager.getVersionName(), build = VersionManager.getVersionCode(),
+                    updateSubtitle = checkForUpdateSubtitle,
+                    checkingUpdate = isCheckingUpdate && apkUpdateState.stage == com.tan.gratify.expect.UpdateStage.IDLE,
+                    autoUpdate = autoCheckUpdate, onAutoUpdate = viewModel::setAutoCheckUpdate,
+                    onCheckUpdate = {
+                        if (apkUpdateState.stage != com.tan.gratify.expect.UpdateStage.IDLE) {
+                            com.tan.gratify.expect.openUpdateStatus()
+                        } else if (!isCheckingUpdate) {
                             sharedViewModel.checkForUpdate(isManual = true)
                         }
                     },
+                    onDeveloper = { navController.navigate(CreditDestination) },
+                    onOpenLink = uriHandler::openUri,
+                    onCopyInfo = { info -> com.tan.gratify.expect.copyToClipboard(appName, info) },
                 )
             }
         }
+        if (activeCategory == SettingCategory.AKUN) item(key = "gratify_account") {
+            Column(Modifier.padding(vertical = 16.dp)) {
+                if (signedIn) {
+                    Text(stringResource(Res.string.settings_account_ready), style = typo().bodySmall,
+                        color = GratifyColors.TextSecondary, modifier = Modifier.padding(16.dp))
+                    SettingItem(title = stringResource(Res.string.log_out), subtitle = stringResource(Res.string.settings_logout_hint),
+                        isEnable = !deletingAccount, onClick = {
+                            viewModel.setBasicAlertData(SettingBasicAlertState(ui_warning, ui_log_out_warning,
+                                ui_log_out to { viewModel.logOutGratify() }, ui_cancel))
+                        })
+                    val deleteTitle = stringResource(Res.string.settings_delete_account)
+                    val deletePrompt = stringResource(Res.string.settings_delete_prompt)
+                    val deleteHint = stringResource(Res.string.settings_delete_hint)
+                    SettingItem(title = if (deletingAccount) stringResource(Res.string.settings_deleting) else deleteTitle,
+                        subtitle = deleteHint, smallSubtitle = true, isEnable = !deletingAccount, onClick = {
+                            viewModel.setBasicAlertData(SettingBasicAlertState(deletePrompt, deleteHint,
+                                deleteTitle to { viewModel.deleteGratifyAccount() }, ui_cancel))
+                        })
+                } else {
+                    SettingItem(title = stringResource(Res.string.settings_sign_in),
+                        subtitle = stringResource(Res.string.settings_signed_out_hint),
+                        isEnable = accountAccess is com.tan.data.sync.AccountAccess.SignedOut,
+                        onClick = { navController.navigate(com.tan.gratify.ui.navigation.destination.login.LoginLandingDestination) })
+                }
+            }
+        }
+        if (settingsWriteFailed) item(key = "settings-write-error") {
+            Text(stringResource(Res.string.settings_write_failed), style = typo().bodyMedium, color = GratifyColors.Error, modifier = Modifier.padding(16.dp))
+        }
+        if (settingsReadFailed) item(key = "settings-read-error") {
+            Text(stringResource(Res.string.settings_read_failed), style = typo().bodyMedium,
+                color = GratifyColors.Error, modifier = Modifier.padding(16.dp))
+            TextButton(onClick = { viewModel.getData(); viewModel.getThumbCacheSize(platformContext) }) { Text(stringResource(Res.string.retry)) }
         }
         if (activeCategory != null) {
             item(key = "end") {
                 EndOfPage()
             }
         }
+    }
     }
     val basisAlertData by viewModel.basicAlertData.collectAsStateWithLifecycle()
     if (basisAlertData != null) {
@@ -2266,394 +2035,25 @@ fun SettingScreen(
             },
         )
     }
-    if (showYouTubeAccountDialog) {
-        BasicAlertDialog(
-            onDismissRequest = { },
-            modifier = Modifier.wrapContentSize(),
-        ) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.large,
-                color = GratifyColors.SurfaceRaised,
-                tonalElevation = AlertDialogDefaults.TonalElevation,
-                shadowElevation = 1.dp,
-            ) {
-                val googleAccounts by viewModel.googleAccounts.collectAsStateWithLifecycle(
-                    minActiveState = Lifecycle.State.RESUMED,
-                )
-                LaunchedEffect(googleAccounts) {
-                    Logger.w(
-                        "SettingScreen",
-                        "LaunchedEffect: ${
-                            googleAccounts.data?.map {
-                                it.name to it.isUsed
-                            }
-                        }",
-                    )
-                }
-                LazyColumn(modifier = Modifier.padding(8.dp)) {
-                    item {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(48.dp),
-                        ) {
-                            IconButton(
-                                onClick = { showYouTubeAccountDialog = false },
-                                colors =
-                                    IconButtonDefaults.iconButtonColors().copy(
-                                        contentColor = Color.White,
-                                    ),
-                                modifier =
-                                    Modifier
-                                        .align(Alignment.CenterStart)
-                                        .fillMaxHeight(),
-                            ) {
-                                Icon(Icons.Outlined.Close, null, tint = Color.White)
-                            }
-                            Text(
-                                stringResource(Res.string.youtube_account),
-                                style = typo().titleMedium,
-                                modifier =
-                                    Modifier
-                                        .align(Alignment.Center)
-                                        .wrapContentHeight(align = Alignment.CenterVertically)
-                                        .wrapContentWidth(),
-                            )
-                        }
-                    }
-                    if (googleAccounts is LocalResource.Success) {
-                        val data = googleAccounts.data
-                        if (data.isNullOrEmpty()) {
-                            item {
-                                Text(
-                                    stringResource(Res.string.no_account),
-                                    style = typo().bodyMedium,
-                                    textAlign = TextAlign.Center,
-                                    modifier =
-                                        Modifier
-                                            .padding(12.dp)
-                                            .fillMaxWidth(),
-                                )
-                            }
-                        } else {
-                            items(data) {
-                                Row(
-                                    modifier =
-                                        Modifier
-                                            .padding(vertical = 8.dp)
-                                            .clickable {
-                                                viewModel.setUsedAccount(it)
-                                            },
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Spacer(Modifier.width(24.dp))
-                                    AsyncImage(
-                                        model =
-                                            ImageRequest
-                                                .Builder(LocalPlatformContext.current)
-                                                .data(it.thumbnailUrl)
-                                                .crossfade(550)
-                                                .build(),
-                                        placeholder = painterResource(Res.drawable.baseline_people_alt_24),
-                                        error = painterResource(Res.drawable.baseline_people_alt_24),
-                                        fallback = painterResource(Res.drawable.baseline_people_alt_24),
-                                        contentDescription = it.name,
-                                        modifier =
-                                            Modifier
-                                                .size(48.dp)
-                                                .clip(CircleShape),
-                                    )
-                                    Spacer(Modifier.width(12.dp))
-                                    Column(Modifier.weight(1f)) {
-                                        Text(it.name, style = typo().labelMedium, color = white)
-                                        Text(it.email, style = typo().bodySmall)
-                                    }
-                                    Spacer(Modifier.width(12.dp))
-                                    AnimatedVisibility(it.isUsed) {
-                                        Text(
-                                            stringResource(Res.string.signed_in),
-                                            style = typo().bodySmall,
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis,
-                                            textAlign = TextAlign.Center,
-                                            modifier = Modifier.widthIn(0.dp, 64.dp),
-                                        )
-                                    }
-                                    Spacer(Modifier.width(24.dp))
-                                }
-                            }
-                        }
-                    } else {
-                        item {
-                            CenterLoadingBox(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(80.dp),
-                            )
-                        }
-                    }
-                    item {
-                        Column {
-                            ActionButton(
-                                icon = painterResource(Res.drawable.baseline_people_alt_24),
-                                text = Res.string.guest,
-                            ) {
-                                viewModel.setUsedAccount(null)
-                                showYouTubeAccountDialog = false
-                            }
-                            ActionButton(
-                                icon = painterResource(Res.drawable.baseline_close_24),
-                                text = Res.string.log_out,
-                            ) {
-                                viewModel.setBasicAlertData(
-                                    SettingBasicAlertState(
-                                        title = ui_warning,
-                                        message = ui_log_out_warning,
-                                        confirm =
-                                            ui_log_out to {
-                                                viewModel.logOutAllYouTube()
-                                                showYouTubeAccountDialog = false
-                                            },
-                                        dismiss = ui_cancel,
-                                    ),
-                                )
-                            }
-                            ActionButton(
-                                icon = painterResource(Res.drawable.baseline_playlist_add_24),
-                                text = Res.string.add_an_account,
-                            ) {
-                                showYouTubeAccountDialog = false
-                                navController.navigate(LoginDestination)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
     val alertData by viewModel.alertData.collectAsStateWithLifecycle()
     if (alertData != null) {
         val alertState = alertData ?: return
-        // AlertDialog
-        AlertDialog(
-            onDismissRequest = { viewModel.setAlertData(null) },
-            title = {
-                Text(
-                    text = alertState.title,
-                    style = typo().titleSmall,
-                )
-            },
-            text = {
-                if (alertState.message != null) {
-                    Column {
-                        Text(text = alertState.message)
-                        if (alertState.textField != null) {
-                            val verify =
-                                alertState.textField.verifyCodeBlock?.invoke(
-                                    alertState.textField.value,
-                                ) ?: (true to null)
-                            TextField(
-                                value = alertState.textField.value,
-                                onValueChange = {
-                                    viewModel.setAlertData(
-                                        alertState.copy(
-                                            textField =
-                                                alertState.textField.copy(
-                                                    value = it,
-                                                ),
-                                        ),
-                                    )
-                                },
-                                isError = !verify.first,
-                                label = { Text(text = alertState.textField.label) },
-                                supportingText = {
-                                    if (!verify.first) {
-                                        Text(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            text = verify.second ?: "",
-                                            color = DarkColors.error,
-                                        )
-                                    }
-                                },
-                                trailingIcon = {
-                                    if (!verify.first) {
-                                        Icons.Outlined.Error
-                                    }
-                                },
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(
-                                            vertical = 6.dp,
-                                        ),
-                            )
-                        }
-                    }
-                } else if (alertState.selectOne != null) {
-                    LazyColumn(
-                        Modifier
-                            .padding(vertical = 6.dp)
-                            .heightIn(0.dp, 500.dp),
-                    ) {
-                        items(alertState.selectOne.listSelect) { item ->
-                            val onSelect = {
-                                viewModel.setAlertData(
-                                    alertState.copy(
-                                        selectOne =
-                                            alertState.selectOne.copy(
-                                                listSelect =
-                                                    alertState.selectOne.listSelect.toMutableList().map {
-                                                        if (it == item) {
-                                                            true to it.second
-                                                        } else {
-                                                            false to it.second
-                                                        }
-                                                    },
-                                            ),
-                                    ),
-                                )
-                            }
-                            Row(
-                                Modifier
-                                    .padding(vertical = 4.dp)
-                                    .clickable {
-                                        onSelect.invoke()
-                                    }.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                RadioButton(
-                                    selected = item.first,
-                                    onClick = {
-                                        onSelect.invoke()
-                                    },
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    text = item.second,
-                                    style = typo().bodyMedium,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .wrapContentHeight(align = Alignment.CenterVertically)
-                                            .focusable(),
-                                )
-                            }
-                        }
-                    }
-                } else if (alertState.multipleSelect != null) {
-                    LazyColumn(
-                        Modifier.padding(vertical = 6.dp),
-                    ) {
-                        items(alertState.multipleSelect.listSelect) { item ->
-                            val onCheck = {
-                                viewModel.setAlertData(
-                                    alertState.copy(
-                                        multipleSelect =
-                                            alertState.multipleSelect.copy(
-                                                listSelect =
-                                                    alertState.multipleSelect.listSelect.toMutableList().map {
-                                                        if (it == item) {
-                                                            !it.first to it.second
-                                                        } else {
-                                                            it
-                                                        }
-                                                    },
-                                            ),
-                                    ),
-                                )
-                            }
-                            Row(
-                                Modifier
-                                    .padding(vertical = 4.dp)
-                                    .clickable {
-                                        onCheck.invoke()
-                                    }.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Checkbox(
-                                    checked = item.first,
-                                    onCheckedChange = {
-                                        onCheck.invoke()
-                                    },
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text(text = item.second, style = typo().bodyMedium, maxLines = 1)
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        alertState.confirm.second.invoke(alertState)
-                        viewModel.setAlertData(null)
-                    },
-                    enabled =
-                        if (alertState.textField?.verifyCodeBlock != null) {
-                            alertState.textField.verifyCodeBlock
-                                .invoke(
-                                    alertState.textField.value,
-                                ).first
-                        } else {
-                            true
-                        },
-                ) {
-                    Text(text = alertState.confirm.first)
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.setAlertData(null)
-                    },
-                ) {
-                    Text(text = alertState.dismiss)
-                }
-            },
-        )
+        SettingsValueDialog(alertState, viewModel::setAlertData) { viewModel.setAlertData(null) }
     }
-
 
     TopAppBar(
         title = {
             Text(
-                text = when (activeCategory) {
-                    null -> stringResource(Res.string.settings)
-                    SettingCategory.AKUN -> stringResource(Res.string.settings_category_account)
-                    SettingCategory.KONTEN_TAMPILAN -> stringResource(Res.string.settings_category_content_display)
-                    SettingCategory.PRIVASI_SOSIAL -> stringResource(Res.string.settings_category_privacy_social)
-                    SettingCategory.PLAYBACK -> stringResource(Res.string.settings_category_playback)
-                    SettingCategory.KUALITAS_MEDIA -> stringResource(Res.string.settings_category_media_quality)
-                    SettingCategory.MODE_HEMAT_DATA -> stringResource(Res.string.settings_category_data_saver)
-                    SettingCategory.PENYIMPANAN -> stringResource(Res.string.settings_category_storage_backup)
-                    SettingCategory.TENTANG_DUKUNGAN -> stringResource(Res.string.settings_category_about_support)
-                },
+                text = activeCategory?.label() ?: stringResource(Res.string.settings),
                 style = typo().titleMedium,
             )
         },
         navigationIcon = {
-            Box(Modifier.padding(horizontal = 5.dp)) {
-                RippleIconButton(
-                    Res.drawable.baseline_arrow_back_ios_new_24,
-                    Modifier
-                        .size(32.dp),
-                    true,
-                ) {
-                    if (activeCategory != null) {
-                        activeCategory = null
-                    } else {
-                        navController.navigateUp()
-                    }
-                }
+            IconButton(onClick = { if (activeCategory != null) activeCategory = null else navController.navigateUp() }, modifier = Modifier.size(48.dp)) {
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(Res.string.ui_back))
             }
         },
-        modifier =
-            Modifier,
+        modifier = Modifier.onGloballyPositioned { topBarHeight = with(localDensity) { it.size.height.toDp() } },
         colors =
             TopAppBarDefaults.topAppBarColors(
                 containerColor = MaterialTheme.colorScheme.background,
@@ -2665,44 +2065,11 @@ enum class SettingCategory {
     AKUN,
     KONTEN_TAMPILAN,
     PRIVASI_SOSIAL,
+    KONEKSI,
+    LIRIK,
     PLAYBACK,
     KUALITAS_MEDIA,
     MODE_HEMAT_DATA,
     PENYIMPANAN,
     TENTANG_DUKUNGAN
-}
-
-@Composable
-fun SettingCategoryRow(
-    title: String,
-    subtitle: String,
-    iconRes: org.jetbrains.compose.resources.DrawableResource,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 16.dp, horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            painter = painterResource(iconRes),
-            contentDescription = title,
-            tint = Color.White.copy(alpha = 0.7f),
-            modifier = Modifier.size(24.dp)
-        )
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = typo().titleSmall.copy(color = GratifyColors.TextPrimary, fontWeight = FontWeight.Bold)
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = subtitle,
-                style = typo().bodySmall.copy(color = Color.White.copy(alpha = 0.6f))
-            )
-        }
-    }
 }

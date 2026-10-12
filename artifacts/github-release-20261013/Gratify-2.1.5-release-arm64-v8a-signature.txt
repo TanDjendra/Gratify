@@ -1,0 +1,18 @@
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v3.2 scheme (APK Signature Scheme v3.2): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+V3.0 Signer: certificate DN: CN=Gratify, OU=Development, O=Tan, L=Jakarta, ST=Jakarta, C=ID
+V3.0 Signer: certificate SHA-256 digest: efefe1b8bf7c6502aeeb60db9a45b430dc50040e11c6f76eb22e2308a51c316a
+V3.0 Signer: certificate SHA-1 digest: d923cd947706843dbc394843137912cb128ba273
+V3.0 Signer: certificate MD5 digest: 8be0f7c9c45fde39c7c7f925cc3adbd5
+V3.0 Signer: key algorithm: RSA
+V3.0 Signer: key size (bits): 2048
+V3.0 Signer: public key SHA-256 digest: b76a6eb81b9593c8a11bd8f1caf1866174bd2f31b62a6cd7b8154ddec7494738
+V3.0 Signer: public key SHA-1 digest: 28835e3fe40e267af9bda8aa340dd95e488856d9
+V3.0 Signer: public key MD5 digest: d4dd25666f901bda83f737f0b1ec4886

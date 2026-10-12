@@ -19,6 +19,7 @@ import com.tan.domain.data.entities.LocalPlaylistEntity
 import com.tan.domain.data.entities.LyricsEntity
 import com.tan.domain.data.entities.NewFormatEntity
 import com.tan.domain.data.entities.NotificationEntity
+import com.tan.domain.data.entities.NotificationReceipt
 import com.tan.domain.data.entities.PairSongLocalPlaylist
 import com.tan.domain.data.entities.PlaylistEntity
 import com.tan.domain.data.entities.PodcastsEntity
@@ -39,10 +40,10 @@ import com.tan.domain.data.entities.analytics.PlaybackEventEntity
         NewFormatEntity::class, SongInfoEntity::class, SearchHistory::class, SongEntity::class, ArtistEntity::class,
         AlbumEntity::class, PlaylistEntity::class, LocalPlaylistEntity::class, LyricsEntity::class, QueueEntity::class,
         SetVideoIdEntity::class, PairSongLocalPlaylist::class, GoogleAccountEntity::class, FollowedArtistSingleAndAlbum::class,
-        NotificationEntity::class, TranslatedLyricsEntity::class, PodcastsEntity::class, EpisodeEntity::class,
+        NotificationEntity::class, NotificationReceipt::class, TranslatedLyricsEntity::class, PodcastsEntity::class, EpisodeEntity::class,
         YourYouTubePlaylistList::class, PlaybackEventEntity::class, EventArtistEntity::class
     ],
-    version = 27,
+    version = 29,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 2, to = 3), AutoMigration(
@@ -84,6 +85,8 @@ import com.tan.domain.data.entities.analytics.PlaybackEventEntity
         AutoMigration(24, 25),
         AutoMigration(25, 26),
         AutoMigration(26, 27),
+        AutoMigration(27, 28),
+        AutoMigration(28, 29),
     ],
 )
 @TypeConverters(Converters::class)

@@ -1,128 +1,119 @@
 package com.tan.gratify.viewModel
 
 import androidx.lifecycle.viewModelScope
-import com.tan.domain.manager.DataStoreManager
 import com.tan.gratify.viewModel.base.BaseViewModel
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.first
-import io.github.jan.supabase.SupabaseClient
-import io.github.jan.supabase.auth.auth
-import io.github.jan.supabase.storage.storage
-import io.github.jan.supabase.postgrest.postgrest
-import com.tan.domain.data.entities.UserProfile
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
-import org.koin.core.component.inject
-import com.tan.gratify.utils.compressImage
-import kotlinx.datetime.Clock
-import io.ktor.http.ContentType
+import kotlinx.coroutines.withTimeout
+
+const val PROFILE_NAME_LIMIT = 64
+
+enum class ProfileSaveStage { UPLOADING_PHOTO, SAVING_PROFILE }
+
+enum class ProfileSaveProblem { NAME_REQUIRED, NAME_TOO_LONG, PHOTO_FAILED, PHOTO_UPLOAD_FAILED, SIGN_IN_REQUIRED, ACCOUNT_CHANGED, SAVE_FAILED }
+
+fun profileNameProblem(name: String): ProfileSaveProblem? = when {
+    name.trim().isEmpty() -> ProfileSaveProblem.NAME_REQUIRED
+    name.trim().length > PROFILE_NAME_LIMIT -> ProfileSaveProblem.NAME_TOO_LONG
+    else -> null
+}
 
 data class CreateProfileUiState(
+    val ownerId: String? = null,
     val displayName: String = "",
     val avatarPath: String = "",
+    val initialName: String = "",
+    val initialAvatar: String = "",
     val isSaving: Boolean = false,
-    val saveSuccess: Boolean = false
-)
+    val saveSuccess: Boolean = false,
+    val problem: ProfileSaveProblem? = null,
+    val saveStage: ProfileSaveStage? = null,
+) {
+    val hasChanges get() = displayName.trim() != initialName.trim() || avatarPath != initialAvatar
+}
 
-class CreateProfileViewModel(
-    private val dataStoreManager: DataStoreManager,
-) : BaseViewModel() {
-
-    private val supabase: SupabaseClient by inject()
-    private val userRepository: com.tan.domain.repository.UserRepository by inject()
-
-    private val _uiState = MutableStateFlow(CreateProfileUiState())
+/** One immutable submission for both onboarding and editing an existing profile. */
+class CreateProfileViewModel(private val gateway: ProfileEditorGateway) : BaseViewModel() {
+    private val identity = gateway.initialIdentity()
+    private val _uiState = MutableStateFlow(CreateProfileUiState(
+        ownerId = gateway.currentUserId(), displayName = identity.first, avatarPath = identity.second,
+        initialName = identity.first, initialAvatar = identity.second,
+    ))
     val uiState: StateFlow<CreateProfileUiState> = _uiState
 
-    init {
-        // Coba load nama jika sebelumnya sudah ada (fallback ke account name lokal)
-        viewModelScope.launch {
-            val existingName = dataStoreManager.getString("AppProfileName").first()
-                ?: dataStoreManager.getString("AccountName").first()
-            if (!existingName.isNullOrEmpty()) {
-                _uiState.update { it.copy(displayName = existingName) }
-            }
-        }
-    }
-
-    fun updateDisplayName(name: String) {
-        _uiState.update { it.copy(displayName = name) }
-    }
-
-    fun updateAvatarPath(path: String) {
-        _uiState.update { it.copy(avatarPath = path) }
-    }
-
-    fun saveProfile() {
+    fun beginEditing(ownerId: String?, name: String, avatar: String?) {
         if (_uiState.value.isSaving) return
-        if (_uiState.value.displayName.isBlank()) {
-            makeToast("Nama tidak boleh kosong.")
-            return
-        }
-        _uiState.update { it.copy(isSaving = true) }
+        _uiState.value = CreateProfileUiState(ownerId, name, avatar.orEmpty(), name, avatar.orEmpty())
+    }
+    fun updateDisplayName(name: String) {
+        if (!_uiState.value.isSaving) _uiState.update { it.copy(displayName = name, problem = null, saveSuccess = false) }
+    }
+    fun updateAvatarPath(path: String) {
+        if (!_uiState.value.isSaving) _uiState.update { it.copy(avatarPath = path, problem = null, saveSuccess = false) }
+    }
+    /** A returned picker result belongs to the account that opened it, not to editor visibility. */
+    fun applySelectedAvatar(requestOwner: String?, path: String?): Boolean {
+        if (path.isNullOrBlank() || requestOwner == null || _uiState.value.isSaving ||
+            _uiState.value.ownerId != requestOwner || gateway.currentUserId() != requestOwner) return false
+        updateAvatarPath(path)
+        return true
+    }
+    fun saveProfile() {
+        val submitted = _uiState.value
+        if (submitted.isSaving || submitted.saveSuccess) return
+        val problem = profileNameProblem(submitted.displayName)
+        if (problem != null) { _uiState.update { it.copy(problem = problem) }; return }
+        val owner = submitted.ownerId
+        if (owner == null) { _uiState.update { it.copy(problem = ProfileSaveProblem.SIGN_IN_REQUIRED) }; return }
+        if (gateway.currentUserId() != owner) { _uiState.update { it.copy(problem = ProfileSaveProblem.ACCOUNT_CHANGED) }; return }
+        val name = submitted.displayName.trim()
+        _uiState.update { it.copy(isSaving = true, problem = null, saveStage =
+            if (submitted.avatarPath.isNotBlank() && !submitted.avatarPath.startsWith("https://"))
+                ProfileSaveStage.UPLOADING_PHOTO else ProfileSaveStage.SAVING_PROFILE) }
         viewModelScope.launch {
-            var avatarUrlToSave = _uiState.value.avatarPath
+            var serverAvatar: String? = null
+            fun confirmSaved(avatar: String) {
+                _uiState.update { it.copy(displayName = name, avatarPath = avatar, initialName = name,
+                    initialAvatar = avatar, saveSuccess = true, problem = null) }
+            }
             try {
-                // Upload avatar if not empty and not an http URL
-                if (avatarUrlToSave.isNotEmpty() && !avatarUrlToSave.startsWith("http")) {
-                    val compressedBytes = requireNotNull(compressImage(avatarUrlToSave)) { "Avatar cannot be processed" }
-                    if (compressedBytes != null) {
-                        val currentUserId = supabase.auth.currentUserOrNull()?.id
-                        if (currentUserId != null) {
-                            // Selalu gunakan ID user sebagai nama file agar file lama otomatis tertimpa (upsert = true)
-                            val fileName = "${currentUserId}.jpg"
-                            
-                            // Upload to Supabase Storage
-                            val bucket = supabase.storage.from("avatars")
-                            bucket.upload(
-                                path = fileName,
-                                data = compressedBytes
-                            ) {
-                                upsert = true
-                                contentType = ContentType.Image.JPEG
-                            }
-                            // Get public url dan tambahkan timestamp agar cache gambar (Coil) di aplikasi ter-refresh
-                            val timestamp = Clock.System.now().toEpochMilliseconds()
-                            avatarUrlToSave = bucket.publicUrl(fileName) + "?cacheNonce=$timestamp"
-                        }
+                withTimeout(30_000) {
+                    fun checkOwner() {
+                        if (gateway.currentUserId() != owner) throw ProfileWriteException(ProfileSaveProblem.ACCOUNT_CHANGED)
                     }
+                    checkOwner()
+                    val avatar = if (submitted.avatarPath.isBlank()) "" else if (submitted.avatarPath.startsWith("https://")) {
+                        submitted.avatarPath
+                    } else gateway.uploadAvatar(owner, submitted.avatarPath)
+                    checkOwner()
+                    _uiState.update { it.copy(saveStage = ProfileSaveStage.SAVING_PROFILE) }
+                    gateway.writeMetadata(owner, name, avatar)
+                    checkOwner()
+                    gateway.writeProfile(owner, name, avatar)
+                    checkOwner()
+                    serverAvatar = avatar
+                    // Server identity is authoritative; cache failure must not report a failed server save.
+                    try { withTimeout(2_000) { gateway.cacheIdentity(owner, name, avatar) } }
+                    catch (_: TimeoutCancellationException) { }
+                    catch (cancelled: CancellationException) { throw cancelled }
+                    catch (_: Exception) { }
+                    checkOwner()
+                    confirmSaved(avatar)
                 }
-
-                // Update ke Supabase Backend jika ada sesi
-                val currentUserId = requireNotNull(supabase.auth.currentUserOrNull()?.id) { "Login required" }
-                if (currentUserId != null) {
-                    supabase.auth.updateUser {
-                        data = buildJsonObject {
-                            put("display_name", _uiState.value.displayName)
-                            if (avatarUrlToSave.isNotEmpty()) {
-                                put("avatar_url", avatarUrlToSave)
-                            }
-                        }
-                    }
-                    userRepository.upsertUserProfile(
-                            UserProfile(
-                                id = currentUserId,
-                                displayName = _uiState.value.displayName,
-                                avatarUrl = avatarUrlToSave.ifEmpty { null }
-                            )
-                    ).first().getOrThrow()
-                }
-            } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
-                _uiState.update { it.copy(isSaving = false, saveSuccess = false) }
-                makeToast("Profil belum tersimpan. Periksa koneksi lalu coba lagi.")
-                return@launch
-            }
-
-            
-            dataStoreManager.putString("AppProfileName", _uiState.value.displayName)
-            if (avatarUrlToSave.isNotEmpty()) {
-                dataStoreManager.putString("AppProfileImage", avatarUrlToSave)
-            }
-            _uiState.update { it.copy(isSaving = false, saveSuccess = true) }
+            } catch (cancelled: CancellationException) {
+                if (cancelled !is TimeoutCancellationException) throw cancelled
+                val confirmed = serverAvatar
+                if (confirmed != null && gateway.currentUserId() == owner) confirmSaved(confirmed)
+                else _uiState.update { it.copy(problem = ProfileSaveProblem.SAVE_FAILED) }
+            } catch (failure: ProfileWriteException) {
+                _uiState.update { it.copy(problem = failure.problem) }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(problem = ProfileSaveProblem.SAVE_FAILED) }
+            } finally { _uiState.update { it.copy(isSaving = false, saveStage = null) } }
         }
     }
 }

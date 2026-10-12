@@ -1,0 +1,18 @@
+<resources>
+    <string name="lyrics_animation">Lyrics display</string>
+    <string name="lyrics_animation_on">SimpMusic animation</string>
+    <string name="lyrics_no_animation">Standard · line by line</string>
+    <string name="share_lyrics">Share lyrics</string>
+    <string name="share_lyrics_select">Choose up to 3 consecutive lines</string>
+    <string name="share_lyrics_count">%1$d lines selected</string>
+    <string name="share_lyrics_limit">A card can contain up to 3 consecutive lines.</string>
+    <string name="share_lyrics_preview">Preview card</string>
+    <string name="share_lyrics_image">Share image</string>
+    <string name="share_lyrics_failed">The image could not be shared. Please try again.</string>
+    <string name="player_loading">Loading</string>
+    <string name="share_lyrics_save">Save image</string>
+    <string name="share_lyrics_saved">Image saved.</string>
+    <string name="lyrics_finding">Finding lyrics…</string>
+    <string name="lyrics_missing">Lyrics unavailable</string>
+    <string name="lyrics_retry">Try again</string>
+</resources>

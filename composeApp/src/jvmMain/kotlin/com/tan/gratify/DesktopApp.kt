@@ -170,12 +170,11 @@ fun runDesktopApp(args: Array<String> = emptyArray()) {
     WindowsProtocolRegistrar.register()
 
     val sharedViewModel = getKoin().get<SharedViewModel>()
-    if (sharedViewModel.shouldCheckForUpdate()) {
-        sharedViewModel.checkForUpdate()
-    }
-
     // Connect deep link handler to SharedViewModel
     val callbackScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    callbackScope.launch {
+        if (sharedViewModel.shouldCheckForUpdate()) sharedViewModel.checkForUpdate()
+    }
     val authCallback = DesktopAuthCallback(getKoin().get<SupabaseClient>().auth)
     DesktopDeepLinkHandler.listener = { intent ->
         val uri = intent.data
@@ -254,10 +253,16 @@ fun runDesktopApp(args: Array<String> = emptyArray()) {
             icon = painterResource(Res.drawable.circle_app_icon),
             state = windowState,
             visible = isVisible,
+            undecorated = true,
         ) {
+            LaunchedEffect(Unit) { window.minimumSize = java.awt.Dimension(900, 600) }
             Column(
                 modifier = Modifier.fillMaxSize().background(GratifyColors.Background),
             ) {
+                CustomTitleBar(
+                    title = stringResource(Res.string.app_name), windowState = windowState,
+                    window = window, onCloseRequest = { isVisible = false },
+                )
 
                 val context = LocalPlatformContext.current
                 setSingletonImageLoaderFactory {
